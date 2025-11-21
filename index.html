@@ -162,6 +162,10 @@
             return { ...state, inflation: clampInflation((state.inflation ?? 0) + delta) };
         };
 
+        const calculateInflatedCost = (baseCost, inflationRate = 0) => {
+            return Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
+        };
+
         // --- メインコンポーネント ---
 
         function EconomicCardGame() {
@@ -187,6 +191,30 @@
                 gdp: 0,
                 inflation: 0,
             });
+
+            const getInflationAlert = (value) => {
+                if (value >= 12) return { label: '⚠️ ハイパーインフレ懸念', color: 'text-red-700 bg-red-100 border-red-200' };
+                if (value >= 8) return { label: '🔥 高インフレ', color: 'text-orange-700 bg-orange-100 border-orange-200' };
+                if (value >= 4) return { label: '↗️ インフレ進行', color: 'text-amber-700 bg-amber-50 border-amber-200' };
+                if (value <= -2) return { label: '⬇️ デフレ圧力', color: 'text-blue-700 bg-blue-50 border-blue-200' };
+                return { label: '安定', color: 'text-green-700 bg-green-50 border-green-200' };
+            };
+
+            const applyUnrestPenalty = (state, actorLabel) => {
+                if (state.inflation < 8) return state;
+
+                const angerLevel = state.inflation >= 12 ? '臨界' : state.inflation >= 10 ? '高まり' : '上昇';
+                const incomePenalty = state.inflation >= 12 ? 4 : 2;
+                const gdpPenalty = state.inflation >= 10 ? 5 : 0;
+                const penalizedState = {
+                    ...state,
+                    income: Math.max(0, state.income - incomePenalty),
+                    gdp: Math.max(0, state.gdp - gdpPenalty),
+                };
+
+                addLog(`${actorLabel}: インフレ高騰により「国民の不満」が${angerLevel}、所得-${incomePenalty}${gdpPenalty ? ` / GDP-${gdpPenalty}` : ''}`);
+                return penalizedState;
+            };
 
             // 初期化
             const startGame = () => {
@@ -217,15 +245,18 @@
             const playCard = (card) => {
                 if (gameState !== 'PLAYING') return;
 
-                if (player.money < card.cost) {
-                    addLog(`資金不足です（必要: ${card.cost}兆円）`);
+                const adjustedCost = calculateInflatedCost(card.cost, player.inflation);
+
+                if (player.money < adjustedCost) {
+                    addLog(`資金不足です（必要: ${adjustedCost}兆円、インフレ影響を反映）`);
                     return;
                 }
 
                 let updatedPlayerState = null;
 
                 setPlayer(prev => {
-                    const afterCost = { ...prev, money: prev.money - card.cost };
+                    const adjusted = calculateInflatedCost(card.cost, prev.inflation);
+                    const afterCost = { ...prev, money: prev.money - adjusted };
 
                     if (card.type === 'ATTACK') {
                         updatedPlayerState = afterCost;
@@ -234,8 +265,12 @@
 
                     const afterEffect = card.effect(afterCost, enemy);
                     const afterInflation = applyInflationChange(afterEffect, card.inflationChange);
-                    updatedPlayerState = afterInflation;
-                    return afterInflation;
+                    if (card.inflationChange) {
+                        addLog(`あなた: 「${card.name}」が物価に影響 (${card.inflationChange > 0 ? '+' : ''}${card.inflationChange}%)`);
+                    }
+                    const afterUnrest = applyUnrestPenalty(afterInflation, 'あなた');
+                    updatedPlayerState = afterUnrest;
+                    return afterUnrest;
                 });
 
                 // 効果発動
@@ -258,11 +293,13 @@
 
                 // 1. 収入の処理（プレイヤー）
                 const driftedInflation = applyInflationDrift(player.inflation);
-                setPlayer(prev => ({
-                    ...prev,
-                    money: prev.money + prev.income,
-                    inflation: applyInflationDrift(prev.inflation),
-                }));
+                const playerAfterIncome = {
+                    ...player,
+                    money: player.money + player.income,
+                    inflation: driftedInflation,
+                };
+                const unrestApplied = applyUnrestPenalty(playerAfterIncome, 'あなた');
+                setPlayer(unrestApplied);
                 addLog(`ターン終了: 収入 +${player.income}兆円、インフレ率 ${player.inflation.toFixed(1)} → ${driftedInflation.toFixed(1)}%`);
 
                 // 2. 勝利判定
@@ -282,19 +319,25 @@
                 let latestEnemyState = null;
 
                 setEnemy(prev => {
-                    const afterDrift = { ...prev, inflation: applyInflationDrift(prev.inflation) };
+                    const drifted = applyInflationDrift(prev.inflation);
+                    if (drifted !== prev.inflation) {
+                        addLog(`ライバル: インフレ率 ${prev.inflation.toFixed(1)}% → ${drifted.toFixed(1)}% (自動調整)`);
+                    }
+                    const afterDrift = { ...prev, inflation: drifted };
                     const afterIncome = { ...afterDrift, money: afterDrift.money + afterDrift.income };
+                    const unrestAdjusted = applyUnrestPenalty(afterIncome, 'ライバル');
 
-                    const potentialActions = INITIAL_DECK.filter(c => c.cost <= afterIncome.money);
+                    const potentialActions = INITIAL_DECK.filter(c => calculateInflatedCost(c.cost, unrestAdjusted.inflation) <= unrestAdjusted.money);
 
                     if (potentialActions.length === 0) {
                         addLog(`ライバル: 資金不足のため資金を温存。`);
-                        latestEnemyState = afterIncome;
-                        return afterIncome;
+                        latestEnemyState = unrestAdjusted;
+                        return unrestAdjusted;
                     }
 
                     const aiCard = potentialActions[Math.floor(Math.random() * potentialActions.length)];
-                    let afterPayment = { ...afterIncome, money: afterIncome.money - aiCard.cost };
+                    const inflatedCost = calculateInflatedCost(aiCard.cost, unrestAdjusted.inflation);
+                    let afterPayment = { ...unrestAdjusted, money: unrestAdjusted.money - inflatedCost };
 
                     if (aiCard.type === 'ATTACK') {
                         aiCard.effect(afterPayment, player, setPlayer);
@@ -305,9 +348,13 @@
 
                     const afterEffect = aiCard.effect(afterPayment, player);
                     const afterInflation = applyInflationChange(afterEffect, aiCard.inflationChange);
+                    if (aiCard.inflationChange) {
+                        addLog(`ライバル: 「${aiCard.name}」で物価が変動 (${aiCard.inflationChange > 0 ? '+' : ''}${aiCard.inflationChange}%)`);
+                    }
                     addLog(`ライバル: 「${aiCard.name}」を使用し成長中...`);
-                    latestEnemyState = afterInflation;
-                    return afterInflation;
+                    const unrested = applyUnrestPenalty(afterInflation, 'ライバル');
+                    latestEnemyState = unrested;
+                    return unrested;
                 });
 
                 return checkWinCondition(player, latestEnemyState ?? enemy);
@@ -397,9 +444,12 @@
                                         <div className="text-xs text-gray-500 uppercase tracking-wider">GDP</div>
                                         <div className="font-mono text-2xl font-bold text-blue-700">{enemy.gdp}兆</div>
                                     </div>
-                                    <div>
+                                    <div className="text-right">
                                         <div className="text-xs text-gray-500 uppercase tracking-wider">インフレ</div>
                                         <div className="font-mono text-lg font-bold text-amber-700">{enemy.inflation.toFixed(1)}%</div>
+                                        <div className={`text-[10px] font-bold px-2 py-1 rounded border inline-block mt-1 ${getInflationAlert(enemy.inflation).color}`}>
+                                            {getInflationAlert(enemy.inflation).label}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -451,9 +501,12 @@
                                         <div className="text-xs text-blue-700 uppercase tracking-wider font-bold">GDP</div>
                                         <div className="font-mono text-3xl font-bold text-blue-700">{player.gdp}兆</div>
                                     </div>
-                                    <div className="px-3 py-1">
+                                    <div className="px-3 py-1 text-right">
                                         <div className="text-xs text-gray-500 uppercase tracking-wider">インフレ</div>
                                         <div className="font-mono text-xl font-bold text-amber-700">{player.inflation.toFixed(1)}%</div>
+                                        <div className={`text-[10px] font-bold px-2 py-1 rounded border inline-block mt-1 ${getInflationAlert(player.inflation).color}`}>
+                                            {getInflationAlert(player.inflation).label}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -474,7 +527,8 @@
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                     {playerHand.map((card) => {
                                         const typeInfo = CARD_TYPES[card.type];
-                                        const canAfford = player.money >= card.cost;
+                                        const inflatedCost = calculateInflatedCost(card.cost, player.inflation);
+                                        const canAfford = player.money >= inflatedCost;
                                         return (
                                             <button
                                                 key={card.uniqueId}
@@ -492,11 +546,12 @@
                                                         {typeInfo.icon} {typeInfo.label}
                                                     </span>
                                                     <span className="font-mono text-lg font-bold bg-white/80 px-2 rounded text-gray-800">
-                                                        ¥{card.cost}
+                                                        ¥{inflatedCost}
                                                     </span>
                                                 </div>
                                                 <h4 className="font-bold text-lg mb-1">{card.name}</h4>
-                                                <p className="text-xs mb-3 flex-grow opacity-90">{card.description}</p>
+                                                <p className="text-xs mb-1 flex-grow opacity-90">{card.description}</p>
+                                                <p className="text-[10px] text-amber-800 font-bold mb-2">インフレ反映: 元コスト ¥{card.cost} → 現在 ¥{inflatedCost}</p>
                                                 
                                                 {/* 経済学豆知識ツールチップ (Hover) */}
                                                 <div className="mt-2 pt-2 border-t border-black/10 text-[10px] font-medium opacity-80 flex gap-1 items-start">
