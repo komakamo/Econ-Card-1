@@ -88,6 +88,7 @@
                 name: '公共事業',
                 cost: 40,
                 type: 'POLICY',
+                inflationChange: 1,
                 effect: (me, opp) => ({ ...me, gdp: me.gdp + 25 }),
                 description: '道路や橋を作り、雇用と需要を生み出します。',
                 tip: '【財政政策】政府が支出を行うことで、有効需要を創出します。'
@@ -97,6 +98,7 @@
                 name: '金融緩和',
                 cost: 0,
                 type: 'POLICY',
+                inflationChange: 1.5,
                 effect: (me, opp) => ({ ...me, money: me.money + 40 }),
                 description: '市場にお金を流し込み、一時的に資金を潤沢にします。',
                 tip: '【マネタリーベース】金利を下げたりお金の供給量を増やし、投資を促します。'
@@ -106,6 +108,7 @@
                 name: '増税',
                 cost: 0,
                 type: 'POLICY',
+                inflationChange: -1,
                 effect: (me, opp) => ({ ...me, money: me.money + 60, gdp: me.gdp - 10 }),
                 description: '税率を上げ資金を確保しますが、景気は少し冷え込みます。',
                 tip: '【緊縮財政】財源確保には有効ですが、消費や投資を抑制する副作用があります。'
@@ -143,6 +146,21 @@
         ];
 
         const WINNING_GDP = 300;
+        const INFLATION_MIN = -5;
+        const INFLATION_MAX = 15;
+
+        const clampInflation = (value) => Math.min(INFLATION_MAX, Math.max(INFLATION_MIN, Number(value.toFixed(1))));
+
+        const applyInflationDrift = (value) => {
+            const drifted = value > 0 ? value - 0.3 : value < 0 ? value + 0.3 : 0;
+            if (Math.abs(drifted) < 0.2) return 0;
+            return clampInflation(drifted);
+        };
+
+        const applyInflationChange = (state, delta = 0) => {
+            if (!delta) return state;
+            return { ...state, inflation: clampInflation((state.inflation ?? 0) + delta) };
+        };
 
         // --- メインコンポーネント ---
 
@@ -157,6 +175,7 @@
                 money: 100,
                 income: 10,
                 gdp: 0,
+                inflation: 0,
             });
             const [playerHand, setPlayerHand] = useState([]);
 
@@ -166,12 +185,13 @@
                 money: 100,
                 income: 10,
                 gdp: 0,
+                inflation: 0,
             });
 
             // 初期化
             const startGame = () => {
-                setPlayer({ money: 80, income: 20, gdp: 0 });
-                setEnemy({ money: 80, income: 20, gdp: 0 });
+                setPlayer({ money: 80, income: 20, gdp: 0, inflation: 0 });
+                setEnemy({ money: 80, income: 20, gdp: 0, inflation: 0 });
                 setPlayerHand([]);
                 setTurn(1);
                 setLogs(['ゲーム開始！GDP 300兆円を目指せ！']);
@@ -213,8 +233,9 @@
                     }
 
                     const afterEffect = card.effect(afterCost, enemy);
-                    updatedPlayerState = afterEffect;
-                    return afterEffect;
+                    const afterInflation = applyInflationChange(afterEffect, card.inflationChange);
+                    updatedPlayerState = afterInflation;
+                    return afterInflation;
                 });
 
                 // 効果発動
@@ -236,8 +257,13 @@
                 if (gameState !== 'PLAYING') return;
 
                 // 1. 収入の処理（プレイヤー）
-                setPlayer(prev => ({ ...prev, money: prev.money + prev.income }));
-                addLog(`ターン終了: 収入 +${player.income}兆円`);
+                const driftedInflation = applyInflationDrift(player.inflation);
+                setPlayer(prev => ({
+                    ...prev,
+                    money: prev.money + prev.income,
+                    inflation: applyInflationDrift(prev.inflation),
+                }));
+                addLog(`ターン終了: 収入 +${player.income}兆円、インフレ率 ${player.inflation.toFixed(1)} → ${driftedInflation.toFixed(1)}%`);
 
                 // 2. 勝利判定
                 if (checkWinCondition()) return;
@@ -256,7 +282,8 @@
                 let latestEnemyState = null;
 
                 setEnemy(prev => {
-                    const afterIncome = { ...prev, money: prev.money + prev.income };
+                    const afterDrift = { ...prev, inflation: applyInflationDrift(prev.inflation) };
+                    const afterIncome = { ...afterDrift, money: afterDrift.money + afterDrift.income };
 
                     const potentialActions = INITIAL_DECK.filter(c => c.cost <= afterIncome.money);
 
@@ -277,9 +304,10 @@
                     }
 
                     const afterEffect = aiCard.effect(afterPayment, player);
+                    const afterInflation = applyInflationChange(afterEffect, aiCard.inflationChange);
                     addLog(`ライバル: 「${aiCard.name}」を使用し成長中...`);
-                    latestEnemyState = afterEffect;
-                    return afterEffect;
+                    latestEnemyState = afterInflation;
+                    return afterInflation;
                 });
 
                 return checkWinCondition(player, latestEnemyState ?? enemy);
@@ -369,6 +397,10 @@
                                         <div className="text-xs text-gray-500 uppercase tracking-wider">GDP</div>
                                         <div className="font-mono text-2xl font-bold text-blue-700">{enemy.gdp}兆</div>
                                     </div>
+                                    <div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">インフレ</div>
+                                        <div className="font-mono text-lg font-bold text-amber-700">{enemy.inflation.toFixed(1)}%</div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -418,6 +450,10 @@
                                     <div className="bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">
                                         <div className="text-xs text-blue-700 uppercase tracking-wider font-bold">GDP</div>
                                         <div className="font-mono text-3xl font-bold text-blue-700">{player.gdp}兆</div>
+                                    </div>
+                                    <div className="px-3 py-1">
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">インフレ</div>
+                                        <div className="font-mono text-xl font-bold text-amber-700">{player.inflation.toFixed(1)}%</div>
                                     </div>
                                 </div>
                             </div>
