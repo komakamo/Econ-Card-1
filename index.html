@@ -1,1 +1,475 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>エコノミクス・マスター - 経済学カードゲーム</title>
+    <!-- Tailwind CSS (デザイン用) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & ReactDOM (フレームワーク) -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel (JSXをブラウザで実行するためのコンパイラ) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <style>
+        /* アニメーション定義 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans">
+    <div id="root"></div>
 
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- アイコンコンポーネント (SVG埋め込み) ---
+        // GitHub Pages等で外部ライブラリ依存によるエラーを防ぐためSVGを直接定義
+        const IconWallet = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>
+        );
+        const IconTrendingUp = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+        );
+        const IconZap = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        );
+        const IconShield = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        );
+        const IconAlertCircle = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        );
+        const IconArrowRight = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        );
+        const IconRefreshCw = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        );
+        const IconBookOpen = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        );
+
+        // --- ゲームデータ定義 ---
+
+        const CARD_TYPES = {
+            PRODUCTION: { label: '生産', color: 'bg-blue-100 text-blue-800 border-blue-300', icon: <IconZap size={16} /> },
+            POLICY: { label: '政策', color: 'bg-green-100 text-green-800 border-green-300', icon: <IconBookOpen size={16} /> },
+            ATTACK: { label: '外交', color: 'bg-red-100 text-red-800 border-red-300', icon: <IconShield size={16} /> },
+        };
+
+        const INITIAL_DECK = [
+            {
+                id: 1,
+                name: '設備投資',
+                cost: 30,
+                type: 'PRODUCTION',
+                effect: (me, opp) => ({ ...me, income: me.income + 5, gdp: me.gdp + 10 }),
+                description: '工場の機械などを購入し、生産能力を高めます。',
+                tip: '【投資の乗数効果】投資は将来の生産力と所得を増やします。'
+            },
+            {
+                id: 2,
+                name: '技術革新',
+                cost: 60,
+                type: 'PRODUCTION',
+                effect: (me, opp) => ({ ...me, income: me.income + 10, gdp: me.gdp + 30 }),
+                description: 'AIやロボットなどの新技術を導入し、効率を劇的に上げます。',
+                tip: '【イノベーション】技術進歩は経済成長の最大の要因の一つです。'
+            },
+            {
+                id: 3,
+                name: '公共事業',
+                cost: 40,
+                type: 'POLICY',
+                effect: (me, opp) => ({ ...me, gdp: me.gdp + 25 }),
+                description: '道路や橋を作り、雇用と需要を生み出します。',
+                tip: '【財政政策】政府が支出を行うことで、有効需要を創出します。'
+            },
+            {
+                id: 4,
+                name: '金融緩和',
+                cost: 0,
+                type: 'POLICY',
+                effect: (me, opp) => ({ ...me, money: me.money + 40 }),
+                description: '市場にお金を流し込み、一時的に資金を潤沢にします。',
+                tip: '【マネタリーベース】金利を下げたりお金の供給量を増やし、投資を促します。'
+            },
+            {
+                id: 5,
+                name: '増税',
+                cost: 0,
+                type: 'POLICY',
+                effect: (me, opp) => ({ ...me, money: me.money + 60, gdp: me.gdp - 10 }),
+                description: '税率を上げ資金を確保しますが、景気は少し冷え込みます。',
+                tip: '【緊縮財政】財源確保には有効ですが、消費や投資を抑制する副作用があります。'
+            },
+            {
+                id: 6,
+                name: 'スタートアップ支援',
+                cost: 20,
+                type: 'PRODUCTION',
+                effect: (me, opp) => ({ ...me, income: me.income + 8 }),
+                description: '起業家を支援し、新たなビジネスを育てます。',
+                tip: '【新産業創出】新しい企業は将来の大きな税収源となります。'
+            },
+            {
+                id: 7,
+                name: '関税引き上げ',
+                cost: 15,
+                type: 'ATTACK',
+                effect: (me, opp, setOpp) => {
+                    setOpp(prev => ({ ...prev, income: Math.max(0, prev.income - 5), money: Math.max(0, prev.money - 10) }));
+                    return me;
+                },
+                description: '輸入品に税金をかけ、相手国の輸出産業にダメージを与えます。',
+                tip: '【保護貿易】自国産業を守る一方で、貿易戦争のリスクがあります。'
+            },
+            {
+                id: 8,
+                name: '人材育成',
+                cost: 25,
+                type: 'PRODUCTION',
+                effect: (me, opp) => ({ ...me, income: me.income + 3, gdp: me.gdp + 15 }),
+                description: '教育に投資し、労働者のスキルを向上させます。',
+                tip: '【人的資本】教育レベルの向上は、長期的な経済成長に不可欠です。'
+            },
+        ];
+
+        const WINNING_GDP = 300;
+
+        // --- メインコンポーネント ---
+
+        function EconomicCardGame() {
+            const [turn, setTurn] = useState(1);
+            const [gameState, setGameState] = useState('START'); // START, PLAYING, WON, LOST
+            const [logs, setLogs] = useState(['ゲーム開始！目標：GDP 300兆円到達']);
+            
+            // プレイヤー状態
+            const [player, setPlayer] = useState({
+                name: 'あなた',
+                money: 100,
+                income: 10,
+                gdp: 0,
+            });
+            const [playerHand, setPlayerHand] = useState([]);
+
+            // AI状態
+            const [enemy, setEnemy] = useState({
+                name: 'ライバル国',
+                money: 100,
+                income: 10,
+                gdp: 0,
+            });
+
+            // 初期化
+            const startGame = () => {
+                setPlayer({ money: 80, income: 20, gdp: 0 });
+                setEnemy({ money: 80, income: 20, gdp: 0 });
+                setTurn(1);
+                setLogs(['ゲーム開始！GDP 300兆円を目指せ！']);
+                setGameState('PLAYING');
+                drawCards(3);
+            };
+
+            const addLog = (msg) => {
+                setLogs(prev => [msg, ...prev].slice(0, 5));
+            };
+
+            // カードドロー機能
+            const drawCards = (count) => {
+                const newCards = [];
+                for (let i = 0; i < count; i++) {
+                    const randomCard = INITIAL_DECK[Math.floor(Math.random() * INITIAL_DECK.length)];
+                    newCards.push({ ...randomCard, uniqueId: Math.random() });
+                }
+                setPlayerHand(prev => [...prev, ...newCards]);
+            };
+
+            // プレイヤーのターン処理
+            const playCard = (card) => {
+                if (gameState !== 'PLAYING') return;
+
+                if (player.money < card.cost) {
+                    addLog(`資金不足です（必要: ${card.cost}兆円）`);
+                    return;
+                }
+
+                // コスト支払い
+                setPlayer(prev => ({ ...prev, money: prev.money - card.cost }));
+
+                // 効果発動
+                if (card.type === 'ATTACK') {
+                    card.effect(player, enemy, setEnemy);
+                    addLog(`あなた: 「${card.name}」を使用！相手を妨害した。`);
+                } else {
+                    setPlayer(prev => card.effect(prev, enemy));
+                    addLog(`あなた: 「${card.name}」を使用。経済効果発動！`);
+                }
+
+                // 手札から削除
+                setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
+
+                checkWinCondition();
+            };
+
+            // ターン終了処理 & AIターン
+            const endTurn = () => {
+                if (gameState !== 'PLAYING') return;
+
+                // 1. 収入の処理（プレイヤー）
+                setPlayer(prev => ({ ...prev, money: prev.money + prev.income }));
+                addLog(`ターン終了: 収入 +${player.income}兆円`);
+
+                // 2. 勝利判定
+                if (checkWinCondition()) return;
+
+                // 3. AIのターン
+                aiTurn();
+                
+                // 4. 次のターンの準備
+                setTurn(prev => prev + 1);
+                drawCards(1);
+            };
+
+            const aiTurn = () => {
+                // 収入処理（AI）
+                setEnemy(prev => ({ ...prev, money: prev.money + prev.income }));
+
+                // AIのアクション（簡易ロジック）
+                const potentialActions = INITIAL_DECK.filter(c => c.cost <= enemy.money);
+                
+                if (potentialActions.length > 0) {
+                    const aiCard = potentialActions[Math.floor(Math.random() * potentialActions.length)];
+                    
+                    setEnemy(prev => ({ ...prev, money: prev.money - aiCard.cost }));
+                    
+                    if (aiCard.type === 'ATTACK') {
+                        aiCard.effect(enemy, player, setPlayer);
+                        addLog(`ライバル: 「${aiCard.name}」を使用！`);
+                    } else {
+                        setEnemy(prev => aiCard.effect(prev, player));
+                        addLog(`ライバル: 「${aiCard.name}」を使用し成長中...`);
+                    }
+                } else {
+                    addLog(`ライバル: 資金不足のため資金を温存。`);
+                }
+
+                checkWinCondition();
+            };
+
+            const checkWinCondition = () => {
+                return false; 
+            };
+
+            // 状態監視で勝敗判定
+            useEffect(() => {
+                if (gameState !== 'PLAYING') return;
+
+                if (player.gdp >= WINNING_GDP) {
+                    setGameState('WON');
+                    addLog('🎉 おめでとうございます！あなたの国の経済が勝利しました！');
+                } else if (enemy.gdp >= WINNING_GDP) {
+                    setGameState('LOST');
+                    addLog('💀 残念... ライバル国に経済覇権を奪われました。');
+                }
+            }, [player.gdp, enemy.gdp]);
+
+            return (
+                <div className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto animate-fade-in">
+                    
+                    {/* ヘッダー */}
+                    <header className="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                        <div>
+                            <h1 className="text-xl md:text-2xl font-bold text-indigo-700 flex items-center gap-2">
+                                <IconTrendingUp className="text-indigo-600" />
+                                エコノミクス・マスター
+                            </h1>
+                            <p className="text-xs text-gray-500">Turn: {turn} | 目標: GDP {WINNING_GDP}兆円</p>
+                        </div>
+                        <button 
+                            onClick={startGame}
+                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 text-sm font-bold"
+                        >
+                            <IconRefreshCw size={16} />
+                            {gameState === 'START' ? 'ゲーム開始' : 'リセット'}
+                        </button>
+                    </header>
+
+                    {gameState === 'START' && (
+                        <div className="bg-white p-8 rounded-xl shadow-lg text-center mb-8 border-2 border-indigo-100 animate-fade-in">
+                            <h2 className="text-2xl font-bold mb-4">経済学をカードで学ぼう</h2>
+                            <p className="mb-6 text-gray-600 leading-relaxed">
+                                あなたは国家のリーダーです。<br/>
+                                「投資」「政策」「外交」カードを駆使して、<br/>
+                                ライバル国より先に経済成長（GDP 300兆円）を達成してください。
+                            </p>
+                            <button 
+                                onClick={startGame}
+                                className="px-8 py-3 bg-indigo-600 text-white text-lg rounded-full font-bold shadow-lg hover:bg-indigo-700 hover:scale-105 transition transform"
+                            >
+                                スタート！
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ゲームエリア */}
+                    {(gameState === 'PLAYING' || gameState === 'WON' || gameState === 'LOST') && (
+                        <div className="space-y-6 animate-fade-in">
+                            
+                            {/* 敵のステータス */}
+                            <div className="bg-red-50 p-4 rounded-xl border border-red-200 shadow-sm flex justify-between items-center opacity-90">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-red-200 p-2 rounded-full">
+                                        <IconAlertCircle className="text-red-600" size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-red-800">ライバル国</h3>
+                                        <div className="text-xs text-red-600">AI Player</div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-4 md:gap-8 text-right">
+                                    <div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">資金</div>
+                                        <div className="font-mono text-lg font-bold">{enemy.money}兆</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">収入</div>
+                                        <div className="font-mono text-lg text-green-600">+{enemy.income}/T</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">GDP</div>
+                                        <div className="font-mono text-2xl font-bold text-blue-700">{enemy.gdp}兆</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* ログと勝利画面 */}
+                            <div className="relative h-32 bg-gray-800 rounded-xl p-4 overflow-y-auto shadow-inner border border-gray-700">
+                                {gameState === 'WON' && (
+                                    <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-10 rounded-xl">
+                                        <h2 className="text-3xl font-bold text-yellow-600 mb-2">VICTORY!</h2>
+                                        <p className="font-bold text-gray-700">あなたの経済政策は成功しました！</p>
+                                    </div>
+                                )}
+                                {gameState === 'LOST' && (
+                                    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10 rounded-xl text-white">
+                                        <h2 className="text-3xl font-bold text-red-500 mb-2">DEFEAT...</h2>
+                                        <p>経済競争に敗北しました...</p>
+                                    </div>
+                                )}
+                                <div className="space-y-1">
+                                    {logs.map((log, i) => (
+                                        <p key={i} className="text-sm text-gray-300 border-b border-gray-700 pb-1 last:border-0">
+                                            <span className="text-gray-500 text-xs mr-2">LOG</span>{log}
+                                        </p>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* プレイヤーのステータス */}
+                            <div className="bg-white p-4 rounded-xl border-2 border-indigo-100 shadow-sm flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-indigo-100 p-2 rounded-full">
+                                        <IconWallet className="text-indigo-600" size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-indigo-900">あなた (自国)</h3>
+                                        <div className="text-xs text-indigo-600">Current Player</div>
+                                    </div>
+                                </div>
+                                <div className="flex gap-4 md:gap-8 text-right">
+                                    <div className="bg-yellow-50 px-3 py-1 rounded-lg border border-yellow-100">
+                                        <div className="text-xs text-yellow-700 uppercase tracking-wider font-bold">資金</div>
+                                        <div className="font-mono text-xl font-bold text-yellow-800">{player.money}兆</div>
+                                    </div>
+                                    <div className="px-3 py-1">
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">収入</div>
+                                        <div className="font-mono text-xl text-green-600">+{player.income}/T</div>
+                                    </div>
+                                    <div className="bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">
+                                        <div className="text-xs text-blue-700 uppercase tracking-wider font-bold">GDP</div>
+                                        <div className="font-mono text-3xl font-bold text-blue-700">{player.gdp}兆</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* 手札エリア */}
+                            <div>
+                                <div className="flex justify-between items-end mb-2">
+                                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Hand Cards (Click to Play)</h3>
+                                    <button 
+                                        onClick={endTurn}
+                                        disabled={gameState !== 'PLAYING'}
+                                        className="bg-gray-800 text-white px-6 py-2 rounded-full font-bold hover:bg-gray-700 disabled:opacity-50 shadow-lg flex items-center gap-2"
+                                    >
+                                        ターン終了 <IconArrowRight size={16} />
+                                    </button>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    {playerHand.map((card) => {
+                                        const typeInfo = CARD_TYPES[card.type];
+                                        const canAfford = player.money >= card.cost;
+                                        return (
+                                            <button
+                                                key={card.uniqueId}
+                                                onClick={() => playCard(card)}
+                                                disabled={!canAfford || gameState !== 'PLAYING'}
+                                                className={`
+                                                    relative text-left group
+                                                    flex flex-col h-full p-4 rounded-xl border-2 shadow-sm transition-all duration-200
+                                                    ${typeInfo.color}
+                                                    ${canAfford ? 'hover:-translate-y-1 hover:shadow-md cursor-pointer' : 'opacity-50 cursor-not-allowed grayscale-[0.5]'}
+                                                `}
+                                            >
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className="text-xs font-bold px-2 py-1 rounded-full bg-white/50 backdrop-blur-sm border border-white/20 flex items-center gap-1">
+                                                        {typeInfo.icon} {typeInfo.label}
+                                                    </span>
+                                                    <span className="font-mono text-lg font-bold bg-white/80 px-2 rounded text-gray-800">
+                                                        ¥{card.cost}
+                                                    </span>
+                                                </div>
+                                                <h4 className="font-bold text-lg mb-1">{card.name}</h4>
+                                                <p className="text-xs mb-3 flex-grow opacity-90">{card.description}</p>
+                                                
+                                                {/* 経済学豆知識ツールチップ (Hover) */}
+                                                <div className="mt-2 pt-2 border-t border-black/10 text-[10px] font-medium opacity-80 flex gap-1 items-start">
+                                                    <IconBookOpen size={12} className="mt-0.5 flex-shrink-0" />
+                                                    {card.tip}
+                                                </div>
+
+                                                {!canAfford && (
+                                                    <div className="absolute inset-0 bg-white/50 flex items-center justify-center rounded-xl backdrop-blur-[1px]">
+                                                        <span className="bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded">資金不足</span>
+                                                    </div>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                    {playerHand.length === 0 && (
+                                        <div className="col-span-full text-center py-8 text-gray-400 border-2 border-dashed border-gray-300 rounded-xl">
+                                            手札がありません。ターンを終了してカードを引いてください。
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // アプリケーションのレンダリング
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<EconomicCardGame />);
+    </script>
+</body>
+</html>
