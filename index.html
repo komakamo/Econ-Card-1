@@ -27,7 +27,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState } = React;
 
         // --- アイコンコンポーネント (SVG埋め込み) ---
         // GitHub Pages等で外部ライブラリ依存によるエラーを防ぐためSVGを直接定義
@@ -172,6 +172,7 @@
             const startGame = () => {
                 setPlayer({ money: 80, income: 20, gdp: 0 });
                 setEnemy({ money: 80, income: 20, gdp: 0 });
+                setPlayerHand([]);
                 setTurn(1);
                 setLogs(['ゲーム開始！GDP 300兆円を目指せ！']);
                 setGameState('PLAYING');
@@ -201,22 +202,33 @@
                     return;
                 }
 
-                // コスト支払い
-                setPlayer(prev => ({ ...prev, money: prev.money - card.cost }));
+                let updatedPlayerState = null;
+
+                setPlayer(prev => {
+                    const afterCost = { ...prev, money: prev.money - card.cost };
+
+                    if (card.type === 'ATTACK') {
+                        updatedPlayerState = afterCost;
+                        return afterCost;
+                    }
+
+                    const afterEffect = card.effect(afterCost, enemy);
+                    updatedPlayerState = afterEffect;
+                    return afterEffect;
+                });
 
                 // 効果発動
                 if (card.type === 'ATTACK') {
-                    card.effect(player, enemy, setEnemy);
+                    card.effect(updatedPlayerState, enemy, setEnemy);
                     addLog(`あなた: 「${card.name}」を使用！相手を妨害した。`);
                 } else {
-                    setPlayer(prev => card.effect(prev, enemy));
                     addLog(`あなた: 「${card.name}」を使用。経済効果発動！`);
                 }
 
                 // 手札から削除
                 setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
 
-                checkWinCondition();
+                return checkWinCondition(updatedPlayerState ?? player, enemy);
             };
 
             // ターン終了処理 & AIターン
@@ -231,55 +243,65 @@
                 if (checkWinCondition()) return;
 
                 // 3. AIのターン
-                aiTurn();
-                
+                const aiEndedGame = aiTurn();
+
                 // 4. 次のターンの準備
-                setTurn(prev => prev + 1);
-                drawCards(1);
+                if (!aiEndedGame) {
+                    setTurn(prev => prev + 1);
+                    drawCards(1);
+                }
             };
 
             const aiTurn = () => {
-                // 収入処理（AI）
-                setEnemy(prev => ({ ...prev, money: prev.money + prev.income }));
+                let latestEnemyState = null;
 
-                // AIのアクション（簡易ロジック）
-                const potentialActions = INITIAL_DECK.filter(c => c.cost <= enemy.money);
-                
-                if (potentialActions.length > 0) {
-                    const aiCard = potentialActions[Math.floor(Math.random() * potentialActions.length)];
-                    
-                    setEnemy(prev => ({ ...prev, money: prev.money - aiCard.cost }));
-                    
-                    if (aiCard.type === 'ATTACK') {
-                        aiCard.effect(enemy, player, setPlayer);
-                        addLog(`ライバル: 「${aiCard.name}」を使用！`);
-                    } else {
-                        setEnemy(prev => aiCard.effect(prev, player));
-                        addLog(`ライバル: 「${aiCard.name}」を使用し成長中...`);
+                setEnemy(prev => {
+                    const afterIncome = { ...prev, money: prev.money + prev.income };
+
+                    const potentialActions = INITIAL_DECK.filter(c => c.cost <= afterIncome.money);
+
+                    if (potentialActions.length === 0) {
+                        addLog(`ライバル: 資金不足のため資金を温存。`);
+                        latestEnemyState = afterIncome;
+                        return afterIncome;
                     }
-                } else {
-                    addLog(`ライバル: 資金不足のため資金を温存。`);
-                }
 
-                checkWinCondition();
+                    const aiCard = potentialActions[Math.floor(Math.random() * potentialActions.length)];
+                    let afterPayment = { ...afterIncome, money: afterIncome.money - aiCard.cost };
+
+                    if (aiCard.type === 'ATTACK') {
+                        aiCard.effect(afterPayment, player, setPlayer);
+                        addLog(`ライバル: 「${aiCard.name}」を使用！`);
+                        latestEnemyState = afterPayment;
+                        return afterPayment;
+                    }
+
+                    const afterEffect = aiCard.effect(afterPayment, player);
+                    addLog(`ライバル: 「${aiCard.name}」を使用し成長中...`);
+                    latestEnemyState = afterEffect;
+                    return afterEffect;
+                });
+
+                return checkWinCondition(player, latestEnemyState ?? enemy);
             };
 
-            const checkWinCondition = () => {
-                return false; 
-            };
+            const checkWinCondition = (nextPlayer = player, nextEnemy = enemy) => {
+                if (gameState !== 'PLAYING') return false;
 
-            // 状態監視で勝敗判定
-            useEffect(() => {
-                if (gameState !== 'PLAYING') return;
-
-                if (player.gdp >= WINNING_GDP) {
+                if (nextPlayer.gdp >= WINNING_GDP) {
                     setGameState('WON');
                     addLog('🎉 おめでとうございます！あなたの国の経済が勝利しました！');
-                } else if (enemy.gdp >= WINNING_GDP) {
+                    return true;
+                }
+
+                if (nextEnemy.gdp >= WINNING_GDP) {
                     setGameState('LOST');
                     addLog('💀 残念... ライバル国に経済覇権を奪われました。');
+                    return true;
                 }
-            }, [player.gdp, enemy.gdp]);
+
+                return false;
+            };
 
             return (
                 <div className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto animate-fade-in">
