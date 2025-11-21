@@ -116,6 +116,7 @@
                 cost: 40,
                 type: 'POLICY',
                 inflationChange: 1,
+                supportChange: 8,
                 effect: (me, opp) => ({ ...me, gdp: me.gdp + 25 }),
                 description: '道路や橋を作り、雇用と需要を生み出します。',
                 tip: '【財政政策】政府が支出を行うことで、有効需要を創出します。'
@@ -126,6 +127,7 @@
                 cost: 0,
                 type: 'POLICY',
                 inflationChange: 1.5,
+                supportChange: 2,
                 effect: (me, opp) => ({ ...me, money: me.money + 40 }),
                 description: '市場にお金を流し込み、一時的に資金を潤沢にします。',
                 tip: '【マネタリーベース】金利を下げたりお金の供給量を増やし、投資を促します。'
@@ -136,6 +138,7 @@
                 cost: 0,
                 type: 'POLICY',
                 inflationChange: -1,
+                supportChange: -12,
                 effect: (me, opp) => ({ ...me, money: me.money + 60, gdp: me.gdp - 10 }),
                 description: '税率を上げ資金を確保しますが、景気は少し冷え込みます。',
                 tip: '【緊縮財政】財源確保には有効ですが、消費や投資を抑制する副作用があります。'
@@ -145,6 +148,7 @@
                 name: 'スタートアップ支援',
                 cost: 20,
                 type: 'PRODUCTION',
+                supportChange: 4,
                 effect: (me, opp) => ({ ...me, income: me.income + 8 }),
                 description: '起業家を支援し、新たなビジネスを育てます。',
                 tip: '【新産業創出】新しい企業は将来の大きな税収源となります。'
@@ -154,10 +158,8 @@
                 name: '関税引き上げ',
                 cost: 15,
                 type: 'ATTACK',
-                effect: (me, opp, setOpp) => {
-                    setOpp(prev => ({ ...prev, income: Math.max(0, prev.income - 5), money: Math.max(0, prev.money - 10) }));
-                    return me;
-                },
+                targetSupportChange: -5,
+                targetEffect: (opp) => ({ ...opp, income: Math.max(0, opp.income - 5), money: Math.max(0, opp.money - 10) }),
                 description: '輸入品に税金をかけ、相手国の輸出産業にダメージを与えます。',
                 tip: '【保護貿易】自国産業を守る一方で、貿易戦争のリスクがあります。'
             },
@@ -166,6 +168,7 @@
                 name: '人材育成',
                 cost: 25,
                 type: 'PRODUCTION',
+                supportChange: 5,
                 effect: (me, opp) => ({ ...me, income: me.income + 3, gdp: me.gdp + 15 }),
                 description: '教育に投資し、労働者のスキルを向上させます。',
                 tip: '【人的資本】教育レベルの向上は、長期的な経済成長に不可欠です。'
@@ -208,6 +211,7 @@
                 income: 10,
                 gdp: 0,
                 inflation: 0,
+                support: 70,
             });
             const [playerHand, setPlayerHand] = useState([]);
 
@@ -218,6 +222,7 @@
                 income: 10,
                 gdp: 0,
                 inflation: 0,
+                support: 70,
             });
 
             const getInflationAlert = (value) => {
@@ -244,12 +249,20 @@
                 return penalizedState;
             };
 
+            const applySupportChange = (state, delta = 0, actorLabel, reason) => {
+                if (!delta) return state;
+                const prevSupport = state.support ?? 0;
+                const nextSupport = Math.min(100, Math.max(0, prevSupport + delta));
+                addLog(`${actorLabel}: ${reason}で支持率が${prevSupport}% → ${nextSupport}%に変化`);
+                return { ...state, support: nextSupport };
+            };
+
             // 初期化
             const startGame = () => {
                 const event = chooseRandomEvent();
                 setActiveEvent(event);
-                setPlayer({ money: 80, income: 20, gdp: 0, inflation: 0 });
-                setEnemy({ money: 80, income: 20, gdp: 0, inflation: 0 });
+                setPlayer({ money: 80, income: 20, gdp: 0, inflation: 0, support: 70 });
+                setEnemy({ money: 80, income: 20, gdp: 0, inflation: 0, support: 70 });
                 setPlayerHand([]);
                 setTurn(1);
                 setLogs([`📢 今ターンのイベント: 「${event.name}」 - ${event.description}`, 'ゲーム開始！GDP 300兆円を目指せ！']);
@@ -311,6 +324,8 @@
 
                 const adjustedCost = calculateAdjustedCost(card.cost, player.inflation);
 
+                let updatedEnemyState = null;
+
                 if (player.money < adjustedCost) {
                     addLog(`資金不足です（必要: ${adjustedCost}兆円、インフレ影響を反映）`);
                     return;
@@ -323,8 +338,9 @@
                     const afterCost = { ...prev, money: prev.money - adjusted };
 
                     if (card.type === 'ATTACK') {
-                        updatedPlayerState = afterCost;
-                        return afterCost;
+                        const afterSupport = applySupportChange(afterCost, card.supportChange, 'あなた', `「${card.name}」の政治的影響`);
+                        updatedPlayerState = afterSupport;
+                        return afterSupport;
                     }
 
                     const afterEffect = applyEventMultiplier(afterCost, card.effect(afterCost, enemy));
@@ -333,14 +349,21 @@
                         addLog(`あなた: 「${card.name}」が物価に影響 (${card.inflationChange > 0 ? '+' : ''}${card.inflationChange}%)`);
                     }
                     const afterUnrest = applyUnrestPenalty(afterInflation, 'あなた');
-                    updatedPlayerState = afterUnrest;
-                    return afterUnrest;
+                    const afterSupport = applySupportChange(afterUnrest, card.supportChange, 'あなた', `「${card.name}」の効果`);
+                    updatedPlayerState = afterSupport;
+                    return afterSupport;
                 });
 
                 // 効果発動
                 if (card.type === 'ATTACK') {
                     const eventAwareSetEnemy = withEventMultiplier(setEnemy);
-                    card.effect(updatedPlayerState, enemy, eventAwareSetEnemy);
+                    eventAwareSetEnemy(prev => {
+                        const effected = card.targetEffect ? card.targetEffect(prev, updatedPlayerState) : prev;
+                        const unrested = applyUnrestPenalty(effected, 'ライバル');
+                        const withSupport = applySupportChange(unrested, card.targetSupportChange, 'ライバル', `「${card.name}」の影響`);
+                        updatedEnemyState = withSupport;
+                        return withSupport;
+                    });
                     addLog(`あなた: 「${card.name}」を使用！相手を妨害した。`);
                 } else {
                     addLog(`あなた: 「${card.name}」を使用。経済効果発動！`);
@@ -349,7 +372,7 @@
                 // 手札から削除
                 setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
 
-                return checkWinCondition(updatedPlayerState ?? player, enemy);
+                return checkWinCondition(updatedPlayerState ?? player, updatedEnemyState ?? enemy);
             };
 
             // ターン終了処理 & AIターン
@@ -410,11 +433,16 @@
                     let afterPayment = { ...unrestAdjusted, money: unrestAdjusted.money - inflatedCost };
 
                     if (aiCard.type === 'ATTACK') {
+                        const afterSupport = applySupportChange(afterPayment, aiCard.supportChange, 'ライバル', `「${aiCard.name}」の政治的影響`);
                         const eventAwareSetPlayer = withEventMultiplier(setPlayer);
-                        aiCard.effect(afterPayment, player, eventAwareSetPlayer);
+                        eventAwareSetPlayer(prev => {
+                            const effected = aiCard.targetEffect ? aiCard.targetEffect(prev, afterSupport) : prev;
+                            const unrested = applyUnrestPenalty(effected, 'あなた');
+                            return applySupportChange(unrested, aiCard.targetSupportChange, 'あなた', `「${aiCard.name}」の影響`);
+                        });
                         addLog(`ライバル: 「${aiCard.name}」を使用！`);
-                        latestEnemyState = afterPayment;
-                        return afterPayment;
+                        latestEnemyState = afterSupport;
+                        return afterSupport;
                     }
 
                     const afterEffect = applyEventMultiplier(afterPayment, aiCard.effect(afterPayment, player));
@@ -424,8 +452,9 @@
                     }
                     addLog(`ライバル: 「${aiCard.name}」を使用し成長中...`);
                     const unrested = applyUnrestPenalty(afterInflation, 'ライバル');
-                    latestEnemyState = unrested;
-                    return unrested;
+                    const afterSupport = applySupportChange(unrested, aiCard.supportChange, 'ライバル', `「${aiCard.name}」の効果`);
+                    latestEnemyState = afterSupport;
+                    return afterSupport;
                 });
 
                 return checkWinCondition(player, latestEnemyState ?? enemy);
@@ -443,6 +472,18 @@
                 if (nextEnemy.gdp >= WINNING_GDP) {
                     setGameState('LOST');
                     addLog('💀 残念... ライバル国に経済覇権を奪われました。');
+                    return true;
+                }
+
+                if (nextPlayer.support <= 0) {
+                    setGameState('LOST');
+                    addLog('💀 支持率が0%に落ち、政権が崩壊してしまいました。');
+                    return true;
+                }
+
+                if (nextEnemy.support <= 0) {
+                    setGameState('WON');
+                    addLog('🎉 ライバル国の支持率が崩壊し、あなたの国が優位に立ちました！');
                     return true;
                 }
 
@@ -522,6 +563,10 @@
                                         <div className="font-mono text-lg text-green-600">+{enemy.income}/T</div>
                                     </div>
                                     <div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">支持率</div>
+                                        <div className="font-mono text-lg font-bold text-purple-700">{enemy.support}%</div>
+                                    </div>
+                                    <div>
                                         <div className="text-xs text-gray-500 uppercase tracking-wider">GDP</div>
                                         <div className="font-mono text-2xl font-bold text-blue-700">{enemy.gdp}兆</div>
                                     </div>
@@ -577,6 +622,10 @@
                                     <div className="px-3 py-1">
                                         <div className="text-xs text-gray-500 uppercase tracking-wider">収入</div>
                                         <div className="font-mono text-xl text-green-600">+{player.income}/T</div>
+                                    </div>
+                                    <div className="px-3 py-1">
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">支持率</div>
+                                        <div className="font-mono text-xl font-bold text-purple-700">{player.support}%</div>
                                     </div>
                                     <div className="bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">
                                         <div className="text-xs text-blue-700 uppercase tracking-wider font-bold">GDP</div>
