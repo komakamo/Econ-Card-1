@@ -64,6 +64,33 @@
             ATTACK: { label: '外交', color: 'bg-red-100 text-red-800 border-red-300', icon: <IconShield size={16} /> },
         };
 
+        const EVENTS = [
+            {
+                id: 1,
+                name: '原油ショック',
+                description: '資源価格高騰であらゆる政策コストが20%上昇します。',
+                effect: { costMultiplier: 1.2 },
+            },
+            {
+                id: 2,
+                name: '緊縮財政',
+                description: '財政再建のため収入が毎ターン3兆円減少します。',
+                effect: { incomePenalty: 3 },
+            },
+            {
+                id: 3,
+                name: '技術革新ブーム',
+                description: 'カードの経済効果が1.3倍に増幅します。',
+                effect: { effectMultiplier: 1.3 },
+            },
+            {
+                id: 4,
+                name: '景気後退',
+                description: 'カードの経済効果が0.7倍に縮小し、資金繰りが厳しくなります。',
+                effect: { effectMultiplier: 0.7, costMultiplier: 1.1 },
+            },
+        ];
+
         const INITIAL_DECK = [
             {
                 id: 1,
@@ -172,6 +199,7 @@
             const [turn, setTurn] = useState(1);
             const [gameState, setGameState] = useState('START'); // START, PLAYING, WON, LOST
             const [logs, setLogs] = useState(['ゲーム開始！目標：GDP 300兆円到達']);
+            const [activeEvent, setActiveEvent] = useState(null);
             
             // プレイヤー状態
             const [player, setPlayer] = useState({
@@ -218,17 +246,27 @@
 
             // 初期化
             const startGame = () => {
+                const event = chooseRandomEvent();
+                setActiveEvent(event);
                 setPlayer({ money: 80, income: 20, gdp: 0, inflation: 0 });
                 setEnemy({ money: 80, income: 20, gdp: 0, inflation: 0 });
                 setPlayerHand([]);
                 setTurn(1);
-                setLogs(['ゲーム開始！GDP 300兆円を目指せ！']);
+                setLogs([`📢 今ターンのイベント: 「${event.name}」 - ${event.description}`, 'ゲーム開始！GDP 300兆円を目指せ！']);
                 setGameState('PLAYING');
                 drawCards(3);
             };
 
             const addLog = (msg) => {
                 setLogs(prev => [msg, ...prev].slice(0, 5));
+            };
+
+            const chooseRandomEvent = () => EVENTS[Math.floor(Math.random() * EVENTS.length)];
+
+            const selectTurnEvent = () => {
+                const event = chooseRandomEvent();
+                setActiveEvent(event);
+                addLog(`📢 今ターンのイベント: 「${event.name}」 - ${event.description}`);
             };
 
             // カードドロー機能
@@ -241,11 +279,37 @@
                 setPlayerHand(prev => [...prev, ...newCards]);
             };
 
+            const applyEventMultiplier = (prevState, nextState) => {
+                if (!activeEvent?.effect?.effectMultiplier) return nextState;
+                const multiplier = activeEvent.effect.effectMultiplier;
+                const applyScale = (key) => {
+                    const delta = nextState[key] - prevState[key];
+                    return prevState[key] + Math.round(delta * multiplier);
+                };
+                return {
+                    ...nextState,
+                    money: applyScale('money'),
+                    income: applyScale('income'),
+                    gdp: applyScale('gdp'),
+                };
+            };
+
+            const withEventMultiplier = (setter) => (updater) => setter(prev => {
+                const next = typeof updater === 'function' ? updater(prev) : updater;
+                return applyEventMultiplier(prev, next);
+            });
+
+            const calculateAdjustedCost = (baseCost, inflationRate = 0) => {
+                const inflated = calculateInflatedCost(baseCost, inflationRate);
+                if (!activeEvent?.effect?.costMultiplier) return inflated;
+                return Math.max(0, Math.round(inflated * activeEvent.effect.costMultiplier));
+            };
+
             // プレイヤーのターン処理
             const playCard = (card) => {
                 if (gameState !== 'PLAYING') return;
 
-                const adjustedCost = calculateInflatedCost(card.cost, player.inflation);
+                const adjustedCost = calculateAdjustedCost(card.cost, player.inflation);
 
                 if (player.money < adjustedCost) {
                     addLog(`資金不足です（必要: ${adjustedCost}兆円、インフレ影響を反映）`);
@@ -255,7 +319,7 @@
                 let updatedPlayerState = null;
 
                 setPlayer(prev => {
-                    const adjusted = calculateInflatedCost(card.cost, prev.inflation);
+                    const adjusted = calculateAdjustedCost(card.cost, prev.inflation);
                     const afterCost = { ...prev, money: prev.money - adjusted };
 
                     if (card.type === 'ATTACK') {
@@ -263,7 +327,7 @@
                         return afterCost;
                     }
 
-                    const afterEffect = card.effect(afterCost, enemy);
+                    const afterEffect = applyEventMultiplier(afterCost, card.effect(afterCost, enemy));
                     const afterInflation = applyInflationChange(afterEffect, card.inflationChange);
                     if (card.inflationChange) {
                         addLog(`あなた: 「${card.name}」が物価に影響 (${card.inflationChange > 0 ? '+' : ''}${card.inflationChange}%)`);
@@ -275,7 +339,8 @@
 
                 // 効果発動
                 if (card.type === 'ATTACK') {
-                    card.effect(updatedPlayerState, enemy, setEnemy);
+                    const eventAwareSetEnemy = withEventMultiplier(setEnemy);
+                    card.effect(updatedPlayerState, enemy, eventAwareSetEnemy);
                     addLog(`あなた: 「${card.name}」を使用！相手を妨害した。`);
                 } else {
                     addLog(`あなた: 「${card.name}」を使用。経済効果発動！`);
@@ -293,14 +358,16 @@
 
                 // 1. 収入の処理（プレイヤー）
                 const driftedInflation = applyInflationDrift(player.inflation);
+                const incomePenalty = activeEvent?.effect?.incomePenalty ?? 0;
+                const playerIncomeGain = Math.max(0, player.income - incomePenalty);
                 const playerAfterIncome = {
                     ...player,
-                    money: player.money + player.income,
+                    money: player.money + playerIncomeGain,
                     inflation: driftedInflation,
                 };
                 const unrestApplied = applyUnrestPenalty(playerAfterIncome, 'あなた');
                 setPlayer(unrestApplied);
-                addLog(`ターン終了: 収入 +${player.income}兆円、インフレ率 ${player.inflation.toFixed(1)} → ${driftedInflation.toFixed(1)}%`);
+                addLog(`ターン終了: 収入 +${playerIncomeGain}兆円${incomePenalty ? ` (イベントで-${incomePenalty})` : ''}、インフレ率 ${player.inflation.toFixed(1)} → ${driftedInflation.toFixed(1)}%`);
 
                 // 2. 勝利判定
                 if (checkWinCondition()) return;
@@ -312,6 +379,7 @@
                 if (!aiEndedGame) {
                     setTurn(prev => prev + 1);
                     drawCards(1);
+                    selectTurnEvent();
                 }
             };
 
@@ -324,10 +392,12 @@
                         addLog(`ライバル: インフレ率 ${prev.inflation.toFixed(1)}% → ${drifted.toFixed(1)}% (自動調整)`);
                     }
                     const afterDrift = { ...prev, inflation: drifted };
-                    const afterIncome = { ...afterDrift, money: afterDrift.money + afterDrift.income };
+                    const incomePenalty = activeEvent?.effect?.incomePenalty ?? 0;
+                    const aiIncomeGain = Math.max(0, afterDrift.income - incomePenalty);
+                    const afterIncome = { ...afterDrift, money: afterDrift.money + aiIncomeGain };
                     const unrestAdjusted = applyUnrestPenalty(afterIncome, 'ライバル');
 
-                    const potentialActions = INITIAL_DECK.filter(c => calculateInflatedCost(c.cost, unrestAdjusted.inflation) <= unrestAdjusted.money);
+                    const potentialActions = INITIAL_DECK.filter(c => calculateAdjustedCost(c.cost, unrestAdjusted.inflation) <= unrestAdjusted.money);
 
                     if (potentialActions.length === 0) {
                         addLog(`ライバル: 資金不足のため資金を温存。`);
@@ -336,17 +406,18 @@
                     }
 
                     const aiCard = potentialActions[Math.floor(Math.random() * potentialActions.length)];
-                    const inflatedCost = calculateInflatedCost(aiCard.cost, unrestAdjusted.inflation);
+                    const inflatedCost = calculateAdjustedCost(aiCard.cost, unrestAdjusted.inflation);
                     let afterPayment = { ...unrestAdjusted, money: unrestAdjusted.money - inflatedCost };
 
                     if (aiCard.type === 'ATTACK') {
-                        aiCard.effect(afterPayment, player, setPlayer);
+                        const eventAwareSetPlayer = withEventMultiplier(setPlayer);
+                        aiCard.effect(afterPayment, player, eventAwareSetPlayer);
                         addLog(`ライバル: 「${aiCard.name}」を使用！`);
                         latestEnemyState = afterPayment;
                         return afterPayment;
                     }
 
-                    const afterEffect = aiCard.effect(afterPayment, player);
+                    const afterEffect = applyEventMultiplier(afterPayment, aiCard.effect(afterPayment, player));
                     const afterInflation = applyInflationChange(afterEffect, aiCard.inflationChange);
                     if (aiCard.inflationChange) {
                         addLog(`ライバル: 「${aiCard.name}」で物価が変動 (${aiCard.inflationChange > 0 ? '+' : ''}${aiCard.inflationChange}%)`);
@@ -380,7 +451,7 @@
 
             return (
                 <div className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto animate-fade-in">
-                    
+
                     {/* ヘッダー */}
                     <header className="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                         <div>
@@ -396,8 +467,18 @@
                         >
                             <IconRefreshCw size={16} />
                             {gameState === 'START' ? 'ゲーム開始' : 'リセット'}
-                        </button>
-                    </header>
+                            </button>
+                        </header>
+
+                    {activeEvent && (
+                        <div className="mb-4 bg-amber-50 border border-amber-200 p-3 rounded-lg shadow-sm flex items-start gap-3">
+                            <IconAlertCircle className="text-amber-600 mt-0.5" size={20} />
+                            <div>
+                                <div className="text-sm font-bold text-amber-800">今ターンのイベント: {activeEvent.name}</div>
+                                <div className="text-xs text-amber-700">{activeEvent.description}</div>
+                            </div>
+                        </div>
+                    )}
 
                     {gameState === 'START' && (
                         <div className="bg-white p-8 rounded-xl shadow-lg text-center mb-8 border-2 border-indigo-100 animate-fade-in">
@@ -527,7 +608,7 @@
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                     {playerHand.map((card) => {
                                         const typeInfo = CARD_TYPES[card.type];
-                                        const inflatedCost = calculateInflatedCost(card.cost, player.inflation);
+                                        const inflatedCost = calculateAdjustedCost(card.cost, player.inflation);
                                         const canAfford = player.money >= inflatedCost;
                                         return (
                                             <button
@@ -551,7 +632,7 @@
                                                 </div>
                                                 <h4 className="font-bold text-lg mb-1">{card.name}</h4>
                                                 <p className="text-xs mb-1 flex-grow opacity-90">{card.description}</p>
-                                                <p className="text-[10px] text-amber-800 font-bold mb-2">インフレ反映: 元コスト ¥{card.cost} → 現在 ¥{inflatedCost}</p>
+                                                <p className="text-[10px] text-amber-800 font-bold mb-2">調整後コスト: 元コスト ¥{card.cost} → 現在 ¥{inflatedCost} (物価・イベント反映)</p>
                                                 
                                                 {/* 経済学豆知識ツールチップ (Hover) */}
                                                 <div className="mt-2 pt-2 border-t border-black/10 text-[10px] font-medium opacity-80 flex gap-1 items-start">
