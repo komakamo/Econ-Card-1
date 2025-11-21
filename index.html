@@ -4,8 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>エコノミクス・マスター - 経済学カードゲーム</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+
     <!-- Tailwind CSS (デザイン用) -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Inter"', '"Noto Sans JP"', 'sans-serif'],
+                        mono: ['"Noto Sans JP"', 'monospace'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
     <!-- React & ReactDOM (フレームワーク) -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -19,11 +48,17 @@
             to { opacity: 1; transform: translateY(0); }
         }
         .animate-fade-in {
-            animation: fadeIn 0.3s ease-out forwards;
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        body {
+            background-color: #f8fafc;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"), linear-gradient(to bottom right, #f1f5f9, #e2e8f0);
+            min-height: 100vh;
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800 font-sans">
+<body class="text-slate-800 antialiased selection:bg-brand-100 selection:text-brand-900">
     <div id="root"></div>
 
     <script type="text/babel">
@@ -59,9 +94,24 @@
         // --- ゲームデータ定義 ---
 
         const CARD_TYPES = {
-            PRODUCTION: { label: '生産', color: 'bg-blue-100 text-blue-800 border-blue-300', icon: <IconZap size={16} /> },
-            POLICY: { label: '政策', color: 'bg-green-100 text-green-800 border-green-300', icon: <IconBookOpen size={16} /> },
-            ATTACK: { label: '外交', color: 'bg-red-100 text-red-800 border-red-300', icon: <IconShield size={16} /> },
+            PRODUCTION: {
+                label: '生産',
+                baseStyle: 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1',
+                headerStyle: 'bg-blue-50 text-blue-600 border-b border-blue-100',
+                icon: <IconZap size={14} className="text-blue-500" />
+            },
+            POLICY: {
+                label: '政策',
+                baseStyle: 'bg-white border-slate-200 hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-900/5 hover:-translate-y-1',
+                headerStyle: 'bg-emerald-50 text-emerald-600 border-b border-emerald-100',
+                icon: <IconBookOpen size={14} className="text-emerald-500" />
+            },
+            ATTACK: {
+                label: '外交',
+                baseStyle: 'bg-white border-slate-200 hover:border-rose-300 hover:shadow-xl hover:shadow-rose-900/5 hover:-translate-y-1',
+                headerStyle: 'bg-rose-50 text-rose-600 border-b border-rose-100',
+                icon: <IconShield size={14} className="text-rose-500" />
+            },
         };
 
         const EVENTS = [
@@ -216,6 +266,112 @@
 
         const calculateInflatedCost = (baseCost, inflationRate = 0) => {
             return Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
+        };
+
+        const StatusPanel = ({ data, isEnemy, interest }) => {
+            const inflationAlert = (value) => {
+                if (value >= 12) return { label: 'ハイパーインフレ', color: 'text-red-600 bg-red-50 ring-red-500/20' };
+                if (value >= 8) return { label: '高インフレ', color: 'text-orange-600 bg-orange-50 ring-orange-500/20' };
+                if (value >= 4) return { label: 'インフレ進行', color: 'text-amber-600 bg-amber-50 ring-amber-500/20' };
+                if (value <= -2) return { label: 'デフレ', color: 'text-blue-600 bg-blue-50 ring-blue-500/20' };
+                return { label: '安定', color: 'text-emerald-600 bg-emerald-50 ring-emerald-500/20' };
+            };
+
+            const alert = inflationAlert(data.inflation);
+
+            // Theme colors
+            const theme = isEnemy ? {
+                bg: 'bg-slate-50/80',
+                border: 'border-slate-200',
+                text: 'text-slate-600',
+                accent: 'text-slate-500',
+                highlight: 'bg-slate-200',
+                bar: 'bg-slate-400'
+            } : {
+                bg: 'bg-white/90',
+                border: 'border-blue-100',
+                text: 'text-slate-800',
+                accent: 'text-blue-600',
+                highlight: 'bg-blue-50',
+                bar: 'bg-blue-500'
+            };
+
+            return (
+                <div className={`relative overflow-hidden p-5 rounded-2xl border-2 transition-all duration-300 backdrop-blur-sm ${theme.bg} ${theme.border} ${!isEnemy && 'shadow-xl shadow-blue-900/5 ring-2 ring-blue-500/5'}`}>
+                    {/* Header */}
+                    <div className="flex justify-between items-start mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${isEnemy ? 'bg-white text-slate-400 border border-slate-200' : 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-200'}`}>
+                                {isEnemy ? <IconZap size={20} /> : <IconWallet size={20} />}
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h3 className={`font-bold text-lg leading-none ${theme.text}`}>
+                                        {isEnemy ? 'ライバル国' : '自国 (あなた)'}
+                                    </h3>
+                                    <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${isEnemy ? 'bg-slate-200 text-slate-500' : 'bg-blue-100 text-blue-600'}`}>
+                                        {isEnemy ? 'AI' : 'YOU'}
+                                    </span>
+                                </div>
+                                <div className="text-xs text-slate-400 mt-1 font-medium flex items-center gap-1">
+                                    信用格付:
+                                    <span className={`font-bold ${['AAA','BBB'].includes(data.rating) ? 'text-emerald-600' : 'text-amber-600'}`}>{data.rating}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="text-right">
+                            <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-0.5">GDP (Goal: 300)</div>
+                            <div className={`text-3xl font-black tracking-tighter ${isEnemy ? 'text-slate-600' : 'text-blue-600'}`}>
+                                {data.gdp}<span className="text-sm font-bold ml-1 text-slate-400">兆</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                        {/* Money */}
+                        <div className="bg-white/50 p-3 rounded-xl border border-slate-100">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                                    資金残高
+                                </span>
+                                <span className="text-sm font-bold font-mono text-slate-700">¥{data.money}</span>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-2">
+                                <div className={`h-full rounded-full transition-all duration-500 ${theme.bar}`} style={{ width: `${Math.min(100, data.money)}%` }}></div>
+                            </div>
+                            <div className="flex justify-between text-[10px] font-medium text-slate-400">
+                                <span>収支: <span className="text-emerald-600">+{data.income}</span></span>
+                                <span>利払: <span className="text-rose-500">-{interest}</span></span>
+                            </div>
+                        </div>
+
+                        {/* Support */}
+                        <div className="bg-white/50 p-3 rounded-xl border border-slate-100">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs font-bold text-slate-400">国民支持率</span>
+                                <span className={`text-sm font-bold font-mono ${data.support < 30 ? 'text-rose-500' : 'text-slate-700'}`}>{data.support}%</span>
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                <div className={`h-full rounded-full transition-all duration-500 ${data.support < 30 ? 'bg-rose-500' : 'bg-indigo-500'}`} style={{ width: `${data.support}%` }}></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Footer Stats */}
+                    <div className="flex gap-2">
+                        <div className="flex-1 bg-slate-100/50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-400">債務残高</span>
+                            <span className="text-xs font-bold text-slate-600">{data.debt}兆</span>
+                        </div>
+                        <div className={`flex-1 p-2 rounded-lg border ring-1 flex justify-between items-center ${alert.color}`}>
+                            <span className="text-[10px] font-bold opacity-70">インフレ</span>
+                            <span className="text-xs font-bold">{data.inflation.toFixed(1)}%</span>
+                        </div>
+                    </div>
+                </div>
+            );
         };
 
         // --- メインコンポーネント ---
@@ -605,32 +761,50 @@
             };
 
             return (
-                <div className="min-h-screen p-4 md:p-8 max-w-4xl mx-auto animate-fade-in">
+                <div className="min-h-screen p-4 md:p-8 max-w-5xl mx-auto animate-fade-in pb-20 text-slate-800">
 
                     {/* ヘッダー */}
-                    <header className="flex justify-between items-center mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                        <div>
-                            <h1 className="text-xl md:text-2xl font-bold text-indigo-700 flex items-center gap-2">
-                                <IconTrendingUp className="text-indigo-600" />
-                                エコノミクス・マスター
-                            </h1>
-                            <p className="text-xs text-gray-500">Turn: {turn} | 目標: GDP {WINNING_GDP}兆円</p>
+                    <header className="flex flex-col md:flex-row md:justify-between md:items-center mb-10 gap-4">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-3.5 rounded-2xl shadow-xl shadow-slate-900/20 ring-4 ring-white">
+                                <IconTrendingUp size={28} />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-black text-slate-800 tracking-tighter">Economics Master</h1>
+                                <div className="flex items-center gap-3 mt-1">
+                                    <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-sm">
+                                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                                        <span className="text-xs font-bold text-slate-600">TURN {turn}</span>
+                                    </div>
+                                    <span className="text-xs font-bold text-slate-400">GOAL: GDP {WINNING_GDP}T</span>
+                                </div>
+                            </div>
                         </div>
                         <button 
                             onClick={startGame}
-                            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition flex items-center gap-2 text-sm font-bold"
+                            className="group px-5 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all font-bold text-sm shadow-sm hover:shadow-md flex items-center gap-2"
                         >
-                            <IconRefreshCw size={16} />
-                            {gameState === 'START' ? 'ゲーム開始' : 'リセット'}
-                            </button>
-                        </header>
+                            <IconRefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />
+                            {gameState === 'START' ? 'Start Game' : 'Reset Game'}
+                        </button>
+                    </header>
 
-                    {activeEvent && (
-                        <div className="mb-4 bg-amber-50 border border-amber-200 p-3 rounded-lg shadow-sm flex items-start gap-3">
-                            <IconAlertCircle className="text-amber-600 mt-0.5" size={20} />
-                            <div>
-                                <div className="text-sm font-bold text-amber-800">今ターンのイベント: {activeEvent.name}</div>
-                                <div className="text-xs text-amber-700">{activeEvent.description}</div>
+                    {activeEvent && gameState === 'PLAYING' && (
+                        <div className="mb-8 animate-fade-in">
+                            <div className="relative overflow-hidden bg-white border border-amber-100 p-1 rounded-2xl shadow-xl shadow-amber-900/5 ring-1 ring-amber-500/10">
+                                <div className="bg-gradient-to-r from-amber-50/80 to-orange-50/80 backdrop-blur-md p-5 rounded-xl flex items-start md:items-center gap-5">
+                                    <div className="flex-shrink-0 bg-white p-3 rounded-xl shadow-sm border border-amber-100 text-amber-500">
+                                        <IconAlertCircle size={24} />
+                                    </div>
+                                    <div className="flex-grow">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">News</span>
+                                            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Current Event</span>
+                                        </div>
+                                        <h3 className="text-xl font-black text-slate-800 tracking-tight mb-1">{activeEvent.name}</h3>
+                                        <p className="text-sm text-slate-600 font-medium leading-relaxed">{activeEvent.description}</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -656,145 +830,62 @@
                     {(gameState === 'PLAYING' || gameState === 'WON' || gameState === 'LOST') && (
                         <div className="space-y-6 animate-fade-in">
                             
-                            {/* 敵のステータス */}
-                            <div className="bg-red-50 p-4 rounded-xl border border-red-200 shadow-sm flex justify-between items-center opacity-90">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-red-200 p-2 rounded-full">
-                                        <IconAlertCircle className="text-red-600" size={24} />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-red-800">ライバル国</h3>
-                                        <div className="text-xs text-red-600">AI Player</div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-4 md:gap-8 text-right">
-                                    <div>
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">資金</div>
-                                        <div className="font-mono text-lg font-bold">{enemy.money}兆</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">収入</div>
-                                        <div className="font-mono text-lg text-green-600">+{enemy.income}/T</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">債務</div>
-                                        <div className="font-mono text-lg text-red-600">{enemy.debt}兆</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">格付け</div>
-                                        <div className="font-mono text-lg font-bold text-orange-700">{enemy.rating}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">利払い</div>
-                                        <div className="font-mono text-lg text-red-500">-{getInterestForTurn(enemy)}/T</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">支持率</div>
-                                        <div className="font-mono text-lg font-bold text-purple-700">{enemy.support}%</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">GDP</div>
-                                        <div className="font-mono text-2xl font-bold text-blue-700">{enemy.gdp}兆</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">インフレ</div>
-                                        <div className="font-mono text-lg font-bold text-amber-700">{enemy.inflation.toFixed(1)}%</div>
-                                        <div className={`text-[10px] font-bold px-2 py-1 rounded border inline-block mt-1 ${getInflationAlert(enemy.inflation).color}`}>
-                                            {getInflationAlert(enemy.inflation).label}
-                                        </div>
-                                    </div>
-                                </div>
+                            {/* ステータスエリア (Grid) */}
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <StatusPanel data={player} isEnemy={false} interest={getInterestForTurn(player)} />
+                                <StatusPanel data={enemy} isEnemy={true} interest={getInterestForTurn(enemy)} />
                             </div>
 
                             {/* ログと勝利画面 */}
-                            <div className="relative h-32 bg-gray-800 rounded-xl p-4 overflow-y-auto shadow-inner border border-gray-700">
+                            <div className="relative min-h-[120px] max-h-[180px] bg-slate-900 rounded-2xl p-4 overflow-y-auto shadow-inner ring-1 ring-white/10 font-mono text-sm leading-relaxed scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent group">
                                 {gameState === 'WON' && (
-                                    <div className="absolute inset-0 bg-white/90 flex flex-col items-center justify-center z-10 rounded-xl">
-                                        <h2 className="text-3xl font-bold text-yellow-600 mb-2">VICTORY!</h2>
-                                        <p className="font-bold text-gray-700">あなたの経済政策は成功しました！</p>
+                                    <div className="absolute inset-0 bg-white/95 backdrop-blur-md flex flex-col items-center justify-center z-20 rounded-2xl animate-fade-in">
+                                        <div className="bg-yellow-100 p-4 rounded-full mb-4">
+                                            <IconTrendingUp size={48} className="text-yellow-600" />
+                                        </div>
+                                        <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">VICTORY!</h2>
+                                        <p className="font-medium text-slate-500">あなたの経済政策は成功しました！</p>
+                                        <button onClick={startGame} className="mt-6 px-6 py-3 bg-brand-600 text-white rounded-xl font-bold shadow-lg shadow-brand-500/30 hover:bg-brand-700 transition-all">Play Again</button>
                                     </div>
                                 )}
                                 {gameState === 'LOST' && (
-                                    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-10 rounded-xl text-white">
-                                        <h2 className="text-3xl font-bold text-red-500 mb-2">DEFEAT...</h2>
-                                        <p>経済競争に敗北しました...</p>
+                                    <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center z-20 rounded-2xl animate-fade-in text-white">
+                                        <div className="bg-slate-800 p-4 rounded-full mb-4 border border-slate-700">
+                                            <IconAlertCircle size={48} className="text-rose-500" />
+                                        </div>
+                                        <h2 className="text-4xl font-black text-rose-500 mb-2 tracking-tight">DEFEAT...</h2>
+                                        <p className="text-slate-400">経済競争に敗北しました...</p>
+                                        <button onClick={startGame} className="mt-6 px-6 py-3 bg-white text-slate-900 rounded-xl font-bold hover:bg-slate-200 transition-all">Try Again</button>
                                     </div>
                                 )}
-                                <div className="space-y-1">
+                                <div className="space-y-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
                                     {logs.map((log, i) => (
-                                        <p key={i} className="text-sm text-gray-300 border-b border-gray-700 pb-1 last:border-0">
-                                            <span className="text-gray-500 text-xs mr-2">LOG</span>{log}
-                                        </p>
+                                        <div key={i} className="flex gap-3 text-slate-300 border-b border-slate-800/50 pb-1.5 last:border-0 last:pb-0">
+                                            <span className="text-slate-600 text-xs mt-1 select-none shrink-0">{'>'}</span>
+                                            <span>{log}</span>
+                                        </div>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* プレイヤーのステータス */}
-                            <div className="bg-white p-4 rounded-xl border-2 border-indigo-100 shadow-sm flex justify-between items-center">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-indigo-100 p-2 rounded-full">
-                                        <IconWallet className="text-indigo-600" size={24} />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-bold text-indigo-900">あなた (自国)</h3>
-                                        <div className="text-xs text-indigo-600">Current Player</div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-4 md:gap-8 text-right">
-                                    <div className="bg-yellow-50 px-3 py-1 rounded-lg border border-yellow-100">
-                                        <div className="text-xs text-yellow-700 uppercase tracking-wider font-bold">資金</div>
-                                        <div className="font-mono text-xl font-bold text-yellow-800">{player.money}兆</div>
-                                    </div>
-                                    <div className="px-3 py-1">
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">収入</div>
-                                        <div className="font-mono text-xl text-green-600">+{player.income}/T</div>
-                                    </div>
-                                    <div className="px-3 py-1">
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">債務</div>
-                                        <div className="font-mono text-xl text-red-600">{player.debt}兆</div>
-                                    </div>
-                                    <div className="px-3 py-1">
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">格付け</div>
-                                        <div className="font-mono text-xl font-bold text-orange-700">{player.rating}</div>
-                                    </div>
-                                    <div className="px-3 py-1">
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">利払い</div>
-                                        <div className="font-mono text-xl text-red-500">-{getInterestForTurn(player)}/T</div>
-                                    </div>
-                                    <div className="px-3 py-1">
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">支持率</div>
-                                        <div className="font-mono text-xl font-bold text-purple-700">{player.support}%</div>
-                                    </div>
-                                    <div className="bg-blue-50 px-3 py-1 rounded-lg border border-blue-100">
-                                        <div className="text-xs text-blue-700 uppercase tracking-wider font-bold">GDP</div>
-                                        <div className="font-mono text-3xl font-bold text-blue-700">{player.gdp}兆</div>
-                                    </div>
-                                    <div className="px-3 py-1 text-right">
-                                        <div className="text-xs text-gray-500 uppercase tracking-wider">インフレ</div>
-                                        <div className="font-mono text-xl font-bold text-amber-700">{player.inflation.toFixed(1)}%</div>
-                                        <div className={`text-[10px] font-bold px-2 py-1 rounded border inline-block mt-1 ${getInflationAlert(player.inflation).color}`}>
-                                            {getInflationAlert(player.inflation).label}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
                             {/* 手札エリア */}
                             <div>
-                                <div className="flex justify-between items-end mb-2">
-                                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Hand Cards (Click to Play)</h3>
+                                <div className="flex justify-between items-end mb-4">
+                                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider pl-1">Hand Cards (Click to Play)</h3>
                                     <div className="flex gap-2">
                                         <button
                                             onClick={issueBonds}
                                             disabled={gameState !== 'PLAYING'}
-                                            className="bg-amber-500 text-white px-4 py-2 rounded-full font-bold hover:bg-amber-600 disabled:opacity-50 shadow flex items-center gap-2"
+                                            className="bg-amber-500 text-white px-4 py-2 rounded-xl font-bold hover:bg-amber-600 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none flex items-center gap-2"
                                         >
-                                            国債発行 (+50兆)
+                                            <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded">資金調達</span>
+                                            国債発行
                                         </button>
                                         <button
                                             onClick={endTurn}
                                             disabled={gameState !== 'PLAYING'}
-                                            className="bg-gray-800 text-white px-6 py-2 rounded-full font-bold hover:bg-gray-700 disabled:opacity-50 shadow-lg flex items-center gap-2"
+                                            className="bg-slate-800 text-white px-6 py-2 rounded-xl font-bold hover:bg-slate-700 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none flex items-center gap-2"
                                         >
                                             ターン終了 <IconArrowRight size={16} />
                                         </button>
@@ -815,55 +906,77 @@
                                                 disabled={!canAfford || gameState !== 'PLAYING'}
                                                 className={`
                                                     relative text-left group
-                                                    flex flex-col h-full p-4 rounded-xl border-2 shadow-sm transition-all duration-200
-                                                    ${typeInfo.color}
-                                                    ${canAfford ? 'hover:-translate-y-1 hover:shadow-md cursor-pointer' : 'opacity-50 cursor-not-allowed grayscale-[0.5]'}
+                                                    flex flex-col h-full rounded-xl border transition-all duration-300 overflow-hidden
+                                                    ${typeInfo.baseStyle}
+                                                    ${canAfford ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed grayscale'}
                                                 `}
                                             >
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <span className="text-xs font-bold px-2 py-1 rounded-full bg-white/50 backdrop-blur-sm border border-white/20 flex items-center gap-1">
+                                                {/* Card Header */}
+                                                <div className={`px-4 py-3 flex justify-between items-center ${typeInfo.headerStyle}`}>
+                                                    <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
                                                         {typeInfo.icon} {typeInfo.label}
                                                     </span>
-                                                    <span className="font-mono text-lg font-bold bg-white/80 px-2 rounded text-gray-800">
-                                                        ¥{inflatedCost}
-                                                    </span>
+                                                    <div className="flex flex-col items-end leading-none">
+                                                        <span className="font-mono text-lg font-black tracking-tighter">¥{inflatedCost}</span>
+                                                    </div>
                                                 </div>
-                                                <h4 className="font-bold text-lg mb-1">{card.name}</h4>
-                                                <p className="text-xs mb-1 flex-grow opacity-90">{card.description}</p>
-                                                <p className="text-[10px] text-amber-800 font-bold mb-2">調整後コスト: 元コスト ¥{card.cost} → 現在 ¥{inflatedCost} (物価・イベント反映)</p>
 
-                                                {(comboReadyTags.length > 0 || providesTags.length > 0) && (
-                                                    <div className="flex flex-wrap gap-1 mb-2 text-[10px]">
-                                                        {comboReadyTags.length > 0 && (
-                                                            <span className="bg-pink-100 text-pink-700 border border-pink-200 px-2 py-1 rounded-full font-bold shadow-sm">
-                                                                コンボ準備: {comboReadyTags.join(', ')}
-                                                            </span>
+                                                {/* Card Body */}
+                                                <div className="p-4 flex flex-col flex-grow bg-white/60">
+                                                    <h4 className="font-bold text-slate-800 text-sm mb-2 leading-tight min-h-[2.5em] flex items-center">
+                                                        {card.name}
+                                                    </h4>
+
+                                                    <p className="text-xs text-slate-600 mb-4 flex-grow leading-relaxed">
+                                                        {card.description}
+                                                    </p>
+
+                                                    <div className="space-y-1.5">
+                                                        {/* Cost Info */}
+                                                        {inflatedCost !== card.cost && (
+                                                            <div className="text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100 flex items-center gap-1">
+                                                                <IconAlertCircle size={10} />
+                                                                コスト変動: ¥{card.cost} → ¥{inflatedCost}
+                                                            </div>
                                                         )}
-                                                        {providesTags.length > 0 && (
-                                                            <span className="bg-indigo-100 text-indigo-700 border border-indigo-200 px-2 py-1 rounded-full font-bold shadow-sm">
-                                                                シナジータグ付与: {providesTags.join(', ')}
-                                                            </span>
+
+                                                        {/* Tags */}
+                                                        {(comboReadyTags.length > 0 || providesTags.length > 0) && (
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {comboReadyTags.map(tag => (
+                                                                     <span key={tag} className="bg-rose-100 text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                                                        ★ {tag}
+                                                                     </span>
+                                                                ))}
+                                                                {providesTags.map(tag => (
+                                                                     <span key={tag} className="bg-slate-100 text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-medium">
+                                                                        + {tag}
+                                                                     </span>
+                                                                ))}
+                                                            </div>
                                                         )}
                                                     </div>
-                                                )}
+                                                </div>
 
-                                                {/* 経済学豆知識ツールチップ (Hover) */}
-                                                <div className="mt-2 pt-2 border-t border-black/10 text-[10px] font-medium opacity-80 flex gap-1 items-start">
-                                                    <IconBookOpen size={12} className="mt-0.5 flex-shrink-0" />
+                                                {/* Footer / Tip */}
+                                                <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 text-[10px] text-slate-500 leading-tight">
+                                                    <span className="font-bold text-slate-400 block mb-1 text-[9px] uppercase">MEMO</span>
                                                     {card.tip}
                                                 </div>
 
                                                 {!canAfford && (
-                                                    <div className="absolute inset-0 bg-white/50 flex items-center justify-center rounded-xl backdrop-blur-[1px]">
-                                                        <span className="bg-gray-800 text-white text-xs font-bold px-2 py-1 rounded">資金不足</span>
+                                                    <div className="absolute inset-0 bg-slate-100/50 flex items-center justify-center backdrop-blur-[1px] z-10">
+                                                        <span className="bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">資金不足</span>
                                                     </div>
                                                 )}
                                             </button>
                                         );
                                     })}
                                     {playerHand.length === 0 && (
-                                        <div className="col-span-full text-center py-8 text-gray-400 border-2 border-dashed border-gray-300 rounded-xl">
-                                            手札がありません。ターンを終了してカードを引いてください。
+                                        <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                                            <IconBookOpen className="mb-2 opacity-50" size={32} />
+                                            <p className="text-sm font-medium">手札がありません</p>
+                                            <p className="text-xs mt-1">ターンを終了して次のカードを引いてください</p>
                                         </div>
                                     )}
                                 </div>
