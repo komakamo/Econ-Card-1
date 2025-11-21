@@ -179,6 +179,21 @@
         const INFLATION_MIN = -5;
         const INFLATION_MAX = 15;
 
+        const RATING_TIERS = [
+            { label: 'AAA', threshold: 0, interestMultiplier: 1, eventDamageMultiplier: 1 },
+            { label: 'BBB', threshold: 150, interestMultiplier: 1.25, eventDamageMultiplier: 1.1 },
+            { label: 'CCC', threshold: 250, interestMultiplier: 1.6, eventDamageMultiplier: 1.25 },
+            { label: 'D', threshold: 400, interestMultiplier: 2, eventDamageMultiplier: 1.5 },
+        ];
+
+        const getRatingByDebt = (debt = 0) => {
+            const sorted = [...RATING_TIERS].sort((a, b) => b.threshold - a.threshold);
+            const found = sorted.find(tier => debt >= tier.threshold);
+            return found?.label ?? 'AAA';
+        };
+
+        const getRatingInfo = (rating = 'AAA') => RATING_TIERS.find(tier => tier.label === rating) ?? RATING_TIERS[0];
+
         const clampInflation = (value) => Math.min(INFLATION_MAX, Math.max(INFLATION_MIN, Number(value.toFixed(1))));
 
         const applyInflationDrift = (value) => {
@@ -212,6 +227,9 @@
                 gdp: 0,
                 inflation: 0,
                 support: 70,
+                debt: 0,
+                rating: 'AAA',
+                interestDue: 0,
             });
             const [playerHand, setPlayerHand] = useState([]);
 
@@ -223,6 +241,9 @@
                 gdp: 0,
                 inflation: 0,
                 support: 70,
+                debt: 0,
+                rating: 'AAA',
+                interestDue: 0,
             });
 
             const getInflationAlert = (value) => {
@@ -257,12 +278,32 @@
                 return { ...state, support: nextSupport };
             };
 
+            const applyRatingUpdate = (state, actorLabel) => {
+                const nextRating = getRatingByDebt(state.debt ?? 0);
+                if (state.rating === nextRating) return state;
+                addLog(`${actorLabel}: 債務残高${state.debt}兆により格付けが${state.rating} → ${nextRating}に変化`);
+                return { ...state, rating: nextRating };
+            };
+
+            const getInterestForTurn = (state) => {
+                const ratingInfo = getRatingInfo(state.rating);
+                return Math.max(0, Math.round((state.interestDue ?? 0) * ratingInfo.interestMultiplier));
+            };
+
+            const applyInterestPayment = (state, actorLabel) => {
+                const interest = getInterestForTurn(state);
+                if (!interest) return state;
+                const afterPayment = { ...state, money: Math.max(0, state.money - interest) };
+                addLog(`${actorLabel}: 債務利払いとして ${interest}兆円を支払いました（格付け: ${state.rating}）`);
+                return afterPayment;
+            };
+
             // 初期化
             const startGame = () => {
                 const event = chooseRandomEvent();
                 setActiveEvent(event);
-                setPlayer({ money: 80, income: 20, gdp: 0, inflation: 0, support: 70 });
-                setEnemy({ money: 80, income: 20, gdp: 0, inflation: 0, support: 70 });
+                setPlayer({ money: 80, income: 20, gdp: 0, inflation: 0, support: 70, debt: 0, rating: 'AAA', interestDue: 0 });
+                setEnemy({ money: 80, income: 20, gdp: 0, inflation: 0, support: 70, debt: 0, rating: 'AAA', interestDue: 0 });
                 setPlayerHand([]);
                 setTurn(1);
                 setLogs([`📢 今ターンのイベント: 「${event.name}」 - ${event.description}`, 'ゲーム開始！GDP 300兆円を目指せ！']);
@@ -290,6 +331,21 @@
                     newCards.push({ ...randomCard, uniqueId: Math.random() });
                 }
                 setPlayerHand(prev => [...prev, ...newCards]);
+            };
+
+            const issueBonds = () => {
+                if (gameState !== 'PLAYING') return;
+                setPlayer(prev => {
+                    const updated = {
+                        ...prev,
+                        money: prev.money + 50,
+                        debt: (prev.debt ?? 0) + 50,
+                        interestDue: (prev.interestDue ?? 0) + 5,
+                    };
+                    const rated = applyRatingUpdate(updated, 'あなた');
+                    addLog('あなた: 国債発行！資金+50兆 / 債務+50兆、利払い5兆/ターンを追加');
+                    return rated;
+                });
             };
 
             const applyEventMultiplier = (prevState, nextState) => {
@@ -381,16 +437,20 @@
 
                 // 1. 収入の処理（プレイヤー）
                 const driftedInflation = applyInflationDrift(player.inflation);
-                const incomePenalty = activeEvent?.effect?.incomePenalty ?? 0;
+                const ratingInfo = getRatingInfo(player.rating);
+                const incomePenalty = Math.round((activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier);
                 const playerIncomeGain = Math.max(0, player.income - incomePenalty);
-                const playerAfterIncome = {
+                let playerAfterIncome = {
                     ...player,
                     money: player.money + playerIncomeGain,
                     inflation: driftedInflation,
                 };
-                const unrestApplied = applyUnrestPenalty(playerAfterIncome, 'あなた');
+                const interestPaid = getInterestForTurn(playerAfterIncome);
+                playerAfterIncome = applyInterestPayment(playerAfterIncome, 'あなた');
+                const ratedPlayer = applyRatingUpdate(playerAfterIncome, 'あなた');
+                const unrestApplied = applyUnrestPenalty(ratedPlayer, 'あなた');
                 setPlayer(unrestApplied);
-                addLog(`ターン終了: 収入 +${playerIncomeGain}兆円${incomePenalty ? ` (イベントで-${incomePenalty})` : ''}、インフレ率 ${player.inflation.toFixed(1)} → ${driftedInflation.toFixed(1)}%`);
+                addLog(`ターン終了: 収入 +${playerIncomeGain}兆円${incomePenalty ? ` (イベントで-${incomePenalty})` : ''}、利払い -${interestPaid}兆円、インフレ率 ${player.inflation.toFixed(1)} → ${driftedInflation.toFixed(1)}%、格付け ${ratedPlayer.rating}`);
 
                 // 2. 勝利判定
                 if (checkWinCondition()) return;
@@ -415,10 +475,13 @@
                         addLog(`ライバル: インフレ率 ${prev.inflation.toFixed(1)}% → ${drifted.toFixed(1)}% (自動調整)`);
                     }
                     const afterDrift = { ...prev, inflation: drifted };
-                    const incomePenalty = activeEvent?.effect?.incomePenalty ?? 0;
+                    const ratingInfo = getRatingInfo(afterDrift.rating);
+                    const incomePenalty = Math.round((activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier);
                     const aiIncomeGain = Math.max(0, afterDrift.income - incomePenalty);
-                    const afterIncome = { ...afterDrift, money: afterDrift.money + aiIncomeGain };
-                    const unrestAdjusted = applyUnrestPenalty(afterIncome, 'ライバル');
+                    let afterIncome = { ...afterDrift, money: afterDrift.money + aiIncomeGain };
+                    afterIncome = applyInterestPayment(afterIncome, 'ライバル');
+                    const ratedEnemy = applyRatingUpdate(afterIncome, 'ライバル');
+                    const unrestAdjusted = applyUnrestPenalty(ratedEnemy, 'ライバル');
 
                     const potentialActions = INITIAL_DECK.filter(c => calculateAdjustedCost(c.cost, unrestAdjusted.inflation) <= unrestAdjusted.money);
 
@@ -563,6 +626,18 @@
                                         <div className="font-mono text-lg text-green-600">+{enemy.income}/T</div>
                                     </div>
                                     <div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">債務</div>
+                                        <div className="font-mono text-lg text-red-600">{enemy.debt}兆</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">格付け</div>
+                                        <div className="font-mono text-lg font-bold text-orange-700">{enemy.rating}</div>
+                                    </div>
+                                    <div>
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">利払い</div>
+                                        <div className="font-mono text-lg text-red-500">-{getInterestForTurn(enemy)}/T</div>
+                                    </div>
+                                    <div>
                                         <div className="text-xs text-gray-500 uppercase tracking-wider">支持率</div>
                                         <div className="font-mono text-lg font-bold text-purple-700">{enemy.support}%</div>
                                     </div>
@@ -624,6 +699,18 @@
                                         <div className="font-mono text-xl text-green-600">+{player.income}/T</div>
                                     </div>
                                     <div className="px-3 py-1">
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">債務</div>
+                                        <div className="font-mono text-xl text-red-600">{player.debt}兆</div>
+                                    </div>
+                                    <div className="px-3 py-1">
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">格付け</div>
+                                        <div className="font-mono text-xl font-bold text-orange-700">{player.rating}</div>
+                                    </div>
+                                    <div className="px-3 py-1">
+                                        <div className="text-xs text-gray-500 uppercase tracking-wider">利払い</div>
+                                        <div className="font-mono text-xl text-red-500">-{getInterestForTurn(player)}/T</div>
+                                    </div>
+                                    <div className="px-3 py-1">
                                         <div className="text-xs text-gray-500 uppercase tracking-wider">支持率</div>
                                         <div className="font-mono text-xl font-bold text-purple-700">{player.support}%</div>
                                     </div>
@@ -645,13 +732,22 @@
                             <div>
                                 <div className="flex justify-between items-end mb-2">
                                     <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">Hand Cards (Click to Play)</h3>
-                                    <button 
-                                        onClick={endTurn}
-                                        disabled={gameState !== 'PLAYING'}
-                                        className="bg-gray-800 text-white px-6 py-2 rounded-full font-bold hover:bg-gray-700 disabled:opacity-50 shadow-lg flex items-center gap-2"
-                                    >
-                                        ターン終了 <IconArrowRight size={16} />
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={issueBonds}
+                                            disabled={gameState !== 'PLAYING'}
+                                            className="bg-amber-500 text-white px-4 py-2 rounded-full font-bold hover:bg-amber-600 disabled:opacity-50 shadow flex items-center gap-2"
+                                        >
+                                            国債発行 (+50兆)
+                                        </button>
+                                        <button
+                                            onClick={endTurn}
+                                            disabled={gameState !== 'PLAYING'}
+                                            className="bg-gray-800 text-white px-6 py-2 rounded-full font-bold hover:bg-gray-700 disabled:opacity-50 shadow-lg flex items-center gap-2"
+                                        >
+                                            ターン終了 <IconArrowRight size={16} />
+                                        </button>
+                                    </div>
                                 </div>
                                 
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
