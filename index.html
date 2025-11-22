@@ -24,10 +24,15 @@
                         brand: {
                             50: '#f0f9ff',
                             100: '#e0f2fe',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            700: '#0369a1',
-                            900: '#0c4a6e',
+                            500: '#06b6d4', // Cyan 500
+                            600: '#0891b2', // Cyan 600
+                            700: '#0e7490', // Cyan 700
+                            900: '#164e63', // Cyan 900
+                        },
+                        dark: {
+                            900: '#0f172a', // Slate 900
+                            800: '#1e293b', // Slate 800
+                            700: '#334155', // Slate 700
                         }
                     }
                 }
@@ -52,13 +57,28 @@
         }
 
         body {
-            background-color: #f8fafc;
-            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"), linear-gradient(to bottom right, #f1f5f9, #e2e8f0);
+            background-color: #0f172a; /* Slate 900 */
+            color: #e2e8f0; /* Slate 200 */
             min-height: 100vh;
+        }
+
+        /* Scrollbar customization */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
         }
     </style>
 </head>
-<body class="text-slate-800 antialiased selection:bg-brand-100 selection:text-brand-900">
+<body class="antialiased selection:bg-brand-500 selection:text-white">
     <div id="root"></div>
 
     <script type="text/babel">
@@ -192,21 +212,21 @@
         const CARD_TYPES = {
             PRODUCTION: {
                 label: '生産',
-                baseStyle: 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-xl hover:shadow-blue-900/5 hover:-translate-y-1',
-                headerStyle: 'bg-blue-50 text-blue-600 border-b border-blue-100',
-                icon: <IconZap size={14} className="text-blue-500" />
+                baseStyle: 'bg-slate-800 border-cyan-800 hover:border-cyan-400 hover:shadow-cyan-500/20 text-cyan-100',
+                headerStyle: 'bg-cyan-950/50 text-cyan-400 border-b border-cyan-900',
+                icon: <IconZap size={14} className="text-cyan-400" />
             },
             POLICY: {
                 label: '政策',
-                baseStyle: 'bg-white border-slate-200 hover:border-emerald-300 hover:shadow-xl hover:shadow-emerald-900/5 hover:-translate-y-1',
-                headerStyle: 'bg-emerald-50 text-emerald-600 border-b border-emerald-100',
-                icon: <IconBookOpen size={14} className="text-emerald-500" />
+                baseStyle: 'bg-slate-800 border-emerald-800 hover:border-emerald-400 hover:shadow-emerald-500/20 text-emerald-100',
+                headerStyle: 'bg-emerald-950/50 text-emerald-400 border-b border-emerald-900',
+                icon: <IconBookOpen size={14} className="text-emerald-400" />
             },
             ATTACK: {
                 label: '外交',
-                baseStyle: 'bg-white border-slate-200 hover:border-rose-300 hover:shadow-xl hover:shadow-rose-900/5 hover:-translate-y-1',
-                headerStyle: 'bg-rose-50 text-rose-600 border-b border-rose-100',
-                icon: <IconShield size={14} className="text-rose-500" />
+                baseStyle: 'bg-slate-800 border-rose-800 hover:border-rose-400 hover:shadow-rose-500/20 text-rose-100',
+                headerStyle: 'bg-rose-950/50 text-rose-400 border-b border-rose-900',
+                icon: <IconShield size={14} className="text-rose-400" />
             },
         };
 
@@ -366,38 +386,38 @@
 
         const StatusPanel = ({ data, isEnemy, interest }) => {
             const inflationAlert = (value) => {
-                if (value >= 12) return { label: 'ハイパーインフレ', color: 'text-red-600 bg-red-50 ring-red-500/20' };
-                if (value >= 8) return { label: '高インフレ', color: 'text-orange-600 bg-orange-50 ring-orange-500/20' };
-                if (value >= 4) return { label: 'インフレ進行', color: 'text-amber-600 bg-amber-50 ring-amber-500/20' };
-                if (value <= -2) return { label: 'デフレ', color: 'text-blue-600 bg-blue-50 ring-blue-500/20' };
-                return { label: '安定', color: 'text-emerald-600 bg-emerald-50 ring-emerald-500/20' };
+                if (value >= 12) return { label: 'ハイパーインフレ', color: 'text-red-400 bg-red-900/30 border-red-500' };
+                if (value >= 8) return { label: '高インフレ', color: 'text-orange-400 bg-orange-900/30 border-orange-500' };
+                if (value >= 4) return { label: 'インフレ進行', color: 'text-amber-400 bg-amber-900/30 border-amber-500' };
+                if (value <= -2) return { label: 'デフレ', color: 'text-cyan-400 bg-cyan-900/30 border-cyan-500' };
+                return { label: '安定', color: 'text-emerald-400 bg-emerald-900/30 border-emerald-500' };
             };
 
             const alert = inflationAlert(data.inflation);
 
-            // Theme colors
+            // Theme colors (Dark Mode)
             const theme = isEnemy ? {
-                bg: 'bg-slate-50/80',
-                border: 'border-slate-200',
-                text: 'text-slate-600',
-                accent: 'text-slate-500',
-                highlight: 'bg-slate-200',
-                bar: 'bg-slate-400'
+                bg: 'bg-slate-800/80',
+                border: 'border-slate-700',
+                text: 'text-slate-300',
+                accent: 'text-slate-400',
+                highlight: 'bg-slate-700',
+                bar: 'bg-slate-500'
             } : {
-                bg: 'bg-white/90',
-                border: 'border-blue-100',
-                text: 'text-slate-800',
-                accent: 'text-blue-600',
-                highlight: 'bg-blue-50',
-                bar: 'bg-blue-500'
+                bg: 'bg-slate-800/90',
+                border: 'border-cyan-900',
+                text: 'text-slate-200',
+                accent: 'text-cyan-400',
+                highlight: 'bg-cyan-950',
+                bar: 'bg-cyan-500'
             };
 
             return (
-                <div className={`relative overflow-hidden p-5 rounded-2xl border-2 transition-all duration-300 backdrop-blur-sm ${theme.bg} ${theme.border} ${!isEnemy && 'shadow-xl shadow-blue-900/5 ring-2 ring-blue-500/5'}`}>
+                <div className={`relative overflow-hidden p-5 rounded-2xl border-2 transition-all duration-300 backdrop-blur-sm ${theme.bg} ${theme.border} ${!isEnemy && 'shadow-xl shadow-cyan-900/10 ring-1 ring-cyan-500/20'}`}>
                     {/* Header */}
                     <div className="flex justify-between items-start mb-6">
                         <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${isEnemy ? 'bg-white text-slate-400 border border-slate-200' : 'bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-blue-200'}`}>
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${isEnemy ? 'bg-slate-700 text-slate-400 border border-slate-600' : 'bg-gradient-to-br from-cyan-600 to-cyan-500 text-white shadow-cyan-900/50'}`}>
                                 {isEnemy ? <IconZap size={20} /> : <IconWallet size={20} />}
                             </div>
                             <div>
@@ -405,21 +425,21 @@
                                     <h3 className={`font-bold text-lg leading-none ${theme.text}`}>
                                         {isEnemy ? 'ライバル国' : '自国 (あなた)'}
                                     </h3>
-                                    <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${isEnemy ? 'bg-slate-200 text-slate-500' : 'bg-blue-100 text-blue-600'}`}>
+                                    <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${isEnemy ? 'bg-slate-700 text-slate-400' : 'bg-cyan-950 text-cyan-400 border border-cyan-900'}`}>
                                         {isEnemy ? 'AI' : 'YOU'}
                                     </span>
                                 </div>
                                 <div className="text-xs text-slate-400 mt-1 font-medium flex items-center gap-1">
                                     信用格付:
-                                    <span className={`font-bold ${['AAA','BBB'].includes(data.rating) ? 'text-emerald-600' : 'text-amber-600'}`}>{data.rating}</span>
+                                    <span className={`font-bold ${['AAA','BBB'].includes(data.rating) ? 'text-emerald-400' : 'text-amber-400'}`}>{data.rating}</span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="text-right">
-                            <div className="text-[10px] uppercase tracking-wider text-slate-400 font-bold mb-0.5">GDP (Goal: 300)</div>
-                            <div className={`text-3xl font-black tracking-tighter ${isEnemy ? 'text-slate-600' : 'text-blue-600'}`}>
-                                {data.gdp}<span className="text-sm font-bold ml-1 text-slate-400">兆</span>
+                            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">GDP (Goal: 300)</div>
+                            <div className={`text-3xl font-black tracking-tighter ${isEnemy ? 'text-slate-500' : 'text-cyan-400'}`}>
+                                {data.gdp}<span className="text-sm font-bold ml-1 text-slate-600">兆</span>
                             </div>
                         </div>
                     </div>
@@ -427,29 +447,29 @@
                     {/* Stats Grid */}
                     <div className="grid grid-cols-2 gap-3 mb-4">
                         {/* Money */}
-                        <div className="bg-white/50 p-3 rounded-xl border border-slate-100">
+                        <div className={`${theme.highlight} p-3 rounded-xl border border-slate-700/50`}>
                             <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-bold text-slate-400 flex items-center gap-1">
+                                <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
                                     資金残高
                                 </span>
-                                <span className="text-sm font-bold font-mono text-slate-700">¥{data.money}</span>
+                                <span className="text-sm font-bold font-mono text-slate-300">¥{data.money}</span>
                             </div>
-                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden mb-2">
+                            <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-2">
                                 <div className={`h-full rounded-full transition-all duration-500 ${theme.bar}`} style={{ width: `${Math.min(100, data.money)}%` }}></div>
                             </div>
                             <div className="flex justify-between text-[10px] font-medium text-slate-400">
-                                <span>収支: <span className="text-emerald-600">+{data.income}</span></span>
-                                <span>利払: <span className="text-rose-500">-{interest}</span></span>
+                                <span>収支: <span className="text-emerald-400">+{data.income}</span></span>
+                                <span>利払: <span className="text-rose-400">-{interest}</span></span>
                             </div>
                         </div>
 
                         {/* Support */}
-                        <div className="bg-white/50 p-3 rounded-xl border border-slate-100">
+                        <div className={`${theme.highlight} p-3 rounded-xl border border-slate-700/50`}>
                             <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-bold text-slate-400">国民支持率</span>
-                                <span className={`text-sm font-bold font-mono ${data.support < 30 ? 'text-rose-500' : 'text-slate-700'}`}>{data.support}%</span>
+                                <span className="text-xs font-bold text-slate-500">国民支持率</span>
+                                <span className={`text-sm font-bold font-mono ${data.support < 30 ? 'text-rose-400' : 'text-slate-300'}`}>{data.support}%</span>
                             </div>
-                            <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                            <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
                                 <div className={`h-full rounded-full transition-all duration-500 ${data.support < 30 ? 'bg-rose-500' : 'bg-indigo-500'}`} style={{ width: `${data.support}%` }}></div>
                             </div>
                         </div>
@@ -457,11 +477,11 @@
 
                     {/* Footer Stats */}
                     <div className="flex gap-2">
-                        <div className="flex-1 bg-slate-100/50 p-2 rounded-lg border border-slate-100 flex justify-between items-center">
-                            <span className="text-[10px] font-bold text-slate-400">債務残高</span>
-                            <span className="text-xs font-bold text-slate-600">{data.debt}兆</span>
+                        <div className="flex-1 bg-slate-900/50 p-2 rounded-lg border border-slate-700/50 flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-500">債務残高</span>
+                            <span className="text-xs font-bold text-slate-400">{data.debt}兆</span>
                         </div>
-                        <div className={`flex-1 p-2 rounded-lg border ring-1 flex justify-between items-center ${alert.color}`}>
+                        <div className={`flex-1 p-2 rounded-lg border flex justify-between items-center ${alert.color}`}>
                             <span className="text-[10px] font-bold opacity-70">インフレ</span>
                             <span className="text-xs font-bold">{data.inflation.toFixed(1)}%</span>
                         </div>
@@ -479,6 +499,7 @@
             const [activeEvent, setActiveEvent] = useState(null);
             const [lastTags, setLastTags] = useState([]);
             const [isMuted, setIsMuted] = useState(false);
+            const [lastPlayedCard, setLastPlayedCard] = useState(null); // Purely for UI visualization
 
             useEffect(() => {
                 SoundManager.isMuted = isMuted;
@@ -511,12 +532,12 @@
                 interestDue: 0,
             });
 
+            // ... (Logic functions remain unchanged)
+
             const getInflationAlert = (value) => {
+                // Not used in UI but kept for logic consistency if needed
                 if (value >= 12) return { label: '⚠️ ハイパーインフレ懸念', color: 'text-red-700 bg-red-100 border-red-200' };
-                if (value >= 8) return { label: '🔥 高インフレ', color: 'text-orange-700 bg-orange-100 border-orange-200' };
-                if (value >= 4) return { label: '↗️ インフレ進行', color: 'text-amber-700 bg-amber-50 border-amber-200' };
-                if (value <= -2) return { label: '⬇️ デフレ圧力', color: 'text-blue-700 bg-blue-50 border-blue-200' };
-                return { label: '安定', color: 'text-green-700 bg-green-50 border-green-200' };
+                // ...
             };
 
             const applyUnrestPenalty = (state, actorLabel) => {
@@ -576,11 +597,12 @@
                 setTurn(1);
                 setLogs([`📢 今ターンのイベント: 「${event.name}」 - ${event.description}`, 'ゲーム開始！GDP 300兆円を目指せ！']);
                 setGameState('PLAYING');
+                setLastPlayedCard(null);
                 drawCards(3);
             };
 
             const addLog = (msg) => {
-                setLogs(prev => [msg, ...prev].slice(0, 5));
+                setLogs(prev => [msg, ...prev].slice(0, 10)); // Increased log size slightly
             };
 
             const chooseRandomEvent = () => EVENTS[Math.floor(Math.random() * EVENTS.length)];
@@ -692,8 +714,6 @@
                     addLog(`🎯 コンボ発動！${comboReadyTags.join(', ')}タグとの相乗効果で「${card.name}」の効果が強化されます。`);
                 }
 
-                // Recalculate or reuse adjustedCost? It is already calculated at top of function.
-                // But inflation might have changed? No, synchronous execution.
                 const afterCost = { ...player, money: player.money - adjustedCost };
 
                 let nextPlayerState = null;
@@ -731,6 +751,9 @@
                 } else {
                     addLog(`あなた: 「${card.name}」を使用。経済効果発動！`);
                 }
+
+                // UI update for discard
+                setLastPlayedCard(card);
 
                 // 手札から削除
                 setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
@@ -873,146 +896,143 @@
             };
 
             return (
-                <div className="min-h-screen p-4 md:p-8 max-w-5xl mx-auto animate-fade-in pb-20 text-slate-800">
+                <div className="min-h-screen text-slate-200">
 
-                    {/* ヘッダー */}
-                    <header className="flex flex-col md:flex-row md:justify-between md:items-center mb-10 gap-4">
-                        <div className="flex items-center gap-4">
-                            <div className="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-3.5 rounded-2xl shadow-xl shadow-slate-900/20 ring-4 ring-white">
-                                <IconTrendingUp size={28} />
-                            </div>
-                            <div>
-                                <h1 className="text-3xl font-black text-slate-800 tracking-tighter">Economics Master</h1>
-                                <div className="flex items-center gap-3 mt-1">
-                                    <div className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-0.5 rounded-md shadow-sm">
-                                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                                        <span className="text-xs font-bold text-slate-600">TURN {turn}</span>
-                                    </div>
-                                    <span className="text-xs font-bold text-slate-400">GOAL: GDP {WINNING_GDP}T</span>
+                    {/* TOP HEADER */}
+                    <header className="bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-0 z-50">
+                        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-gradient-to-br from-cyan-600 to-blue-600 text-white p-2 rounded-lg shadow-lg shadow-cyan-500/20">
+                                    <IconTrendingUp size={20} />
+                                </div>
+                                <div>
+                                    <h1 className="text-xl font-black text-white tracking-tighter leading-none">Economics Master</h1>
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Strategic Card Game</p>
                                 </div>
                             </div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => setIsMuted(!isMuted)}
-                                className="p-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm hover:shadow-md"
-                                aria-label={isMuted ? "Unmute" : "Mute"}
-                            >
-                                {isMuted ? <IconVolumeX size={20} /> : <IconVolume2 size={20} />}
-                            </button>
-                            <button
-                                onClick={startGame}
-                                className="group px-5 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all font-bold text-sm shadow-sm hover:shadow-md flex items-center gap-2"
-                            >
-                                <IconRefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />
-                                {gameState === 'START' ? 'Start Game' : 'Reset Game'}
-                            </button>
+
+                            <div className="flex items-center gap-4">
+                                <div className="hidden md:flex items-center gap-3">
+                                    <div className="flex items-center gap-2 bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700/50">
+                                        <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
+                                        <span className="text-xs font-bold text-slate-300">TURN {turn}</span>
+                                    </div>
+                                    <div className="text-xs font-bold text-slate-500">GOAL: GDP {WINNING_GDP}T</div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setIsMuted(!isMuted)}
+                                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                                    >
+                                        {isMuted ? <IconVolumeX size={18} /> : <IconVolume2 size={18} />}
+                                    </button>
+                                    <button
+                                        onClick={startGame}
+                                        className="text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition-all flex items-center gap-2"
+                                    >
+                                        <IconRefreshCw size={14} />
+                                        {gameState === 'START' ? 'Start' : 'Reset'}
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </header>
 
-                    {activeEvent && gameState === 'PLAYING' && (
-                        <div className="mb-8 animate-fade-in">
-                            <div className="relative overflow-hidden bg-white border border-amber-100 p-1 rounded-2xl shadow-xl shadow-amber-900/5 ring-1 ring-amber-500/10">
-                                <div className="bg-gradient-to-r from-amber-50/80 to-orange-50/80 backdrop-blur-md p-5 rounded-xl flex items-start md:items-center gap-5">
-                                    <div className="flex-shrink-0 bg-white p-3 rounded-xl shadow-sm border border-amber-100 text-amber-500">
-                                        <IconAlertCircle size={24} />
-                                    </div>
-                                    <div className="flex-grow">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest">News</span>
-                                            <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">Current Event</span>
-                                        </div>
-                                        <h3 className="text-xl font-black text-slate-800 tracking-tight mb-1">{activeEvent.name}</h3>
-                                        <p className="text-sm text-slate-600 font-medium leading-relaxed">{activeEvent.description}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                    <main className="max-w-7xl mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                    {gameState === 'START' && (
-                        <div className="bg-white p-8 rounded-xl shadow-lg text-center mb-8 border-2 border-indigo-100 animate-fade-in">
-                            <h2 className="text-2xl font-bold mb-4">経済学をカードで学ぼう</h2>
-                            <p className="mb-6 text-gray-600 leading-relaxed">
-                                あなたは国家のリーダーです。<br/>
-                                「投資」「政策」「外交」カードを駆使して、<br/>
-                                ライバル国より先に経済成長（GDP 300兆円）を達成してください。
-                            </p>
-                            <button 
-                                onClick={startGame}
-                                className="px-8 py-3 bg-indigo-600 text-white text-lg rounded-full font-bold shadow-lg hover:bg-indigo-700 hover:scale-105 transition transform"
-                            >
-                                スタート！
-                            </button>
-                        </div>
-                    )}
-
-                    {/* ゲームエリア */}
-                    {(gameState === 'PLAYING' || gameState === 'WON' || gameState === 'LOST') && (
-                        <div className="space-y-6 animate-fade-in">
+                        {/* LEFT/CENTER COLUMN (Game Board) */}
+                        <div className="lg:col-span-9 space-y-6">
                             
-                            {/* ステータスエリア (Grid) */}
-                            <div className="grid md:grid-cols-2 gap-4">
-                                <StatusPanel data={player} isEnemy={false} interest={getInterestForTurn(player)} />
+                            {/* 1. OPPONENT FIELD */}
+                            <section>
                                 <StatusPanel data={enemy} isEnemy={true} interest={getInterestForTurn(enemy)} />
-                            </div>
+                            </section>
 
-                            {/* ログと勝利画面 */}
-                            <div className="relative min-h-[120px] max-h-[180px] bg-slate-900 rounded-2xl p-4 overflow-y-auto shadow-inner ring-1 ring-white/10 font-mono text-sm leading-relaxed scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent group">
-                                {gameState === 'WON' && (
-                                    <div className="absolute inset-0 bg-white/95 backdrop-blur-md flex flex-col items-center justify-center z-20 rounded-2xl animate-fade-in">
-                                        <div className="bg-yellow-100 p-4 rounded-full mb-4">
-                                            <IconTrendingUp size={48} className="text-yellow-600" />
+                            {/* 2. MIDDLE ZONE (Deck, Event, Discard) */}
+                            <section className="grid grid-cols-1 md:grid-cols-3 gap-4 min-h-[140px]">
+                                {/* Discard Pile (Visual) */}
+                                <div className="hidden md:flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-800 bg-slate-900/30 p-4 relative group">
+                                    <span className="text-xs font-bold text-slate-700 uppercase mb-2">Discard / Last Played</span>
+                                    {lastPlayedCard ? (
+                                         <div className="w-20 h-28 bg-slate-800 border border-slate-600 rounded-lg flex items-center justify-center shadow-lg relative transform group-hover:scale-110 transition-transform">
+                                            <div className="text-[10px] text-center p-1">
+                                                <div className="font-bold text-slate-300 mb-1 truncate">{lastPlayedCard.name}</div>
+                                                <div className="text-slate-500 text-[9px]">{CARD_TYPES[lastPlayedCard.type].label}</div>
+                                            </div>
+                                         </div>
+                                    ) : (
+                                        <div className="w-20 h-28 bg-transparent border border-slate-800 rounded-lg flex items-center justify-center opacity-30">
+                                            <IconBookOpen size={20} />
                                         </div>
-                                        <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">VICTORY!</h2>
-                                        <p className="font-medium text-slate-500">あなたの経済政策は成功しました！</p>
-                                        <button onClick={startGame} className="mt-6 px-6 py-3 bg-brand-600 text-white rounded-xl font-bold shadow-lg shadow-brand-500/30 hover:bg-brand-700 transition-all">Play Again</button>
-                                    </div>
-                                )}
-                                {gameState === 'LOST' && (
-                                    <div className="absolute inset-0 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center z-20 rounded-2xl animate-fade-in text-white">
-                                        <div className="bg-slate-800 p-4 rounded-full mb-4 border border-slate-700">
-                                            <IconAlertCircle size={48} className="text-rose-500" />
-                                        </div>
-                                        <h2 className="text-4xl font-black text-rose-500 mb-2 tracking-tight">DEFEAT...</h2>
-                                        <p className="text-slate-400">経済競争に敗北しました...</p>
-                                        <button onClick={startGame} className="mt-6 px-6 py-3 bg-white text-slate-900 rounded-xl font-bold hover:bg-slate-200 transition-all">Try Again</button>
-                                    </div>
-                                )}
-                                <div className="space-y-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                                    {logs.map((log, i) => (
-                                        <div key={i} className="flex gap-3 text-slate-300 border-b border-slate-800/50 pb-1.5 last:border-0 last:pb-0">
-                                            <span className="text-slate-600 text-xs mt-1 select-none shrink-0">{'>'}</span>
-                                            <span>{log}</span>
-                                        </div>
-                                    ))}
+                                    )}
                                 </div>
-                            </div>
 
+                                {/* Active Event (Center) */}
+                                <div className="md:col-span-1">
+                                    {activeEvent && gameState === 'PLAYING' ? (
+                                        <div className="h-full bg-gradient-to-br from-amber-950/40 to-slate-900 border border-amber-900/50 p-4 rounded-xl flex flex-col justify-center relative overflow-hidden group">
+                                            <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
+                                                <IconAlertCircle size={60} />
+                                            </div>
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="bg-amber-900/50 text-amber-500 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider border border-amber-900">Event</span>
+                                            </div>
+                                            <h3 className="font-bold text-amber-500 text-lg leading-tight mb-1">{activeEvent.name}</h3>
+                                            <p className="text-xs text-amber-200/70 leading-relaxed">{activeEvent.description}</p>
+                                        </div>
+                                    ) : (
+                                        <div className="h-full flex items-center justify-center text-slate-700 text-xs font-bold uppercase tracking-widest border border-slate-800 rounded-xl bg-slate-900/50">
+                                            No Active Event
+                                        </div>
+                                    )}
+                                </div>
 
-                            {/* 手札エリア */}
-                            <div>
-                                <div className="flex justify-between items-end mb-4">
-                                    <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider pl-1">Hand Cards (Click to Play)</h3>
+                                {/* Deck (Visual) */}
+                                <div className="hidden md:flex flex-col items-center justify-center rounded-xl border border-slate-800 bg-slate-900/50 p-4">
+                                     <div className="relative w-24 h-32 cursor-pointer hover:-translate-y-1 transition-transform">
+                                        {/* Card Stack Effect */}
+                                        <div className="absolute inset-0 bg-slate-800 rounded-lg border border-slate-700 translate-x-2 translate-y-2"></div>
+                                        <div className="absolute inset-0 bg-slate-800 rounded-lg border border-slate-700 translate-x-1 translate-y-1"></div>
+                                        <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-800 rounded-lg border border-slate-600 flex items-center justify-center shadow-2xl">
+                                            <div className="text-center">
+                                                <IconTrendingUp className="text-cyan-900 mb-1 mx-auto" size={24} />
+                                                <span className="text-[10px] font-bold text-cyan-900 uppercase tracking-widest">DECK</span>
+                                            </div>
+                                        </div>
+                                     </div>
+                                </div>
+                            </section>
+
+                            {/* 3. PLAYER FIELD */}
+                            <section>
+                                <StatusPanel data={player} isEnemy={false} interest={getInterestForTurn(player)} />
+                            </section>
+
+                            {/* 4. HAND AREA */}
+                            <section className="bg-slate-900/50 rounded-2xl border border-slate-800 p-4 md:p-6">
+                                <div className="flex justify-between items-center mb-4">
+                                    <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                                        <IconWallet size={16} /> Your Hand
+                                    </h3>
                                     <div className="flex gap-2">
                                         <button
                                             onClick={issueBonds}
                                             disabled={gameState !== 'PLAYING'}
-                                            className="bg-amber-500 text-white px-4 py-2 rounded-xl font-bold hover:bg-amber-600 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none flex items-center gap-2"
+                                            className="bg-amber-700/20 text-amber-500 border border-amber-900/50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-700/40 transition-all disabled:opacity-50 flex items-center gap-1.5"
                                         >
-                                            <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded">資金調達</span>
-                                            国債発行
+                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                            国債発行 (+50兆)
                                         </button>
                                         <button
                                             onClick={endTurn}
                                             disabled={gameState !== 'PLAYING'}
-                                            className="bg-slate-800 text-white px-6 py-2 rounded-xl font-bold hover:bg-slate-700 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none flex items-center gap-2"
+                                            className="bg-cyan-600 text-white px-5 py-1.5 rounded-lg text-xs font-bold hover:bg-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20 transition-all disabled:opacity-50 flex items-center gap-2"
                                         >
-                                            ターン終了 <IconArrowRight size={16} />
+                                            ターン終了 <IconArrowRight size={14} />
                                         </button>
                                     </div>
                                 </div>
-                                
+
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                     {playerHand.map((card) => {
                                         const typeInfo = CARD_TYPES[card.type];
@@ -1020,6 +1040,7 @@
                                         const canAfford = player.money >= inflatedCost;
                                         const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
                                         const providesTags = getCardProvidedTags(card);
+
                                         return (
                                             <button
                                                 key={card.uniqueId}
@@ -1027,37 +1048,35 @@
                                                 disabled={!canAfford || gameState !== 'PLAYING'}
                                                 className={`
                                                     relative text-left group
-                                                    flex flex-col h-full rounded-xl border transition-all duration-300 overflow-hidden
+                                                    flex flex-col h-full rounded-xl border-2 transition-all duration-300 overflow-hidden
                                                     ${typeInfo.baseStyle}
-                                                    ${canAfford ? 'cursor-pointer' : 'opacity-60 cursor-not-allowed grayscale'}
+                                                    ${canAfford ? 'cursor-pointer hover:-translate-y-1 hover:brightness-110' : 'opacity-40 cursor-not-allowed grayscale border-slate-700 bg-slate-900'}
                                                 `}
                                             >
-                                                {/* Card Header */}
-                                                <div className={`px-4 py-3 flex justify-between items-center ${typeInfo.headerStyle}`}>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+                                                {/* Header */}
+                                                <div className={`px-3 py-2 flex justify-between items-center ${typeInfo.headerStyle}`}>
+                                                    <span className="text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
                                                         {typeInfo.icon} {typeInfo.label}
                                                     </span>
-                                                    <div className="flex flex-col items-end leading-none">
-                                                        <span className="font-mono text-lg font-black tracking-tighter">¥{inflatedCost}</span>
-                                                    </div>
+                                                    <span className="font-mono text-base font-black tracking-tighter">¥{inflatedCost}</span>
                                                 </div>
 
-                                                {/* Card Body */}
-                                                <div className="p-4 flex flex-col flex-grow bg-white/60">
-                                                    <h4 className="font-bold text-slate-800 text-sm mb-2 leading-tight min-h-[2.5em] flex items-center">
+                                                {/* Body */}
+                                                <div className="p-3 flex flex-col flex-grow bg-slate-900/40 backdrop-blur-sm">
+                                                    <h4 className="font-bold text-slate-200 text-xs mb-1.5 min-h-[2.5em] flex items-center leading-snug">
                                                         {card.name}
                                                     </h4>
 
-                                                    <p className="text-xs text-slate-600 mb-4 flex-grow leading-relaxed">
+                                                    <p className="text-[10px] text-slate-400 mb-3 flex-grow leading-relaxed line-clamp-3">
                                                         {card.description}
                                                     </p>
 
-                                                    <div className="space-y-1.5">
-                                                        {/* Cost Info */}
+                                                    <div className="space-y-1">
+                                                         {/* Cost Info */}
                                                         {inflatedCost !== card.cost && (
-                                                            <div className="text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded border border-amber-100 flex items-center gap-1">
-                                                                <IconAlertCircle size={10} />
-                                                                コスト変動: ¥{card.cost} → ¥{inflatedCost}
+                                                            <div className="text-[9px] text-amber-500 bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-900/50 flex items-center gap-1 w-max">
+                                                                <IconAlertCircle size={8} />
+                                                                Cost: {card.cost}→{inflatedCost}
                                                             </div>
                                                         )}
 
@@ -1065,12 +1084,12 @@
                                                         {(comboReadyTags.length > 0 || providesTags.length > 0) && (
                                                             <div className="flex flex-wrap gap-1">
                                                                 {comboReadyTags.map(tag => (
-                                                                     <span key={tag} className="bg-rose-100 text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                                                                     <span key={tag} className="bg-rose-900/30 text-rose-400 border border-rose-900/50 px-1.5 py-0.5 rounded text-[9px] font-bold">
                                                                         ★ {tag}
                                                                      </span>
                                                                 ))}
                                                                 {providesTags.map(tag => (
-                                                                     <span key={tag} className="bg-slate-100 text-slate-500 border border-slate-200 px-1.5 py-0.5 rounded text-[10px] font-medium">
+                                                                     <span key={tag} className="bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[9px] font-medium">
                                                                         + {tag}
                                                                      </span>
                                                                 ))}
@@ -1078,32 +1097,113 @@
                                                         )}
                                                     </div>
                                                 </div>
-
-                                                {/* Footer / Tip */}
-                                                <div className="px-4 py-3 bg-slate-50/50 border-t border-slate-100 text-[10px] text-slate-500 leading-tight">
-                                                    <span className="font-bold text-slate-400 block mb-1 text-[9px] uppercase">MEMO</span>
-                                                    {card.tip}
-                                                </div>
-
-                                                {!canAfford && (
-                                                    <div className="absolute inset-0 bg-slate-100/50 flex items-center justify-center backdrop-blur-[1px] z-10">
-                                                        <span className="bg-slate-800 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">資金不足</span>
-                                                    </div>
-                                                )}
                                             </button>
                                         );
                                     })}
                                     {playerHand.length === 0 && (
-                                        <div className="col-span-full py-12 flex flex-col items-center justify-center text-slate-400 border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
-                                            <IconBookOpen className="mb-2 opacity-50" size={32} />
-                                            <p className="text-sm font-medium">手札がありません</p>
-                                            <p className="text-xs mt-1">ターンを終了して次のカードを引いてください</p>
+                                        <div className="col-span-full py-8 flex flex-col items-center justify-center text-slate-600 border-2 border-dashed border-slate-800 rounded-xl">
+                                            <IconBookOpen className="mb-2 opacity-50" size={24} />
+                                            <p className="text-xs font-medium">No cards available</p>
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            </section>
                         </div>
-                    )}
+
+                        {/* RIGHT COLUMN: LOGS & INFO */}
+                        <div className="lg:col-span-3 space-y-6">
+
+                            {/* Game Log Component */}
+                            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col h-[500px] shadow-lg shadow-black/20 sticky top-24">
+                                <div className="bg-slate-800/50 p-3 border-b border-slate-800 flex justify-between items-center">
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                        <IconRefreshCw size={12} /> Game Log
+                                    </h3>
+                                    <span className="text-[10px] text-slate-600 font-mono">LIVE</span>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900">
+                                    {logs.map((log, i) => (
+                                        <div key={i} className="text-xs leading-relaxed animate-fade-in">
+                                            <div className="flex gap-2 text-slate-400">
+                                                <span className="text-cyan-700 mt-0.5 select-none text-[8px]">●</span>
+                                                <span className={`${i===0 ? 'text-slate-200 font-medium' : ''}`}>{log}</span>
+                                            </div>
+                                            {i === 0 && <div className="mt-2 h-px bg-gradient-to-r from-cyan-900/50 to-transparent"></div>}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* START SCREEN / OVERLAY */}
+                            {gameState === 'START' && (
+                                <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
+                                    <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-2xl max-w-lg w-full text-center relative overflow-hidden">
+                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-rose-500"></div>
+
+                                        <div className="bg-slate-900 inline-flex p-4 rounded-full mb-6 border border-slate-700 shadow-xl">
+                                            <IconTrendingUp size={48} className="text-cyan-400" />
+                                        </div>
+
+                                        <h2 className="text-3xl font-black text-white mb-2 tracking-tighter">Economics Master</h2>
+                                        <p className="text-slate-400 mb-8 font-medium">経済戦略カードゲームへようこそ</p>
+
+                                        <div className="space-y-4 mb-8 text-left bg-slate-900/50 p-6 rounded-xl border border-slate-700/50 text-sm text-slate-300">
+                                            <p className="flex items-start gap-2">
+                                                <span className="text-cyan-400 font-bold">1.</span>
+                                                <span><strong className="text-white">GDP 300兆円</strong> を達成すれば勝利。</span>
+                                            </p>
+                                            <p className="flex items-start gap-2">
+                                                <span className="text-cyan-400 font-bold">2.</span>
+                                                <span>支持率が <strong className="text-rose-400">0%</strong> になると敗北。</span>
+                                            </p>
+                                            <p className="flex items-start gap-2">
+                                                <span className="text-cyan-400 font-bold">3.</span>
+                                                <span>インフレ率、債務残高、金利に注意しながら国を運営しよう。</span>
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            onClick={startGame}
+                                            className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-cyan-900/20 hover:scale-105 transition-transform"
+                                        >
+                                            START GAME
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* WIN/LOSS OVERLAY */}
+                            {(gameState === 'WON' || gameState === 'LOST') && (
+                                <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4">
+                                     <div className={`p-8 rounded-2xl shadow-2xl max-w-md w-full text-center border-2 ${gameState === 'WON' ? 'bg-slate-800 border-cyan-500' : 'bg-slate-800 border-rose-500'}`}>
+
+                                        {gameState === 'WON' ? (
+                                            <>
+                                                <div className="text-6xl mb-4">🎉</div>
+                                                <h2 className="text-4xl font-black text-cyan-400 mb-2">VICTORY</h2>
+                                                <p className="text-slate-300 mb-6">あなたの経済政策は大成功を収めました！</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="text-6xl mb-4">💀</div>
+                                                <h2 className="text-4xl font-black text-rose-500 mb-2">DEFEAT</h2>
+                                                <p className="text-slate-300 mb-6">政権は崩壊し、経済は破綻しました...</p>
+                                            </>
+                                        )}
+
+                                        <button
+                                            onClick={startGame}
+                                            className="px-8 py-3 bg-slate-700 text-white rounded-xl font-bold hover:bg-slate-600 transition-colors w-full"
+                                        >
+                                            Play Again
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+                    </main>
                 </div>
             );
         }
