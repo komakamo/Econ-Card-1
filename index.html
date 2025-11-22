@@ -62,7 +62,97 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useEffect } = React;
+
+        // --- Sound Manager (Web Audio API) ---
+        const SoundManager = {
+            ctx: null,
+            isMuted: false,
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+
+            playTone(freq, type, duration, vol = 0.1) {
+                if (this.isMuted) return;
+                try {
+                    this.init();
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {
+                    console.error("Audio error:", e);
+                }
+            },
+
+            playClick() {
+                this.playTone(800, 'sine', 0.1, 0.05);
+            },
+
+            playError() {
+                if (this.isMuted) return;
+                try {
+                    this.init();
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(100, this.ctx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.3);
+                } catch (e) {
+                    console.error(e);
+                }
+            },
+
+            playSuccess() {
+                this.playTone(1200, 'sine', 0.2, 0.1);
+                setTimeout(() => this.playTone(1800, 'sine', 0.4, 0.1), 100);
+            },
+
+            playCard(type) {
+                if (this.isMuted) return;
+                if (type === 'ATTACK') {
+                    this.playTone(300, 'square', 0.3, 0.05);
+                } else if (type === 'POLICY') {
+                    this.playTone(600, 'sine', 0.3, 0.05);
+                } else {
+                    // PRODUCTION
+                    this.playTone(400, 'triangle', 0.1, 0.05);
+                    setTimeout(() => this.playTone(600, 'triangle', 0.2, 0.05), 100);
+                }
+            },
+
+            playGameEnd(win) {
+                if (this.isMuted) return;
+                if (win) {
+                    this.playTone(523.25, 'triangle', 0.2, 0.1); // C5
+                    setTimeout(() => this.playTone(659.25, 'triangle', 0.2, 0.1), 200); // E5
+                    setTimeout(() => this.playTone(783.99, 'triangle', 0.4, 0.1), 400); // G5
+                    setTimeout(() => this.playTone(1046.50, 'triangle', 0.8, 0.1), 600); // C6
+                } else {
+                    this.playTone(300, 'sawtooth', 0.4, 0.1);
+                    setTimeout(() => this.playTone(250, 'sawtooth', 0.4, 0.1), 300);
+                    setTimeout(() => this.playTone(200, 'sawtooth', 0.8, 0.1), 600);
+                }
+            }
+        };
 
         // --- アイコンコンポーネント (SVG埋め込み) ---
         // GitHub Pages等で外部ライブラリ依存によるエラーを防ぐためSVGを直接定義
@@ -89,6 +179,12 @@
         );
         const IconBookOpen = ({ size = 24, className = "" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        );
+        const IconVolume2 = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+        );
+        const IconVolumeX = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
         );
 
         // --- ゲームデータ定義 ---
@@ -382,6 +478,11 @@
             const [logs, setLogs] = useState(['ゲーム開始！目標：GDP 300兆円到達']);
             const [activeEvent, setActiveEvent] = useState(null);
             const [lastTags, setLastTags] = useState([]);
+            const [isMuted, setIsMuted] = useState(false);
+
+            useEffect(() => {
+                SoundManager.isMuted = isMuted;
+            }, [isMuted]);
             
             // プレイヤー状態
             const [player, setPlayer] = useState({
@@ -464,6 +565,8 @@
 
             // 初期化
             const startGame = () => {
+                SoundManager.init();
+                SoundManager.playSuccess();
                 const event = chooseRandomEvent();
                 setActiveEvent(event);
                 setPlayer({ money: 80, income: 20, gdp: 0, inflation: 0, support: 70, debt: 0, rating: 'AAA', interestDue: 0 });
@@ -500,6 +603,7 @@
 
             const issueBonds = () => {
                 if (gameState !== 'PLAYING') return;
+                SoundManager.playTone(1000, 'sine', 0.1, 0.1);
                 setPlayer(prev => {
                     const updated = {
                         ...prev,
@@ -577,9 +681,12 @@
                 let updatedEnemyState = null;
 
                 if (player.money < adjustedCost) {
+                    SoundManager.playError();
                     addLog(`資金不足です（必要: ${adjustedCost}兆円、インフレ影響を反映）`);
                     return;
                 }
+
+                SoundManager.playCard(card.type);
 
                 if (comboReadyTags.length > 0) {
                     addLog(`🎯 コンボ発動！${comboReadyTags.join(', ')}タグとの相乗効果で「${card.name}」の効果が強化されます。`);
@@ -638,6 +745,8 @@
             // ターン終了処理 & AIターン
             const endTurn = () => {
                 if (gameState !== 'PLAYING') return;
+
+                SoundManager.playClick();
 
                 // 1. 収入の処理（プレイヤー）
                 const driftedInflation = applyInflationDrift(player.inflation);
@@ -734,24 +843,28 @@
 
                 if (nextPlayer.gdp >= WINNING_GDP) {
                     setGameState('WON');
+                    SoundManager.playGameEnd(true);
                     addLog('🎉 おめでとうございます！あなたの国の経済が勝利しました！');
                     return true;
                 }
 
                 if (nextEnemy.gdp >= WINNING_GDP) {
                     setGameState('LOST');
+                    SoundManager.playGameEnd(false);
                     addLog('💀 残念... ライバル国に経済覇権を奪われました。');
                     return true;
                 }
 
                 if (nextPlayer.support <= 0) {
                     setGameState('LOST');
+                    SoundManager.playGameEnd(false);
                     addLog('💀 支持率が0%に落ち、政権が崩壊してしまいました。');
                     return true;
                 }
 
                 if (nextEnemy.support <= 0) {
                     setGameState('WON');
+                    SoundManager.playGameEnd(true);
                     addLog('🎉 ライバル国の支持率が崩壊し、あなたの国が優位に立ちました！');
                     return true;
                 }
@@ -779,13 +892,22 @@
                                 </div>
                             </div>
                         </div>
-                        <button 
-                            onClick={startGame}
-                            className="group px-5 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all font-bold text-sm shadow-sm hover:shadow-md flex items-center gap-2"
-                        >
-                            <IconRefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />
-                            {gameState === 'START' ? 'Start Game' : 'Reset Game'}
-                        </button>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setIsMuted(!isMuted)}
+                                className="p-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm hover:shadow-md"
+                                aria-label={isMuted ? "Unmute" : "Mute"}
+                            >
+                                {isMuted ? <IconVolumeX size={20} /> : <IconVolume2 size={20} />}
+                            </button>
+                            <button
+                                onClick={startGame}
+                                className="group px-5 py-2.5 bg-white text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all font-bold text-sm shadow-sm hover:shadow-md flex items-center gap-2"
+                            >
+                                <IconRefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-500" />
+                                {gameState === 'START' ? 'Start Game' : 'Reset Game'}
+                            </button>
+                        </div>
                     </header>
 
                     {activeEvent && gameState === 'PLAYING' && (
