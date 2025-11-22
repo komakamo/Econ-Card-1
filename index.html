@@ -585,18 +585,16 @@
                     addLog(`🎯 コンボ発動！${comboReadyTags.join(', ')}タグとの相乗効果で「${card.name}」の効果が強化されます。`);
                 }
 
-                let updatedPlayerState = null;
+                // Recalculate or reuse adjustedCost? It is already calculated at top of function.
+                // But inflation might have changed? No, synchronous execution.
+                const afterCost = { ...player, money: player.money - adjustedCost };
 
-                setPlayer(prev => {
-                    const adjusted = calculateAdjustedCost(card.cost, prev.inflation);
-                    const afterCost = { ...prev, money: prev.money - adjusted };
+                let nextPlayerState = null;
 
-                    if (card.type === 'ATTACK') {
-                        const afterSupport = applySupportChange(afterCost, card.supportChange, 'あなた', `「${card.name}」の政治的影響`);
-                        updatedPlayerState = afterSupport;
-                        return afterSupport;
-                    }
-
+                if (card.type === 'ATTACK') {
+                    const afterSupport = applySupportChange(afterCost, card.supportChange, 'あなた', `「${card.name}」の政治的影響`);
+                    nextPlayerState = afterSupport;
+                } else {
                     const afterEffect = card.effect(afterCost, enemy);
                     const comboBoosted = applyComboBonus(afterCost, afterEffect, comboReadyTags);
                     const afterEvent = applyEventMultiplier(afterCost, comboBoosted);
@@ -606,15 +604,16 @@
                     }
                     const afterUnrest = applyUnrestPenalty(afterInflation, 'あなた');
                     const afterSupport = applySupportChange(afterUnrest, card.supportChange, 'あなた', `「${card.name}」の効果`);
-                    updatedPlayerState = afterSupport;
-                    return afterSupport;
-                });
+                    nextPlayerState = afterSupport;
+                }
+
+                setPlayer(nextPlayerState);
 
                 // 効果発動
                 if (card.type === 'ATTACK') {
                     const eventAwareSetEnemy = withEventMultiplier(setEnemy);
                     eventAwareSetEnemy(prev => {
-                        const effected = card.targetEffect ? card.targetEffect(prev, updatedPlayerState) : prev;
+                        const effected = card.targetEffect ? card.targetEffect(prev, nextPlayerState) : prev;
                         const comboBoosted = applyComboBonus(prev, effected, comboReadyTags);
                         const unrested = applyUnrestPenalty(comboBoosted, 'ライバル');
                         const withSupport = applySupportChange(unrested, card.targetSupportChange, 'ライバル', `「${card.name}」の影響`);
@@ -633,7 +632,7 @@
                     setLastTags(prev => Array.from(new Set([...prev, ...providedTags])));
                 }
 
-                return checkWinCondition(updatedPlayerState ?? player, updatedEnemyState ?? enemy);
+                return checkWinCondition(nextPlayerState, updatedEnemyState ?? enemy);
             };
 
             // ターン終了処理 & AIターン
