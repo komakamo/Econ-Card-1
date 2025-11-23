@@ -1323,14 +1323,22 @@
             const aiTurn = () => {
                 let latestEnemyState = null;
 
+                // Era Effect for AI
+                let driftTarget = 0;
+                let eraIncomePenalty = 0;
+                if (era.id === 'STAGNATION') {
+                    driftTarget = -2;
+                    eraIncomePenalty = 5;
+                }
+
                 setEnemy(prev => {
-                    const drifted = applyInflationDrift(prev.inflation);
+                    const drifted = applyInflationDrift(prev.inflation, driftTarget);
                     if (drifted !== prev.inflation) {
                         addLog(`ライバル: インフレ率 ${prev.inflation.toFixed(1)}% → ${drifted.toFixed(1)}% (自動調整)`);
                     }
                     const afterDrift = { ...prev, inflation: drifted };
                     const ratingInfo = getRatingInfo(afterDrift.rating);
-                    const incomePenalty = Math.round((activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier);
+                    const incomePenalty = Math.round((activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier + eraIncomePenalty);
                     const aiIncomeGain = Math.max(0, afterDrift.income - incomePenalty);
                     let afterIncome = { ...afterDrift, money: afterDrift.money + aiIncomeGain };
                     afterIncome = applyInterestPayment(afterIncome, 'ライバル');
