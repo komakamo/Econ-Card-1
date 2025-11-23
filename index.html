@@ -421,7 +421,36 @@
             },
         ];
 
-        const WINNING_GDP = 300;
+        const DIFFICULTY_SETTINGS = {
+            BEGINNER: {
+                id: 'BEGINNER',
+                label: 'ビギナー',
+                targetGdp: 200,
+                initialMoney: 120,
+                initialDebt: 0,
+                eventDamageMultiplier: 0.5,
+                description: '勝利条件GDPが低く、初期資金が多い。イベントの悪影響も半減します。'
+            },
+            NORMAL: {
+                id: 'NORMAL',
+                label: 'ノーマル',
+                targetGdp: 300,
+                initialMoney: 80,
+                initialDebt: 0,
+                eventDamageMultiplier: 1.0,
+                description: '標準的なバランスです。'
+            },
+            HARD: {
+                id: 'HARD',
+                label: 'ハード',
+                targetGdp: 400,
+                initialMoney: 60,
+                initialDebt: 30,
+                eventDamageMultiplier: 1.5,
+                description: '目標GDPが高く、初期債務を抱えた状態からスタート。イベントの悪影響も強まります。'
+            }
+        };
+
         const INFLATION_MIN = -5;
         const INFLATION_MAX = 15;
 
@@ -712,7 +741,7 @@
                         </div>
 
                         <div className="text-right">
-                            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">GDP (Goal: 300)</div>
+                            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">GDP</div>
                             <div className={`text-3xl font-black tracking-tighter ${isEnemy ? 'text-slate-500' : 'text-cyan-400'}`}>
                                 <NumberCounter value={data.gdp} /><span className="text-sm font-bold ml-1 text-slate-600">兆</span>
                             </div>
@@ -771,7 +800,7 @@
             const [turn, setTurn] = useState(1);
             const [era, setEra] = useState(ERAS.GROWTH);
             const [gameState, setGameState] = useState('START'); // START, PLAYING, WON, LOST
-            const [logs, setLogs] = useState(['ゲーム開始！目標：GDP 300兆円到達']);
+            const [logs, setLogs] = useState([]);
             const [activeEvent, setActiveEvent] = useState(null);
             const [lastTags, setLastTags] = useState([]);
             const [isMuted, setIsMuted] = useState(false);
@@ -780,6 +809,10 @@
             const [showTurnOverlay, setShowTurnOverlay] = useState(false);
             const [shake, setShake] = useState({ player: false, enemy: false });
             const [hoveredCard, setHoveredCard] = useState(null);
+
+            // Difficulty State
+            const [selectedDifficulty, setSelectedDifficulty] = useState(DIFFICULTY_SETTINGS.NORMAL.id);
+            const [currentDifficulty, setCurrentDifficulty] = useState(DIFFICULTY_SETTINGS.NORMAL);
 
             useEffect(() => {
                 SoundManager.isMuted = isMuted;
@@ -918,14 +951,34 @@
             const startGame = () => {
                 SoundManager.init();
                 SoundManager.playSuccess();
+
+                const difficulty = DIFFICULTY_SETTINGS[selectedDifficulty];
+                setCurrentDifficulty(difficulty);
+
                 const event = chooseRandomEvent();
                 setActiveEvent(event);
-                setPlayer({ money: 80, income: 20, gdp: 0, inflation: 0, support: 70, debt: 0, rating: 'AAA', interestDue: 0 });
-                setEnemy({ money: 80, income: 20, gdp: 0, inflation: 0, support: 70, debt: 0, rating: 'AAA', interestDue: 0 });
+
+                const initialPlayerState = {
+                    money: difficulty.initialMoney,
+                    income: 20,
+                    gdp: 0,
+                    inflation: 0,
+                    support: 70,
+                    debt: difficulty.initialDebt,
+                    rating: getRatingByDebt(difficulty.initialDebt),
+                    interestDue: Math.round(difficulty.initialDebt * 0.1)
+                };
+
+                setPlayer(initialPlayerState);
+                setEnemy({ ...initialPlayerState, name: 'ライバル国' });
+
                 setPlayerHand([]);
                 setLastTags([]);
                 setTurn(1);
-                setLogs([`📢 今ターンのイベント: 「${event.name}」 - ${event.description}`, 'ゲーム開始！GDP 300兆円を目指せ！']);
+                setLogs([
+                    `📢 今ターンのイベント: 「${event.name}」 - ${event.description}`,
+                    `ゲーム開始！難易度: ${difficulty.label} (目標GDP: ${difficulty.targetGdp}兆円)`
+                ]);
                 setGameState('PLAYING');
                 setLastPlayedCard(null);
                 setFloatingTexts([]);
@@ -977,12 +1030,30 @@
             };
 
             const applyEventMultiplier = (prevState, nextState) => {
-                if (!activeEvent?.effect?.effectMultiplier) return nextState;
-                const multiplier = activeEvent.effect.effectMultiplier;
+                // 1. Event Multiplier (from card events like Technology Boom)
+                const evtMultiplier = activeEvent?.effect?.effectMultiplier || 1;
+
+                // 2. Difficulty Multiplier (affects negative outcomes mainly)
+                // Logic: If the delta is negative (bad), amplify it by difficulty multiplier.
+                // Beginner: 0.5x bad effect. Hard: 1.5x bad effect.
+                const difficultyMult = currentDifficulty.eventDamageMultiplier || 1;
+
                 const applyScale = (key) => {
                     const delta = nextState[key] - prevState[key];
-                    return prevState[key] + Math.round(delta * multiplier);
+
+                    // First apply the event multiplier (e.g., Tech Boom x1.3)
+                    let scaledDelta = Math.round(delta * evtMultiplier);
+
+                    // Then apply difficulty multiplier if the effect is negative
+                    if (scaledDelta < 0) {
+                        scaledDelta = Math.round(scaledDelta * difficultyMult);
+                    }
+
+                    return prevState[key] + scaledDelta;
                 };
+
+                if (evtMultiplier === 1 && difficultyMult === 1) return nextState;
+
                 return {
                     ...nextState,
                     money: applyScale('money'),
@@ -1203,10 +1274,19 @@
                     eraIncomePenalty = 5; // Reduce income
                 }
 
+                // Difficulty multiplier for income penalty
+                const diffMult = currentDifficulty.eventDamageMultiplier || 1;
+
                 // 1. 収入の処理（プレイヤー）
                 const driftedInflation = applyInflationDrift(player.inflation, driftTarget);
                 const ratingInfo = getRatingInfo(player.rating);
-                const incomePenalty = Math.round((activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier) + eraIncomePenalty;
+
+                // Calculate base penalty
+                let basePenalty = (activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier + eraIncomePenalty;
+
+                // Apply difficulty multiplier to the penalty
+                const incomePenalty = Math.round(basePenalty * diffMult);
+
                 const playerIncomeGain = Math.max(0, player.income - incomePenalty);
                 let playerAfterIncome = {
                     ...player,
@@ -1301,14 +1381,16 @@
             const checkWinCondition = (nextPlayer = player, nextEnemy = enemy) => {
                 if (gameState !== 'PLAYING') return false;
 
-                if (nextPlayer.gdp >= WINNING_GDP) {
+                const target = currentDifficulty.targetGdp || 300;
+
+                if (nextPlayer.gdp >= target) {
                     setGameState('WON');
                     SoundManager.playGameEnd(true);
                     addLog('🎉 おめでとうございます！あなたの国の経済が勝利しました！');
                     return true;
                 }
 
-                if (nextEnemy.gdp >= WINNING_GDP) {
+                if (nextEnemy.gdp >= target) {
                     setGameState('LOST');
                     SoundManager.playGameEnd(false);
                     addLog('💀 残念... ライバル国に経済覇権を奪われました。');
@@ -1373,7 +1455,7 @@
                                         <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
                                         <span className="text-xs font-bold text-slate-300">TURN {turn}</span>
                                     </div>
-                                    <div className="text-xs font-bold text-slate-500">GOAL: GDP {WINNING_GDP}T</div>
+                                    <div className="text-xs font-bold text-slate-500">GOAL: GDP {currentDifficulty.targetGdp}T</div>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
@@ -1624,19 +1706,41 @@
                                         <h2 className="text-3xl font-black text-white mb-2 tracking-tighter">Economics Master</h2>
                                         <p className="text-slate-400 mb-8 font-medium">経済戦略カードゲームへようこそ</p>
 
-                                        <div className="space-y-4 mb-8 text-left bg-slate-900/50 p-6 rounded-xl border border-slate-700/50 text-sm text-slate-300">
-                                            <p className="flex items-start gap-2">
-                                                <span className="text-cyan-400 font-bold">1.</span>
-                                                <span><strong className="text-white">GDP 300兆円</strong> を達成すれば勝利。</span>
-                                            </p>
-                                            <p className="flex items-start gap-2">
-                                                <span className="text-cyan-400 font-bold">2.</span>
-                                                <span>支持率が <strong className="text-rose-400">0%</strong> になると敗北。</span>
-                                            </p>
-                                            <p className="flex items-start gap-2">
-                                                <span className="text-cyan-400 font-bold">3.</span>
-                                                <span>インフレ率、債務残高、金利に注意しながら国を運営しよう。</span>
-                                            </p>
+                                        {/* Difficulty Selector */}
+                                        <div className="mb-8 text-left">
+                                            <div className="text-xs font-bold text-slate-500 uppercase mb-3 tracking-wider">Select Difficulty</div>
+                                            <div className="grid grid-cols-3 gap-3 mb-4">
+                                                {Object.values(DIFFICULTY_SETTINGS).map(diff => {
+                                                    const isSelected = selectedDifficulty === diff.id;
+                                                    return (
+                                                        <button
+                                                            key={diff.id}
+                                                            onClick={() => setSelectedDifficulty(diff.id)}
+                                                            className={`
+                                                                p-3 rounded-xl border-2 transition-all duration-200 text-center relative overflow-hidden
+                                                                ${isSelected
+                                                                    ? 'border-cyan-500 bg-cyan-950/50 text-white shadow-lg shadow-cyan-900/20 scale-105 z-10'
+                                                                    : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:bg-slate-800'}
+                                                            `}
+                                                        >
+                                                            {isSelected && <div className="absolute top-0 left-0 w-full h-1 bg-cyan-500"></div>}
+                                                            <div className="font-bold text-sm mb-0.5">{diff.label}</div>
+                                                            <div className="text-[10px] opacity-70">GDP {diff.targetGdp}T</div>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 min-h-[80px] flex items-center">
+                                                <div>
+                                                    <span className="text-xs font-bold text-cyan-400 block mb-1">
+                                                        {DIFFICULTY_SETTINGS[selectedDifficulty].label} Mode
+                                                    </span>
+                                                    <p className="text-xs text-slate-300 leading-relaxed">
+                                                        {DIFFICULTY_SETTINGS[selectedDifficulty].description}
+                                                    </p>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         <button
