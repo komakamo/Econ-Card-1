@@ -546,6 +546,65 @@
             );
         };
 
+        const CardInfoPanel = ({ card }) => {
+            if (!card) {
+                return (
+                     <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center text-center h-48 animate-fade-in hidden lg:flex">
+                        <div className="p-3 rounded-full bg-slate-800 mb-3 opacity-50">
+                            <IconBookOpen size={24} className="text-slate-400" />
+                        </div>
+                        <h3 className="text-sm font-bold text-slate-500 mb-1">カード解説</h3>
+                        <p className="text-xs text-slate-600">カードにカーソルを合わせると<br/>詳しい解説が表示されます</p>
+                     </div>
+                );
+            }
+
+            const typeInfo = CARD_TYPES[card.type];
+
+            return (
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-fade-in shadow-lg">
+                    {/* Header */}
+                    <div className={`px-4 py-3 border-b border-slate-800 flex items-center gap-2 ${typeInfo?.headerStyle?.replace('bg-', 'bg-opacity-20 bg-')}`}>
+                         {typeInfo?.icon}
+                         <span className="font-bold text-sm tracking-wider">{card.name}</span>
+                    </div>
+
+                    <div className="p-4 space-y-4">
+                        {/* Tip Section */}
+                        <div className="bg-indigo-950/30 border border-indigo-900/50 rounded-xl p-3 relative overflow-hidden">
+                             <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+                             <div className="flex items-start gap-2 mb-1">
+                                 <IconBookOpen size={14} className="text-indigo-400 mt-0.5" />
+                                 <span className="text-xs font-bold text-indigo-300">経済メモ</span>
+                             </div>
+                             <p className="text-xs text-slate-300 leading-relaxed pl-1">
+                                {card.tip}
+                             </p>
+                        </div>
+
+                        {/* Description */}
+                        <div>
+                            <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">効果詳細</div>
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                                {card.description}
+                            </p>
+                        </div>
+
+                        {/* Tags */}
+                        {(card.providesTags || card.providesTag) && (
+                            <div className="flex flex-wrap gap-1 pt-2 border-t border-slate-800/50">
+                                {[].concat(card.providesTags || [], card.providesTag || []).filter(Boolean).map(tag => (
+                                    <span key={tag} className="text-[10px] px-2 py-1 rounded bg-slate-800 text-slate-500 font-mono">
+                                        #{tag}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
         const StatusPanel = ({ data, isEnemy, interest, isShaking }) => {
             if (!data) return <div className="p-4 border rounded text-red-500">Error: No Data</div>;
 
@@ -668,6 +727,7 @@
             const [floatingTexts, setFloatingTexts] = useState([]);
             const [showTurnOverlay, setShowTurnOverlay] = useState(false);
             const [shake, setShake] = useState({ player: false, enemy: false });
+            const [hoveredCard, setHoveredCard] = useState(null);
 
             useEffect(() => {
                 SoundManager.isMuted = isMuted;
@@ -1057,6 +1117,11 @@
                     addLog(`あなた: 「${card.name}」を使用。経済効果発動！`);
                 }
 
+                // Tip Log
+                if (card.tip) {
+                    addLog(`💡 【経済メモ】${card.tip}`);
+                }
+
                 // UI update for discard
                 setLastPlayedCard(card);
 
@@ -1384,6 +1449,8 @@
                                             <button
                                                 key={card.uniqueId}
                                                 onClick={(e) => playCard(card, e)}
+                                                 onMouseEnter={() => setHoveredCard(card)}
+                                                 onMouseLeave={() => setHoveredCard(null)}
                                                 disabled={!canAfford || gameState !== 'PLAYING'}
                                                 className={`
                                                     relative text-left group
@@ -1461,6 +1528,9 @@
 
                         {/* RIGHT COLUMN: LOGS & INFO */}
                         <div className="lg:col-span-3 space-y-6">
+
+                            {/* Card Info Panel */}
+                            <CardInfoPanel card={hoveredCard || lastPlayedCard} />
 
                             {/* Game Log Component */}
                             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col h-[500px] shadow-lg shadow-black/20 sticky top-24">
