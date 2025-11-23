@@ -56,6 +56,14 @@
             animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
+        @keyframes floatUp {
+            0% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -40px) scale(1.2); opacity: 0; }
+        }
+        .animate-float-up {
+            animation: floatUp 1.2s ease-out forwards;
+        }
+
         body {
             background-color: #0f172a; /* Slate 900 */
             color: #e2e8f0; /* Slate 200 */
@@ -500,6 +508,7 @@
             const [lastTags, setLastTags] = useState([]);
             const [isMuted, setIsMuted] = useState(false);
             const [lastPlayedCard, setLastPlayedCard] = useState(null); // Purely for UI visualization
+            const [floatingTexts, setFloatingTexts] = useState([]);
 
             useEffect(() => {
                 SoundManager.isMuted = isMuted;
@@ -531,6 +540,21 @@
                 rating: 'AAA',
                 interestDue: 0,
             });
+
+            // UI Enhancement: Add Floating Text
+            const addFloatingText = (x, y, text, type = 'default') => {
+                const id = Math.random();
+                // Determine color based on type
+                let colorClass = 'text-white';
+                if (type === 'cost') colorClass = 'text-amber-400';
+                if (type === 'income') colorClass = 'text-emerald-400';
+                if (type === 'damage') colorClass = 'text-rose-500';
+
+                setFloatingTexts(prev => [...prev, { id, x, y, text, colorClass }]);
+                setTimeout(() => {
+                    setFloatingTexts(prev => prev.filter(ft => ft.id !== id));
+                }, 1000);
+            };
 
             // ... (Logic functions remain unchanged)
 
@@ -598,6 +622,7 @@
                 setLogs([`📢 今ターンのイベント: 「${event.name}」 - ${event.description}`, 'ゲーム開始！GDP 300兆円を目指せ！']);
                 setGameState('PLAYING');
                 setLastPlayedCard(null);
+                setFloatingTexts([]);
                 drawCards(3);
             };
 
@@ -623,9 +648,15 @@
                 setPlayerHand(prev => [...prev, ...newCards]);
             };
 
-            const issueBonds = () => {
+            const issueBonds = (e) => {
                 if (gameState !== 'PLAYING') return;
                 SoundManager.playTone(1000, 'sine', 0.1, 0.1);
+
+                // Show feedback
+                if (e) {
+                    addFloatingText(e.clientX, e.clientY, "+50", "income");
+                }
+
                 setPlayer(prev => {
                     const updated = {
                         ...prev,
@@ -693,7 +724,7 @@
             };
 
             // プレイヤーのターン処理
-            const playCard = (card) => {
+            const playCard = (card, e) => {
                 if (gameState !== 'PLAYING') return;
 
                 const adjustedCost = calculateAdjustedCost(card.cost, player.inflation);
@@ -706,6 +737,11 @@
                     SoundManager.playError();
                     addLog(`資金不足です（必要: ${adjustedCost}兆円、インフレ影響を反映）`);
                     return;
+                }
+
+                // Show feedback
+                if (e) {
+                    if (adjustedCost > 0) addFloatingText(e.clientX, e.clientY, `-${adjustedCost}`, "cost");
                 }
 
                 SoundManager.playCard(card.type);
@@ -781,6 +817,10 @@
                     money: player.money + playerIncomeGain,
                     inflation: driftedInflation,
                 };
+
+                // Show Summary Feedback (Center screen)
+                addFloatingText(window.innerWidth / 2, window.innerHeight / 2, `Income +${playerIncomeGain}`, "income");
+
                 const interestPaid = getInterestForTurn(playerAfterIncome);
                 playerAfterIncome = applyInterestPayment(playerAfterIncome, 'あなた');
                 const ratedPlayer = applyRatingUpdate(playerAfterIncome, 'あなた');
@@ -896,7 +936,17 @@
             };
 
             return (
-                <div className="min-h-screen text-slate-200">
+                <div className="min-h-screen text-slate-200 relative">
+                    {/* Floating Text Overlay */}
+                    {floatingTexts.map(ft => (
+                        <div
+                            key={ft.id}
+                            className={`fixed pointer-events-none z-50 font-black text-2xl animate-float-up ${ft.colorClass}`}
+                            style={{ left: ft.x, top: ft.y, textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}
+                        >
+                            {ft.text}
+                        </div>
+                    ))}
 
                     {/* TOP HEADER */}
                     <header className="bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-0 z-50">
@@ -922,13 +972,13 @@
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setIsMuted(!isMuted)}
-                                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors active:scale-95"
                                     >
                                         {isMuted ? <IconVolumeX size={18} /> : <IconVolume2 size={18} />}
                                     </button>
                                     <button
                                         onClick={startGame}
-                                        className="text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition-all flex items-center gap-2"
+                                        className="text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition-all flex items-center gap-2 active:scale-95"
                                     >
                                         <IconRefreshCw size={14} />
                                         {gameState === 'START' ? 'Start' : 'Reset'}
@@ -1016,9 +1066,9 @@
                                     </h3>
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={issueBonds}
+                                            onClick={(e) => issueBonds(e)}
                                             disabled={gameState !== 'PLAYING'}
-                                            className="bg-amber-700/20 text-amber-500 border border-amber-900/50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-700/40 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                                            className="bg-amber-700/20 text-amber-500 border border-amber-900/50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-700/40 transition-all disabled:opacity-50 flex items-center gap-1.5 active:scale-95"
                                         >
                                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                             国債発行 (+50兆)
@@ -1026,7 +1076,7 @@
                                         <button
                                             onClick={endTurn}
                                             disabled={gameState !== 'PLAYING'}
-                                            className="bg-cyan-600 text-white px-5 py-1.5 rounded-lg text-xs font-bold hover:bg-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20 transition-all disabled:opacity-50 flex items-center gap-2"
+                                            className="bg-cyan-600 text-white px-5 py-1.5 rounded-lg text-xs font-bold hover:bg-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20 transition-all disabled:opacity-50 flex items-center gap-2 active:scale-95"
                                         >
                                             ターン終了 <IconArrowRight size={14} />
                                         </button>
@@ -1044,13 +1094,13 @@
                                         return (
                                             <button
                                                 key={card.uniqueId}
-                                                onClick={() => playCard(card)}
+                                                onClick={(e) => playCard(card, e)}
                                                 disabled={!canAfford || gameState !== 'PLAYING'}
                                                 className={`
                                                     relative text-left group
                                                     flex flex-col h-full rounded-xl border-2 transition-all duration-300 overflow-hidden
                                                     ${typeInfo.baseStyle}
-                                                    ${canAfford ? 'cursor-pointer hover:-translate-y-1 hover:brightness-110' : 'opacity-40 cursor-not-allowed grayscale border-slate-700 bg-slate-900'}
+                                                    ${canAfford ? 'cursor-pointer hover:-translate-y-1 hover:brightness-110 active:scale-95' : 'opacity-40 cursor-not-allowed grayscale border-slate-700 bg-slate-900'}
                                                 `}
                                             >
                                                 {/* Header */}
@@ -1165,7 +1215,7 @@
 
                                         <button
                                             onClick={startGame}
-                                            className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-cyan-900/20 hover:scale-105 transition-transform"
+                                            className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-cyan-900/20 hover:scale-105 transition-transform active:scale-95"
                                         >
                                             START GAME
                                         </button>
@@ -1194,7 +1244,7 @@
 
                                         <button
                                             onClick={startGame}
-                                            className="px-8 py-3 bg-slate-700 text-white rounded-xl font-bold hover:bg-slate-600 transition-colors w-full"
+                                            className="px-8 py-3 bg-slate-700 text-white rounded-xl font-bold hover:bg-slate-600 transition-colors w-full active:scale-95"
                                         >
                                             Play Again
                                         </button>
