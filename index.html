@@ -371,7 +371,41 @@
             }
         };
 
-        const INITIAL_DECK = [
+        const IDEOLOGIES = {
+            KEYNESIAN: {
+                id: 'KEYNESIAN',
+                name: 'ケインズ派',
+                label: '積極財政',
+                description: '不況時は政府支出で需要を創出します。',
+                features: ['公共事業・金融緩和 多め', '初期支持率 高', '初期債務 あり'],
+                initialStats: { support: 80, debt: 50, money: 120 },
+                deckWeights: { 3: 3, 4: 2, 6: 2 },
+                rankCriteria: { minGdp: 400, maxInflation: 4, minInflation: 2, maxDebt: 100 }
+            },
+            MONETARIST: {
+                id: 'MONETARIST',
+                name: 'マネタリスト',
+                label: '規律重視',
+                description: '通貨供給を管理し、インフレ抑制を最優先します。',
+                features: ['増税・金融引き締め', 'インフレ抑制で高評価', '堅実な運営'],
+                initialStats: { support: 60, debt: 0, money: 70 },
+                deckWeights: { 5: 3, 4: 2, 11: 2 },
+                rankCriteria: { minGdp: 350, maxInflation: 2, minInflation: -1, maxDebt: 80 },
+                bonusCondition: (stats) => stats.inflation >= -1 && stats.inflation <= 2
+            },
+            SUPPLY_SIDE: {
+                id: 'SUPPLY_SIDE',
+                name: 'サプライサイド',
+                label: '成長戦略',
+                description: '規制緩和と投資で供給力を高め、GDP成長を促します。',
+                features: ['設備投資・技術革新', 'GDP重視', '大器晩成'],
+                initialStats: { support: 70, debt: 20, money: 100 },
+                deckWeights: { 1: 3, 2: 3, 8: 3 },
+                rankCriteria: { minGdp: 450, maxInflation: 6, minInflation: 0, maxDebt: 150 }
+            }
+        };
+
+        const ALL_CARDS = [
             {
                 id: 1,
                 name: '設備投資',
@@ -596,7 +630,7 @@
             return Math.min(100, Math.max(0, Math.round(base + bonus)));
         };
 
-        const evaluateGame = (player, difficulty, isWin) => {
+        const evaluateGame = (player, difficulty, isWin, ideology = null) => {
             // 1. Basic Stats
             const gdp = player.gdp;
             const inflation = player.inflation;
@@ -608,11 +642,14 @@
             let comments = [];
             let nextGoals = [];
 
+            // Ideology Rank Criteria (Defaults to Standard/Keynesian if null)
+            const criteria = ideology?.rankCriteria || { minGdp: 400, maxInflation: 4, minInflation: 2, maxDebt: 100 };
+
             // Inflation Eval
             let inflationEval = "適正";
             if (inflation < 0) { inflationEval = "デフレ気味"; comments.push("デフレ脱却が必要です"); }
-            else if (inflation < 2) { inflationEval = "やや低い"; }
-            else if (inflation <= 4) { inflationEval = "理想的"; }
+            else if (inflation < criteria.minInflation) { inflationEval = "やや低い"; }
+            else if (inflation <= criteria.maxInflation) { inflationEval = "理想的"; }
             else if (inflation <= 8) { inflationEval = "やや高い"; }
             else { inflationEval = "危険水域"; comments.push("インフレ抑制を最優先に"); }
 
@@ -632,24 +669,41 @@
                 rankColor = 'text-gray-500';
                 nextGoals.push("まずはクリアを目指しましょう！");
             } else {
-                // Check S
-                const isS = gdp >= 400 && (inflation >= 2 && inflation <= 4) && debt <= 100 && rating === 'AAA' && support >= 60;
-                // Check A
-                const isA = gdp >= 300 && (inflation >= 0 && inflation <= 6) && debt <= 200 && (rating === 'AAA' || rating === 'BBB') && support >= 50;
+                // Check S (Ideology Specific)
+                // Default S: GDP 400, Inf 2-4, Debt 100, AAA, Support 60
+                const isS = gdp >= criteria.minGdp
+                            && (inflation >= criteria.minInflation && inflation <= criteria.maxInflation)
+                            && debt <= criteria.maxDebt
+                            && rating === 'AAA'
+                            && support >= 60;
 
-                if (isS) {
+                // Check A (Relaxed S)
+                const isA = gdp >= (criteria.minGdp * 0.75)
+                            && (inflation >= (criteria.minInflation - 2) && inflation <= (criteria.maxInflation + 2))
+                            && debt <= (criteria.maxDebt + 100)
+                            && (rating === 'AAA' || rating === 'BBB')
+                            && support >= 50;
+
+                // Monetarist Bonus: If inflation is perfectly managed, boost rank?
+                const bonusAchieved = ideology?.bonusCondition && ideology.bonusCondition(player);
+                const effectiveRank = isS ? 'S' : (isA ? 'A' : 'B');
+
+                // Apply Bonus to promote A to S if close? (For now just use S/A logic directly)
+
+                if (isS || (isA && bonusAchieved && effectiveRank !== 'S')) {
                     rank = 'S';
                     rankLabel = 'LEGENDARY';
                     rankColor = 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]';
                     nextGoals.push("完璧な手腕です！これ以上の称号はありません。");
+                    if(bonusAchieved) nextGoals.push("ボーナス目標（インフレ抑制）も達成！");
                 } else if (isA) {
                     rank = 'A';
                     rankLabel = 'EXCELLENT';
                     rankColor = 'text-emerald-400';
                     // Advice for S
-                    if (gdp < 400) nextGoals.push("次はGDP 400兆円を目指そう");
-                    if (inflation < 2 || inflation > 4) nextGoals.push("インフレ率 2-4% の安定成長を目指そう");
-                    if (debt > 100) nextGoals.push("債務 100兆円以下の健全財政を目指そう");
+                    if (gdp < criteria.minGdp) nextGoals.push(`次はGDP ${criteria.minGdp}兆円を目指そう`);
+                    if (inflation < criteria.minInflation || inflation > criteria.maxInflation) nextGoals.push(`インフレ率 ${criteria.minInflation}-${criteria.maxInflation}% を目指そう`);
+                    if (debt > criteria.maxDebt) nextGoals.push(`債務 ${criteria.maxDebt}兆円以下の健全財政を目指そう`);
                 } else {
                     rank = 'B';
                     rankLabel = 'GOOD';
@@ -1017,6 +1071,8 @@
             // Difficulty State
             const [selectedDifficulty, setSelectedDifficulty] = useState(DIFFICULTY_SETTINGS.NORMAL.id);
             const [currentDifficulty, setCurrentDifficulty] = useState(DIFFICULTY_SETTINGS.NORMAL);
+            const [selectedIdeology, setSelectedIdeology] = useState(IDEOLOGIES.KEYNESIAN.id);
+            const [gameDeck, setGameDeck] = useState([]);
 
             useEffect(() => {
                 SoundManager.isMuted = isMuted;
@@ -1179,10 +1235,38 @@
                 const difficulty = DIFFICULTY_SETTINGS[selectedDifficulty];
                 setCurrentDifficulty(difficulty);
 
+                const ideology = IDEOLOGIES[selectedIdeology];
+
+                // Build Deck based on Ideology
+                const newDeck = [];
+                ALL_CARDS.forEach(card => {
+                    const weight = ideology.deckWeights[card.id] || 1;
+                    for(let i=0; i<weight; i++) {
+                        newDeck.push(card);
+                    }
+                });
+                setGameDeck(newDeck);
+
                 const event = chooseRandomEvent();
                 setActiveEvent(event);
 
+                // Initialize Player Stats: Ideology Base + Difficulty Modifiers
+                const initialDebt = (ideology.initialStats.debt || 0) + (difficulty.initialDebt || 0);
+
                 const initialPlayerState = {
+                    money: ideology.initialStats.money || 100,
+                    income: 20,
+                    gdp: 0,
+                    inflation: 0,
+                    support: ideology.initialStats.support || 70,
+                    debt: initialDebt,
+                    rating: getRatingByDebt(initialDebt),
+                    interestDue: Math.round(initialDebt * 0.1),
+                    activeEffects: []
+                };
+
+                // AI uses standard/difficulty stats or could mirror player (let's use difficulty defaults for AI to keep it standard)
+                const initialEnemyState = {
                     money: difficulty.initialMoney,
                     income: 20,
                     gdp: 0,
@@ -1195,19 +1279,26 @@
                 };
 
                 setPlayer(initialPlayerState);
-                setEnemy({ ...initialPlayerState, name: 'ライバル国', activeEffects: [] });
+                setEnemy({ ...initialEnemyState, name: 'ライバル国', activeEffects: [] });
 
                 setPlayerHand([]);
                 setLastTags([]);
                 setTurn(1);
                 setLogs([
                     `📢 今ターンのイベント: 「${event.name}」 - ${event.description}`,
-                    `ゲーム開始！難易度: ${difficulty.label} (目標GDP: ${difficulty.targetGdp}兆円)`
+                    `ゲーム開始！難易度: ${difficulty.label} / 思想: ${ideology.name}`
                 ]);
                 setGameState('PLAYING');
                 setLastPlayedCard(null);
                 setFloatingTexts([]);
-                drawCards(3);
+
+                // Draw initial cards from the NEW deck.
+                // Note: drawCards uses 'gameDeck' state, but state updates are async.
+                // So we pass the deck explicitly to a modified draw helper or just set state and use effect?
+                // Better: drawCards uses gameDeck from state, but it's empty right now!
+                // Fix: Pass the deck to drawCards or handle initial draw separately.
+                // Let's modify drawCards to accept an optional deck source.
+                drawCards(3, newDeck);
             };
 
             const addLog = (msg) => {
@@ -1223,10 +1314,13 @@
             };
 
             // カードドロー機能
-            const drawCards = (count) => {
+            const drawCards = (count, sourceDeck = null) => {
+                const deckToUse = sourceDeck || gameDeck;
+                if (!deckToUse || deckToUse.length === 0) return;
+
                 const newCards = [];
                 for (let i = 0; i < count; i++) {
-                    const randomCard = INITIAL_DECK[Math.floor(Math.random() * INITIAL_DECK.length)];
+                    const randomCard = deckToUse[Math.floor(Math.random() * deckToUse.length)];
                     newCards.push({ ...randomCard, uniqueId: Math.random() });
                 }
                 setPlayerHand(prev => [...prev, ...newCards]);
@@ -1624,7 +1718,7 @@
                     const ratedEnemy = applyRatingUpdate(afterIncome, 'ライバル');
                     const unrestAdjusted = applyUnrestPenalty(ratedEnemy, 'ライバル');
 
-                    const potentialActions = INITIAL_DECK.filter(c => calculateAdjustedCost(c.cost, unrestAdjusted.inflation) <= unrestAdjusted.money);
+                    const potentialActions = ALL_CARDS.filter(c => calculateAdjustedCost(c.cost, unrestAdjusted.inflation) <= unrestAdjusted.money);
 
                     if (potentialActions.length === 0) {
                         addLog(`ライバル: 資金不足のため資金を温存。`);
@@ -1694,7 +1788,7 @@
                     addLog(isWin ? `🎉 ${reason}` : `💀 ${reason}`);
 
                     // Calculate Evaluation
-                    const result = evaluateGame(nextPlayer, currentDifficulty, isWin);
+                    const result = evaluateGame(nextPlayer, currentDifficulty, isWin, IDEOLOGIES[selectedIdeology]);
                     setEvaluation(result);
                     return true;
                 }
@@ -2005,6 +2099,38 @@
 
                                         <h2 className="text-3xl font-black text-white mb-2 tracking-tighter">Economics Master</h2>
                                         <p className="text-slate-400 mb-8 font-medium">経済戦略カードゲームへようこそ</p>
+
+                                        {/* Ideology Selector */}
+                                        <div className="mb-8 text-left">
+                                            <div className="text-xs font-bold text-slate-500 uppercase mb-3 tracking-wider">Select Playstyle (思想・派閥)</div>
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                                                {Object.values(IDEOLOGIES).map(ideology => {
+                                                    const isSelected = selectedIdeology === ideology.id;
+                                                    return (
+                                                        <button
+                                                            key={ideology.id}
+                                                            onClick={() => setSelectedIdeology(ideology.id)}
+                                                            className={`
+                                                                p-3 rounded-xl border-2 transition-all duration-200 text-left relative overflow-hidden group h-full
+                                                                ${isSelected
+                                                                    ? 'border-indigo-500 bg-indigo-950/50 text-white shadow-lg shadow-indigo-900/20 scale-[1.02] z-10'
+                                                                    : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600 hover:bg-slate-800'}
+                                                            `}
+                                                        >
+                                                            {isSelected && <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>}
+                                                            <div className="font-bold text-sm mb-0.5">{ideology.name}</div>
+                                                            <div className="text-[10px] font-bold opacity-70 mb-2 text-indigo-300">{ideology.label}</div>
+                                                            <div className="text-[10px] opacity-60 leading-tight mb-2">{ideology.description}</div>
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {ideology.features.map((f, i) => (
+                                                                    <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-black/20 text-slate-300">{f}</span>
+                                                                ))}
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
 
                                         {/* Difficulty Selector */}
                                         <div className="mb-8 text-left">
