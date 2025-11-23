@@ -342,12 +342,56 @@
                 name: '公共事業',
                 cost: 40,
                 type: 'POLICY',
-                inflationChange: 1,
+                inflationChange: 2,
                 supportChange: 8,
-                effect: (me, opp) => ({ ...me, gdp: me.gdp + 25 }),
-                description: '道路や橋を作り、雇用と需要を生み出します。',
-                tip: '【財政政策】政府が支出を行うことで、有効需要を創出します。',
+                effect: (me, opp) => ({
+                    ...me,
+                    gdp: me.gdp + 40,
+                    activeEffects: [...(me.activeEffects || []), {
+                        name: '公共事業の維持費',
+                        turnsLeft: 3,
+                        effect: (s) => ({ ...s, income: Math.max(0, s.income - 5) })
+                    }]
+                }),
+                description: '大規模なインフラ整備を行います。GDPは大きく伸びますが、将来の維持費がかさみます。',
+                tip: '【財政政策】政府支出は即効性がありますが、将来の財政硬直化（維持費増大）を招くリスクもあります。',
                 providesTag: 'infrastructure'
+            },
+            {
+                id: 10,
+                name: 'ポピュリズム政策',
+                cost: 10,
+                type: 'POLICY',
+                supportChange: 20,
+                inflationChange: 1,
+                effect: (me, opp) => ({
+                    ...me,
+                    gdp: Math.max(0, me.gdp - 15),
+                    activeEffects: [...(me.activeEffects || []), {
+                        name: 'バラマキのツケ',
+                        turnsLeft: 2,
+                        effect: (s) => ({ ...s, inflation: s.inflation + 3 })
+                    }]
+                }),
+                description: '現金給付などで支持率を爆上げしますが、成長を阻害し、近い将来インフレを招きます。',
+                tip: '【ポピュリズム】短期的な人気取り政策は、長期的には経済の基礎的条件（ファンダメンタルズ）を悪化させることがあります。'
+            },
+            {
+                id: 11,
+                name: '大規模構造改革',
+                cost: 30,
+                type: 'POLICY',
+                supportChange: -15,
+                effect: (me, opp) => ({
+                    ...me,
+                    activeEffects: [...(me.activeEffects || []), {
+                        name: '改革の成果',
+                        turnsLeft: 3,
+                        effect: (s) => ({ ...s, gdp: s.gdp + 50 })
+                    }]
+                }),
+                description: '既得権益を打破します。国民の反発を招きますが、数ターン後に大きな成長をもたらします。',
+                tip: '【構造改革】規制緩和や市場開放は、短期的には痛み（失業や反発）を伴いますが、長期的には生産性を向上させます。'
             },
             {
                 id: 4,
@@ -966,11 +1010,12 @@
                     support: 70,
                     debt: difficulty.initialDebt,
                     rating: getRatingByDebt(difficulty.initialDebt),
-                    interestDue: Math.round(difficulty.initialDebt * 0.1)
+                    interestDue: Math.round(difficulty.initialDebt * 0.1),
+                    activeEffects: []
                 };
 
                 setPlayer(initialPlayerState);
-                setEnemy({ ...initialPlayerState, name: 'ライバル国' });
+                setEnemy({ ...initialPlayerState, name: 'ライバル国', activeEffects: [] });
 
                 setPlayerHand([]);
                 setLastTags([]);
@@ -1266,6 +1311,28 @@
 
                 SoundManager.playClick();
 
+                // 0. Process Delayed Effects (Player)
+                let currentPlayerState = { ...player };
+                let effectsTriggered = [];
+                let nextActiveEffects = [];
+
+                if (currentPlayerState.activeEffects) {
+                    currentPlayerState.activeEffects.forEach(eff => {
+                        if (eff.turnsLeft <= 1) {
+                            currentPlayerState = eff.effect(currentPlayerState);
+                            effectsTriggered.push(eff.name);
+                        } else {
+                            nextActiveEffects.push({ ...eff, turnsLeft: eff.turnsLeft - 1 });
+                        }
+                    });
+                }
+                currentPlayerState.activeEffects = nextActiveEffects;
+
+                if (effectsTriggered.length > 0) {
+                    addLog(`⏰ 時間差効果発動: ${effectsTriggered.join(', ')}`);
+                    addFloatingText(window.innerWidth / 2, window.innerHeight / 2 - 50, "Delayed Effect!", "income");
+                }
+
                 // Era Effect: Stagnation Deflation Drift
                 let driftTarget = 0;
                 let eraIncomePenalty = 0;
@@ -1278,8 +1345,8 @@
                 const diffMult = currentDifficulty.eventDamageMultiplier || 1;
 
                 // 1. 収入の処理（プレイヤー）
-                const driftedInflation = applyInflationDrift(player.inflation, driftTarget);
-                const ratingInfo = getRatingInfo(player.rating);
+                const driftedInflation = applyInflationDrift(currentPlayerState.inflation, driftTarget);
+                const ratingInfo = getRatingInfo(currentPlayerState.rating);
 
                 // Calculate base penalty
                 let basePenalty = (activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier + eraIncomePenalty;
@@ -1287,10 +1354,10 @@
                 // Apply difficulty multiplier to the penalty
                 const incomePenalty = Math.round(basePenalty * diffMult);
 
-                const playerIncomeGain = Math.max(0, player.income - incomePenalty);
+                const playerIncomeGain = Math.max(0, currentPlayerState.income - incomePenalty);
                 let playerAfterIncome = {
-                    ...player,
-                    money: player.money + playerIncomeGain,
+                    ...currentPlayerState,
+                    money: currentPlayerState.money + playerIncomeGain,
                     inflation: driftedInflation,
                 };
 
@@ -1332,11 +1399,32 @@
                 }
 
                 setEnemy(prev => {
-                    const drifted = applyInflationDrift(prev.inflation, driftTarget);
-                    if (drifted !== prev.inflation) {
-                        addLog(`ライバル: インフレ率 ${prev.inflation.toFixed(1)}% → ${drifted.toFixed(1)}% (自動調整)`);
+                    // 0. Process Delayed Effects (AI)
+                    let currentEnemyState = { ...prev };
+                    let nextActiveEffects = [];
+                    let effectsTriggered = [];
+
+                    if (currentEnemyState.activeEffects) {
+                        currentEnemyState.activeEffects.forEach(eff => {
+                            if (eff.turnsLeft <= 1) {
+                                currentEnemyState = eff.effect(currentEnemyState);
+                                effectsTriggered.push(eff.name);
+                            } else {
+                                nextActiveEffects.push({ ...eff, turnsLeft: eff.turnsLeft - 1 });
+                            }
+                        });
                     }
-                    const afterDrift = { ...prev, inflation: drifted };
+                    currentEnemyState.activeEffects = nextActiveEffects;
+
+                    if (effectsTriggered.length > 0) {
+                        addLog(`ライバル: 時間差効果発動: ${effectsTriggered.join(', ')}`);
+                    }
+
+                    const drifted = applyInflationDrift(currentEnemyState.inflation, driftTarget);
+                    if (drifted !== currentEnemyState.inflation) {
+                        addLog(`ライバル: インフレ率 ${currentEnemyState.inflation.toFixed(1)}% → ${drifted.toFixed(1)}% (自動調整)`);
+                    }
+                    const afterDrift = { ...currentEnemyState, inflation: drifted };
                     const ratingInfo = getRatingInfo(afterDrift.rating);
                     const incomePenalty = Math.round((activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier + eraIncomePenalty);
                     const aiIncomeGain = Math.max(0, afterDrift.income - incomePenalty);
