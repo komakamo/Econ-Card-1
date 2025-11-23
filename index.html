@@ -605,6 +605,58 @@
             );
         };
 
+        const ComboGuidePanel = () => {
+            const combos = [
+                {
+                    tag: 'infrastructure',
+                    label: 'インフラ',
+                    desc: '設備投資系。後続の公共投資や技術革新の効果を強化します。',
+                    color: 'text-amber-400 bg-amber-900/20 border-amber-500/30'
+                },
+                {
+                    tag: 'education',
+                    label: '教育・人材',
+                    desc: '人材育成系。後の技術革新やスタートアップと好相性です。',
+                    color: 'text-emerald-400 bg-emerald-900/20 border-emerald-500/30'
+                },
+                {
+                    tag: 'innovation',
+                    label: 'イノベーション',
+                    desc: '技術革新系。スタートアップ支援等の効果を最大化します。',
+                    color: 'text-cyan-400 bg-cyan-900/20 border-cyan-500/30'
+                },
+                {
+                    tag: 'tech',
+                    label: '先端技術',
+                    desc: 'IT革命期(後半)に効果が倍増する強力なタグです。',
+                    color: 'text-purple-400 bg-purple-900/20 border-purple-500/30'
+                }
+            ];
+
+            return (
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg mt-6">
+                    <div className="bg-slate-800/50 p-3 border-b border-slate-800 flex items-center gap-2">
+                         <IconZap size={14} className="text-yellow-400" />
+                         <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Combo Guide</span>
+                    </div>
+                    <div className="p-4 space-y-2">
+                        {combos.map(c => (
+                            <div key={c.tag} className={`p-2 rounded-lg border ${c.color} border flex flex-col gap-1`}>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-black/20 tracking-wider">#{c.tag}</span>
+                                    <span className="text-xs font-bold opacity-90">{c.label}</span>
+                                </div>
+                                <p className="text-[10px] opacity-80 leading-relaxed pl-1">{c.desc}</p>
+                            </div>
+                        ))}
+                         <div className="mt-2 pt-2 border-t border-slate-800/50 text-[10px] text-slate-500 text-center leading-tight">
+                            直前にプレイしたカードのタグが<br/>次のカードのコンボ発動キーになります
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const StatusPanel = ({ data, isEnemy, interest, isShaking }) => {
             if (!data) return <div className="p-4 border rounded text-red-500">Error: No Data</div>;
 
@@ -1044,7 +1096,9 @@
                 SoundManager.playCard(card.type);
 
                 if (comboReadyTags.length > 0) {
-                    addLog(`🎯 コンボ発動！${comboReadyTags.join(', ')}タグとの相乗効果で「${card.name}」の効果が強化されます。`);
+                    addLog(`★コンボ発動：${comboReadyTags.join(', ')}タグ → 効果${COMBO_MULTIPLIER}倍`);
+                    // Visual Feedback for Combo
+                    addFloatingText(e ? e.clientX : window.innerWidth/2, e ? e.clientY - 50 : window.innerHeight/2, `COMBO x${COMBO_MULTIPLIER}!`, 'income');
                 }
 
                 if (card.type === 'ATTACK') {
@@ -1498,15 +1552,15 @@
 
                                                         {/* Tags */}
                                                         {(comboReadyTags.length > 0 || providesTags.length > 0) && (
-                                                            <div className="flex flex-wrap gap-1">
+                                                            <div className="flex flex-wrap gap-1 mt-auto pt-2">
                                                                 {comboReadyTags.map(tag => (
-                                                                     <span key={tag} className="bg-rose-900/30 text-rose-400 border border-rose-900/50 px-1.5 py-0.5 rounded text-[9px] font-bold">
-                                                                        ★ {tag}
+                                                                     <span key={tag} className="bg-gradient-to-r from-amber-500/20 to-rose-500/20 text-amber-200 border border-amber-500/50 px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide shadow-[0_0_10px_rgba(245,158,11,0.2)] animate-pulse">
+                                                                        ★ COMBO: {tag}
                                                                      </span>
                                                                 ))}
                                                                 {providesTags.map(tag => (
-                                                                     <span key={tag} className="bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded text-[9px] font-medium">
-                                                                        + {tag}
+                                                                     <span key={tag} className="bg-slate-800/80 text-cyan-200/80 border border-cyan-800/50 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide">
+                                                                        #{tag}
                                                                      </span>
                                                                 ))}
                                                             </div>
@@ -1533,7 +1587,7 @@
                             <CardInfoPanel card={hoveredCard || lastPlayedCard} />
 
                             {/* Game Log Component */}
-                            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col h-[500px] shadow-lg shadow-black/20 sticky top-24">
+                            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col h-[350px] shadow-lg shadow-black/20">
                                 <div className="bg-slate-800/50 p-3 border-b border-slate-800 flex justify-between items-center">
                                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                                         <IconRefreshCw size={12} /> Game Log
@@ -1553,6 +1607,9 @@
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Combo Guide */}
+                            <ComboGuidePanel />
 
                             {/* START SCREEN / OVERLAY */}
                             {gameState === 'START' && (
