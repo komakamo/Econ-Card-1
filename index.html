@@ -596,6 +596,88 @@
             return Math.min(100, Math.max(0, Math.round(base + bonus)));
         };
 
+        const evaluateGame = (player, difficulty, isWin) => {
+            // 1. Basic Stats
+            const gdp = player.gdp;
+            const inflation = player.inflation;
+            const debt = player.debt;
+            const support = player.support;
+            const rating = player.rating;
+
+            // 2. Comments
+            let comments = [];
+            let nextGoals = [];
+
+            // Inflation Eval
+            let inflationEval = "適正";
+            if (inflation < 0) { inflationEval = "デフレ気味"; comments.push("デフレ脱却が必要です"); }
+            else if (inflation < 2) { inflationEval = "やや低い"; }
+            else if (inflation <= 4) { inflationEval = "理想的"; }
+            else if (inflation <= 8) { inflationEval = "やや高い"; }
+            else { inflationEval = "危険水域"; comments.push("インフレ抑制を最優先に"); }
+
+            // Debt Eval
+            let debtEval = "健全";
+            if (debt > 300) { debtEval = "危機的"; comments.push("財政再建が急務です"); }
+            else if (debt > 150) { debtEval = "要注意"; }
+
+            // Rank Logic
+            let rank = 'C';
+            let rankColor = 'text-slate-400';
+            let rankLabel = 'NORMAL';
+
+            if (!isWin) {
+                rank = 'E';
+                rankLabel = 'FAILED';
+                rankColor = 'text-gray-500';
+                nextGoals.push("まずはクリアを目指しましょう！");
+            } else {
+                // Check S
+                const isS = gdp >= 400 && (inflation >= 2 && inflation <= 4) && debt <= 100 && rating === 'AAA' && support >= 60;
+                // Check A
+                const isA = gdp >= 300 && (inflation >= 0 && inflation <= 6) && debt <= 200 && (rating === 'AAA' || rating === 'BBB') && support >= 50;
+
+                if (isS) {
+                    rank = 'S';
+                    rankLabel = 'LEGENDARY';
+                    rankColor = 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]';
+                    nextGoals.push("完璧な手腕です！これ以上の称号はありません。");
+                } else if (isA) {
+                    rank = 'A';
+                    rankLabel = 'EXCELLENT';
+                    rankColor = 'text-emerald-400';
+                    // Advice for S
+                    if (gdp < 400) nextGoals.push("次はGDP 400兆円を目指そう");
+                    if (inflation < 2 || inflation > 4) nextGoals.push("インフレ率 2-4% の安定成長を目指そう");
+                    if (debt > 100) nextGoals.push("債務 100兆円以下の健全財政を目指そう");
+                } else {
+                    rank = 'B';
+                    rankLabel = 'GOOD';
+                    rankColor = 'text-cyan-400';
+                     // Advice for A
+                    if (inflation > 6) nextGoals.push("インフレを 5%以下 に抑えてAランクを目指そう");
+                    if (debt > 200) nextGoals.push("債務を減らして格付けを維持しよう");
+                    if (support < 50) nextGoals.push("支持率 50%以上 をキープしよう");
+                }
+            }
+
+            // Default advice if empty
+            if (nextGoals.length === 0) nextGoals.push("さらなる高みを目指して...");
+
+            return {
+                rank,
+                rankLabel,
+                rankColor,
+                stats: [
+                    { label: '最終GDP', value: `${gdp}兆`, note: gdp >= 400 ? 'S基準達成' : '' },
+                    { label: 'インフレ率', value: `${inflation.toFixed(1)}%`, note: inflationEval },
+                    { label: '債務残高', value: `${debt}兆`, note: `格付:${rating}` },
+                    { label: '支持率', value: `${support}%`, note: support >= 60 ? '高支持' : '' },
+                ],
+                nextGoal: nextGoals[0]
+            };
+        };
+
         // --- Visual Components ---
 
         const NumberCounter = ({ value, duration = 1000 }) => {
@@ -930,6 +1012,7 @@
             const [shake, setShake] = useState({ player: false, enemy: false });
             const [hoveredCard, setHoveredCard] = useState(null);
             const [crisisAlert, setCrisisAlert] = useState(null); // { message: string, type: 'danger'|'warning' }
+            const [evaluation, setEvaluation] = useState(null);
 
             // Difficulty State
             const [selectedDifficulty, setSelectedDifficulty] = useState(DIFFICULTY_SETTINGS.NORMAL.id);
@@ -1586,32 +1669,33 @@
                 if (gameState !== 'PLAYING') return false;
 
                 const target = currentDifficulty.targetGdp || 300;
+                let won = false;
+                let lost = false;
+                let reason = '';
 
                 if (nextPlayer.gdp >= target) {
-                    setGameState('WON');
-                    SoundManager.playGameEnd(true);
-                    addLog('🎉 おめでとうございます！あなたの国の経済が勝利しました！');
-                    return true;
+                    won = true;
+                    reason = '経済目標達成！';
+                } else if (nextEnemy.gdp >= target) {
+                    lost = true;
+                    reason = 'ライバル国に敗北...';
+                } else if (nextPlayer.support <= 0) {
+                    lost = true;
+                    reason = '支持率低下により政権崩壊';
+                } else if (nextEnemy.support <= 0) {
+                    won = true;
+                    reason = 'ライバル国が自滅！';
                 }
 
-                if (nextEnemy.gdp >= target) {
-                    setGameState('LOST');
-                    SoundManager.playGameEnd(false);
-                    addLog('💀 残念... ライバル国に経済覇権を奪われました。');
-                    return true;
-                }
+                if (won || lost) {
+                    const isWin = won;
+                    setGameState(isWin ? 'WON' : 'LOST');
+                    SoundManager.playGameEnd(isWin);
+                    addLog(isWin ? `🎉 ${reason}` : `💀 ${reason}`);
 
-                if (nextPlayer.support <= 0) {
-                    setGameState('LOST');
-                    SoundManager.playGameEnd(false);
-                    addLog('💀 支持率が0%に落ち、政権が崩壊してしまいました。');
-                    return true;
-                }
-
-                if (nextEnemy.support <= 0) {
-                    setGameState('WON');
-                    SoundManager.playGameEnd(true);
-                    addLog('🎉 ライバル国の支持率が崩壊し、あなたの国が優位に立ちました！');
+                    // Calculate Evaluation
+                    const result = evaluateGame(nextPlayer, currentDifficulty, isWin);
+                    setEvaluation(result);
                     return true;
                 }
 
@@ -1969,28 +2053,65 @@
                                 </div>
                             )}
 
-                            {/* WIN/LOSS OVERLAY */}
-                            {(gameState === 'WON' || gameState === 'LOST') && (
-                                <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4">
-                                     <div className={`p-8 rounded-2xl shadow-2xl max-w-md w-full text-center border-2 ${gameState === 'WON' ? 'bg-slate-800 border-cyan-500' : 'bg-slate-800 border-rose-500'}`}>
+                            {/* WIN/LOSS OVERLAY (REPORT CARD) */}
+                            {(gameState === 'WON' || gameState === 'LOST') && evaluation && (
+                                <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-md flex items-center justify-center p-4">
+                                     <div className={`relative p-8 rounded-3xl shadow-2xl max-w-lg w-full border-4 overflow-hidden ${gameState === 'WON' ? 'bg-slate-800 border-cyan-500 shadow-cyan-900/50' : 'bg-slate-800 border-rose-900 shadow-rose-900/50'}`}>
 
-                                        {gameState === 'WON' ? (
-                                            <>
-                                                <div className="text-6xl mb-4">🎉</div>
-                                                <h2 className="text-4xl font-black text-cyan-400 mb-2">VICTORY</h2>
-                                                <p className="text-slate-300 mb-6">あなたの経済政策は大成功を収めました！</p>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <div className="text-6xl mb-4">💀</div>
-                                                <h2 className="text-4xl font-black text-rose-500 mb-2">DEFEAT</h2>
-                                                <p className="text-slate-300 mb-6">政権は崩壊し、経済は破綻しました...</p>
-                                            </>
-                                        )}
+                                        {/* Background Effect */}
+                                        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-black/20 to-transparent pointer-events-none"></div>
+
+                                        {/* Header */}
+                                        <div className="text-center mb-6 relative z-10">
+                                            <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-2">Result Report</div>
+                                            <h2 className={`text-5xl font-black tracking-tighter mb-2 ${gameState === 'WON' ? 'text-white' : 'text-rose-500'}`}>
+                                                {gameState === 'WON' ? 'VICTORY' : 'GAME OVER'}
+                                            </h2>
+                                            <div className={`text-sm font-bold px-4 py-1 rounded-full inline-block ${gameState === 'WON' ? 'bg-cyan-950 text-cyan-400' : 'bg-rose-950 text-rose-400'}`}>
+                                                {gameState === 'WON' ? '経済目標達成' : '政権崩壊 / 経済敗北'}
+                                            </div>
+                                        </div>
+
+                                        {/* Rank Circle */}
+                                        <div className="flex justify-center mb-8 relative z-10">
+                                            <div className="relative w-32 h-32 flex items-center justify-center">
+                                                <div className={`absolute inset-0 rounded-full border-4 border-dashed animate-spin-slow opacity-30 ${evaluation.rank === 'S' ? 'border-yellow-500' : 'border-slate-600'}`} style={{ animationDuration: '10s' }}></div>
+                                                <div className={`text-8xl font-black ${evaluation.rankColor} drop-shadow-2xl transform scale-110`}>
+                                                    {evaluation.rank}
+                                                </div>
+                                                <div className={`absolute -bottom-4 bg-slate-900 border border-slate-700 px-3 py-1 rounded-lg text-xs font-bold tracking-widest ${evaluation.rankColor}`}>
+                                                    {evaluation.rankLabel}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Stats Grid */}
+                                        <div className="bg-slate-900/50 rounded-xl border border-slate-700/50 p-4 mb-6 grid grid-cols-2 gap-4 relative z-10">
+                                            {evaluation.stats.map((stat, i) => (
+                                                <div key={i} className="flex flex-col">
+                                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-1">{stat.label}</span>
+                                                    <div className="flex items-baseline gap-2">
+                                                        <span className="text-lg font-bold text-slate-200">{stat.value}</span>
+                                                        {stat.note && <span className={`text-[10px] font-bold ${stat.note.includes('S基準') || stat.note === '理想的' || stat.note === '高支持' ? 'text-emerald-400' : 'text-amber-400'}`}>{stat.note}</span>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+
+                                        {/* Advice Box */}
+                                        <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-4 mb-8 text-left relative z-10">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <IconZap size={14} className="text-indigo-400" />
+                                                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">Next Goal</span>
+                                            </div>
+                                            <p className="text-sm text-indigo-100 leading-relaxed font-medium">
+                                                {evaluation.nextGoal}
+                                            </p>
+                                        </div>
 
                                         <button
                                             onClick={startGame}
-                                            className="px-8 py-3 bg-slate-700 text-white rounded-xl font-bold hover:bg-slate-600 transition-colors w-full active:scale-95"
+                                            className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all hover:scale-[1.02] active:scale-95 ${gameState === 'WON' ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-cyan-900/20' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
                                         >
                                             Play Again
                                         </button>
