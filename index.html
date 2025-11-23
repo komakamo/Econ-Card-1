@@ -89,6 +89,14 @@
             animation: slideInRight 0.5s ease-out forwards;
         }
 
+        @keyframes flashRed {
+            0%, 100% { background-color: transparent; }
+            50% { background-color: rgba(220, 38, 38, 0.3); }
+        }
+        .animate-flash-red {
+            animation: flashRed 0.5s ease-in-out 3;
+        }
+
         body {
             background-color: #0f172a; /* Slate 900 */
             color: #e2e8f0; /* Slate 200 */
@@ -204,6 +212,55 @@
                     setTimeout(() => this.playTone(250, 'sawtooth', 0.4, 0.1), 300);
                     setTimeout(() => this.playTone(200, 'sawtooth', 0.8, 0.1), 600);
                 }
+            },
+
+            playCrisis() {
+                if (this.isMuted) return;
+                try {
+                    this.init();
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    // Siren effect
+                    osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                    osc.frequency.linearRampToValueAtTime(600, this.ctx.currentTime + 0.5);
+                    osc.frequency.linearRampToValueAtTime(400, this.ctx.currentTime + 1.0);
+
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.0);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 1.0);
+                } catch (e) { console.error(e); }
+            },
+
+            playDoom() {
+                 if (this.isMuted) return;
+                try {
+                    this.init();
+                    // Low rumble
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const filter = this.ctx.createBiquadFilter();
+
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(50, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 2.0);
+
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 200;
+
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 2.0);
+
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 2.0);
+                } catch (e) { console.error(e); }
             }
         };
 
@@ -584,6 +641,22 @@
             );
         };
 
+        const CrisisOverlay = ({ message, show, type = 'danger' }) => {
+             if (!show) return null;
+             const color = type === 'danger' ? 'text-red-500 border-red-600 bg-red-950/90' : 'text-amber-500 border-amber-600 bg-amber-950/90';
+
+             return (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center pointer-events-none">
+                    <div className="absolute inset-0 animate-flash-red"></div>
+                    <div className={`px-12 py-8 rounded-xl border-4 shadow-2xl animate-pop-in flex flex-col items-center ${color}`}>
+                         <IconAlertCircle size={64} className="mb-4 animate-bounce" />
+                         <h2 className="text-5xl font-black tracking-tighter uppercase mb-2 text-center whitespace-pre-wrap">{message}</h2>
+                         <p className="text-xl font-bold opacity-80 uppercase tracking-widest">EMERGENCY ALERT</p>
+                    </div>
+                </div>
+             );
+        };
+
         const Confetti = () => {
             const particles = Array.from({ length: 50 }).map((_, i) => ({
                 id: i,
@@ -856,6 +929,7 @@
             const [showTurnOverlay, setShowTurnOverlay] = useState(false);
             const [shake, setShake] = useState({ player: false, enemy: false });
             const [hoveredCard, setHoveredCard] = useState(null);
+            const [crisisAlert, setCrisisAlert] = useState(null); // { message: string, type: 'danger'|'warning' }
 
             // Difficulty State
             const [selectedDifficulty, setSelectedDifficulty] = useState(DIFFICULTY_SETTINGS.NORMAL.id);
@@ -926,6 +1000,20 @@
                 rating: 'AAA',
                 interestDue: 0,
             });
+
+            // Crisis Check Effect (Inflation)
+            useEffect(() => {
+                if (gameState !== 'PLAYING') return;
+
+                if (player.inflation >= 12) {
+                     // Only trigger if we aren't already showing one?
+                     if (!crisisAlert) {
+                         SoundManager.playCrisis();
+                         setCrisisAlert({ message: "暴動の危機！\n(インフレ12%突破)", type: 'danger' });
+                         setTimeout(() => setCrisisAlert(null), 3000);
+                     }
+                }
+            }, [player.inflation, gameState]);
 
             // UI Enhancement: Add Floating Text
             const addFloatingText = (x, y, text, type = 'default') => {
@@ -1378,6 +1466,17 @@
                 const ratedPlayer = applyRatingUpdate(playerAfterIncome, 'あなた');
                 const unrestApplied = applyUnrestPenalty(ratedPlayer, 'あなた');
                 setPlayer(unrestApplied);
+
+                // --- Ruin Logic: Debt Collapse ---
+                if (unrestApplied.debt >= 400 && unrestApplied.rating === 'D') {
+                    SoundManager.playDoom();
+                    addLog('📉 市場の信認崩壊… 債務超過により経済が麻痺しています');
+                    // Add a visual flash too?
+                    setCrisisAlert({ message: "市場の信認崩壊…", type: 'danger' });
+                    setTimeout(() => setCrisisAlert(null), 3000);
+                }
+                // --------------------------------
+
                 addLog(`ターン終了: 収入 +${playerIncomeGain}兆円${incomePenalty ? ` (イベントで-${incomePenalty})` : ''}、利払い -${interestPaid}兆円、インフレ率 ${player.inflation.toFixed(1)} → ${driftedInflation.toFixed(1)}%、格付け ${ratedPlayer.rating}`);
 
                 // 2. 勝利判定
@@ -1523,6 +1622,7 @@
                 <div className={`min-h-screen text-slate-200 relative transition-colors duration-1000 ${era.bgClass}`}>
                     {gameState === 'WON' && <Confetti />}
                     <TurnOverlay turn={turn} show={showTurnOverlay} />
+                    <CrisisOverlay message={crisisAlert?.message} show={!!crisisAlert} type={crisisAlert?.type} />
 
                     {/* Floating Text Overlay */}
                     {floatingTexts.map(ft => (
