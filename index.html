@@ -343,9 +343,11 @@
                 type: 'POLICY',
                 inflationChange: -1,
                 supportChange: -12,
+                baseSuccessRate: 90,
                 effect: (me, opp) => ({ ...me, money: me.money + 60, gdp: me.gdp - 10 }),
                 description: '税率を上げ資金を確保しますが、景気は少し冷え込みます。',
-                tip: '【緊縮財政】財源確保には有効ですが、消費や投資を抑制する副作用があります。'
+                tip: '【緊縮財政】財源確保には有効ですが、消費や投資を抑制する副作用があります。',
+                onFailure: (me) => ({ ...me, support: Math.max(0, me.support - 10) })
             },
             {
                 id: 6,
@@ -378,6 +380,19 @@
                 description: '教育に投資し、労働者のスキルを向上させます。',
                 tip: '【人的資本】教育レベルの向上は、長期的な経済成長に不可欠です。',
                 providesTag: 'education'
+            },
+            {
+                id: 9,
+                name: '大規模金融緩和',
+                cost: 0,
+                type: 'POLICY',
+                inflationChange: 3,
+                supportChange: 5,
+                baseSuccessRate: 80,
+                effect: (me, opp) => ({ ...me, money: me.money + 100 }),
+                description: '異次元の金融緩和を行い、市場に大量の資金を供給します。',
+                tip: '【リスク】失敗すると市場の信認を失い、支持率が急落します。',
+                onFailure: (me) => ({ ...me, support: Math.max(0, me.support - 20) })
             },
         ];
 
@@ -415,6 +430,14 @@
 
         const calculateInflatedCost = (baseCost, inflationRate = 0) => {
             return Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
+        };
+
+        const calculateSuccessRate = (card, support) => {
+            const base = card.baseSuccessRate ?? 100;
+            if (base >= 100) return 100;
+            // Bonus: (Support - 50) * 0.5. Support 70 -> +10%. Support 30 -> -10%.
+            const bonus = (support - 50) * 0.5;
+            return Math.min(100, Math.max(0, Math.round(base + bonus)));
         };
 
         // --- Visual Components ---
@@ -865,15 +888,44 @@
                     if (adjustedCost > 0) addFloatingText(e.clientX, e.clientY, `-${adjustedCost}`, "cost");
                 }
 
+                // Success Rate Check
+                const successRate = calculateSuccessRate(card, player.support);
+                const roll = Math.random() * 100;
+                const isSuccess = roll < successRate;
+
+                // Pay cost regardless of success (RISK!)
+                const afterCost = { ...player, money: player.money - adjustedCost };
+
+                let nextPlayerState = null;
+
+                if (!isSuccess) {
+                    // FAILURE
+                    SoundManager.playError();
+                    triggerShake('player');
+                    addFloatingText(e.clientX, e.clientY, "FAILED!", "damage");
+                    addLog(`あなた: 「${card.name}」の実行に失敗... (成功率 ${successRate}%)`);
+
+                    let penaltyState = afterCost;
+                    if (card.onFailure) {
+                        penaltyState = card.onFailure(penaltyState);
+                        addLog(`副作用: 政策の失敗により支持率が急落しました。`);
+                    }
+                    nextPlayerState = penaltyState;
+                    setPlayer(nextPlayerState);
+
+                    // Discard card
+                    setLastPlayedCard(card);
+                    setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
+
+                    return checkWinCondition(nextPlayerState, enemy);
+                }
+
+                // SUCCESS
                 SoundManager.playCard(card.type);
 
                 if (comboReadyTags.length > 0) {
                     addLog(`🎯 コンボ発動！${comboReadyTags.join(', ')}タグとの相乗効果で「${card.name}」の効果が強化されます。`);
                 }
-
-                const afterCost = { ...player, money: player.money - adjustedCost };
-
-                let nextPlayerState = null;
 
                 if (card.type === 'ATTACK') {
                     const afterSupport = applySupportChange(afterCost, card.supportChange, 'あなた', `「${card.name}」の政治的影響`);
@@ -1216,6 +1268,8 @@
                                         const canAfford = player.money >= inflatedCost;
                                         const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
                                         const providesTags = getCardProvidedTags(card);
+                                        const successRate = calculateSuccessRate(card, player.support);
+                                        const isRisky = successRate < 100;
 
                                         return (
                                             <button
@@ -1255,6 +1309,16 @@
                                                                 Cost: {card.cost}→{inflatedCost}
                                                             </div>
                                                         )}
+
+                                                        {/* Success Rate Info (Only if risky or varied) */}
+                                                        <div className={`text-[9px] px-1.5 py-0.5 rounded border flex items-center gap-1 w-max ${
+                                                            isRisky
+                                                                ? successRate < 70 ? 'text-red-400 bg-red-950/30 border-red-900/50' : 'text-orange-400 bg-orange-950/30 border-orange-900/50'
+                                                                : 'text-emerald-400 bg-emerald-950/30 border-emerald-900/50'
+                                                        }`}>
+                                                            {isRisky && <IconAlertCircle size={8} />}
+                                                            成功率: {successRate}%
+                                                        </div>
 
                                                         {/* Tags */}
                                                         {(comboReadyTags.length > 0 || providesTags.length > 0) && (
