@@ -290,6 +290,30 @@
             },
         ];
 
+        const ERAS = {
+            GROWTH: {
+                id: 'GROWTH',
+                name: '高度経済成長期',
+                description: 'GDP↑ インフレ↑',
+                bgClass: 'bg-orange-900/10',
+                effectDesc: 'GDP上昇効果増・インフレ加速'
+            },
+            STAGNATION: {
+                id: 'STAGNATION',
+                name: 'バブル崩壊・停滞期',
+                description: 'コスト増・デフレ・収益減',
+                bgClass: 'bg-slate-950',
+                effectDesc: 'カードコスト増・収益減・デフレ進行'
+            },
+            IT_REV: {
+                id: 'IT_REV',
+                name: 'IT革命・新時代',
+                description: '技術カード効果2倍',
+                bgClass: 'bg-cyan-950/20',
+                effectDesc: '技術系カードの効果が2倍'
+            }
+        };
+
         const INITIAL_DECK = [
             {
                 id: 1,
@@ -310,7 +334,7 @@
                 effect: (me, opp) => ({ ...me, income: me.income + 10, gdp: me.gdp + 30 }),
                 description: 'AIやロボットなどの新技術を導入し、効率を劇的に上げます。',
                 tip: '【イノベーション】技術進歩は経済成長の最大の要因の一つです。',
-                providesTag: 'innovation',
+                providesTags: ['innovation', 'tech'],
                 combosWith: ['education', 'infrastructure']
             },
             {
@@ -358,6 +382,7 @@
                 effect: (me, opp) => ({ ...me, income: me.income + 8 }),
                 description: '起業家を支援し、新たなビジネスを育てます。',
                 tip: '【新産業創出】新しい企業は将来の大きな税収源となります。',
+                providesTags: ['tech'],
                 combosWith: ['innovation', 'education']
             },
             {
@@ -417,10 +442,11 @@
 
         const clampInflation = (value) => Math.min(INFLATION_MAX, Math.max(INFLATION_MIN, Number(value.toFixed(1))));
 
-        const applyInflationDrift = (value) => {
-            const drifted = value > 0 ? value - 0.3 : value < 0 ? value + 0.3 : 0;
-            if (Math.abs(drifted) < 0.2) return 0;
-            return clampInflation(drifted);
+        const applyInflationDrift = (value, target = 0) => {
+            const diff = target - value;
+            const step = 0.3;
+            if (Math.abs(diff) < step) return target;
+            return clampInflation(value + (diff > 0 ? step : -step));
         };
 
         const applyInflationChange = (state, delta = 0) => {
@@ -521,6 +547,8 @@
         };
 
         const StatusPanel = ({ data, isEnemy, interest, isShaking }) => {
+            if (!data) return <div className="p-4 border rounded text-red-500">Error: No Data</div>;
+
             const inflationAlert = (value) => {
                 if (value >= 12) return { label: 'ハイパーインフレ', color: 'text-red-400 bg-red-900/30 border-red-500' };
                 if (value >= 8) return { label: '高インフレ', color: 'text-orange-400 bg-orange-900/30 border-orange-500' };
@@ -529,7 +557,7 @@
                 return { label: '安定', color: 'text-emerald-400 bg-emerald-900/30 border-emerald-500' };
             };
 
-            const alert = inflationAlert(data.inflation);
+            const alert = inflationAlert(data.inflation || 0);
 
             // Theme colors (Dark Mode)
             const theme = isEnemy ? {
@@ -630,6 +658,7 @@
 
         function EconomicCardGame() {
             const [turn, setTurn] = useState(1);
+            const [era, setEra] = useState(ERAS.GROWTH);
             const [gameState, setGameState] = useState('START'); // START, PLAYING, WON, LOST
             const [logs, setLogs] = useState(['ゲーム開始！目標：GDP 300兆円到達']);
             const [activeEvent, setActiveEvent] = useState(null);
@@ -643,6 +672,27 @@
             useEffect(() => {
                 SoundManager.isMuted = isMuted;
             }, [isMuted]);
+
+            // Update Era based on progress
+            useEffect(() => {
+                if (gameState !== 'PLAYING') return;
+
+                let nextEra = ERAS.GROWTH;
+                // Phase 3: IT Revolution
+                if (turn >= 15 || (player && player.gdp >= 200)) {
+                    nextEra = ERAS.IT_REV;
+                }
+                // Phase 2: Stagnation
+                else if (turn >= 8 || (player && player.gdp >= 100)) {
+                    nextEra = ERAS.STAGNATION;
+                }
+
+                if (nextEra.id !== era.id) {
+                    setEra(nextEra);
+                    addLog(`📢 時代変遷: 「${nextEra.name}」に突入しました！(${nextEra.effectDesc})`);
+                    SoundManager.playTone(200, 'sawtooth', 0.5, 0.05); // Era change sound
+                }
+            }, [turn, player, gameState]); // Changed dependency from player.gdp to player to avoid undefined access
 
             useEffect(() => {
                 // Show turn overlay on turn change
@@ -863,8 +913,14 @@
 
             const calculateAdjustedCost = (baseCost, inflationRate = 0) => {
                 const inflated = calculateInflatedCost(baseCost, inflationRate);
-                if (!activeEvent?.effect?.costMultiplier) return inflated;
-                return Math.max(0, Math.round(inflated * activeEvent.effect.costMultiplier));
+                let multiplier = activeEvent?.effect?.costMultiplier || 1;
+
+                // Era Effect: Stagnation increases costs
+                if (era.id === 'STAGNATION') {
+                    multiplier *= 1.5;
+                }
+
+                return Math.max(0, Math.round(inflated * multiplier));
             };
 
             // プレイヤーのターン処理
@@ -874,6 +930,10 @@
                 const adjustedCost = calculateAdjustedCost(card.cost, player.inflation);
                 const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
                 const providedTags = getCardProvidedTags(card);
+
+                // Era Effect: IT Revolution (Tech x2)
+                const isTech = providedTags.includes('tech');
+                const eraMultiplier = (era.id === 'IT_REV' && isTech) ? 2 : 1;
 
                 let updatedEnemyState = null;
 
@@ -931,12 +991,47 @@
                     const afterSupport = applySupportChange(afterCost, card.supportChange, 'あなた', `「${card.name}」の政治的影響`);
                     nextPlayerState = afterSupport;
                 } else {
-                    const afterEffect = card.effect(afterCost, enemy);
-                    const comboBoosted = applyComboBonus(afterCost, afterEffect, comboReadyTags);
+                    // 1. Base Effect
+                    const baseState = card.effect(afterCost, enemy);
+
+                    // 2. Apply Era Multiplier (IT_REV & GROWTH GDP Bonus)
+                    let boostedState = baseState;
+
+                    // IT Revolution: Tech cards effect doubled
+                    if (eraMultiplier > 1) {
+                         const keys = ['money', 'income', 'gdp'];
+                         const boosted = { ...baseState };
+                         keys.forEach(key => {
+                             const delta = baseState[key] - afterCost[key];
+                             if (delta !== 0) {
+                                 boosted[key] = afterCost[key] + delta * eraMultiplier;
+                             }
+                         });
+                         boostedState = boosted;
+                    }
+
+                    // GROWTH Era: GDP Boost
+                    if (era.id === 'GROWTH') {
+                        // Check if boostedState is valid, otherwise fallback
+                        const currentGdp = boostedState ? boostedState.gdp : afterCost.gdp;
+                        const deltaGdp = currentGdp - afterCost.gdp;
+                        if (deltaGdp > 0 && boostedState) {
+                            boostedState.gdp = afterCost.gdp + Math.round(deltaGdp * 1.5);
+                        }
+                    }
+
+                    const comboBoosted = applyComboBonus(afterCost, boostedState, comboReadyTags);
                     const afterEvent = applyEventMultiplier(afterCost, comboBoosted);
-                    const afterInflation = applyInflationChange(afterEvent, card.inflationChange);
-                    if (card.inflationChange) {
-                        addLog(`あなた: 「${card.name}」が物価に影響 (${card.inflationChange > 0 ? '+' : ''}${card.inflationChange}%)`);
+
+                    // Inflation
+                    let inflationDelta = card.inflationChange || 0;
+                    if (era.id === 'GROWTH' && inflationDelta > 0) {
+                        inflationDelta += 1; // GROWTH inflates faster
+                    }
+                    const afterInflation = applyInflationChange(afterEvent, inflationDelta);
+
+                    if (inflationDelta) {
+                        addLog(`あなた: 「${card.name}」が物価に影響 (${inflationDelta > 0 ? '+' : ''}${inflationDelta.toFixed(1)}%)`);
                     }
                     const afterUnrest = applyUnrestPenalty(afterInflation, 'あなた');
                     const afterSupport = applySupportChange(afterUnrest, card.supportChange, 'あなた', `「${card.name}」の効果`);
@@ -981,10 +1076,18 @@
 
                 SoundManager.playClick();
 
+                // Era Effect: Stagnation Deflation Drift
+                let driftTarget = 0;
+                let eraIncomePenalty = 0;
+                if (era.id === 'STAGNATION') {
+                    driftTarget = -2; // Drift towards deflation
+                    eraIncomePenalty = 5; // Reduce income
+                }
+
                 // 1. 収入の処理（プレイヤー）
-                const driftedInflation = applyInflationDrift(player.inflation);
+                const driftedInflation = applyInflationDrift(player.inflation, driftTarget);
                 const ratingInfo = getRatingInfo(player.rating);
-                const incomePenalty = Math.round((activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier);
+                const incomePenalty = Math.round((activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier) + eraIncomePenalty;
                 const playerIncomeGain = Math.max(0, player.income - incomePenalty);
                 let playerAfterIncome = {
                     ...player,
@@ -1111,7 +1214,7 @@
             };
 
             return (
-                <div className="min-h-screen text-slate-200 relative">
+                <div className={`min-h-screen text-slate-200 relative transition-colors duration-1000 ${era.bgClass}`}>
                     {gameState === 'WON' && <Confetti />}
                     <TurnOverlay turn={turn} show={showTurnOverlay} />
 
@@ -1128,6 +1231,9 @@
 
                     {/* TOP HEADER */}
                     <header className="bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-0 z-50">
+                        {/* Era Indicator Progress Bar */}
+                        <div className="absolute top-0 left-0 h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-rose-500 transition-all duration-1000" style={{ width: `${(turn / 30) * 100}%`, opacity: 0.5 }}></div>
+
                         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
                             <div className="flex items-center gap-3">
                                 <div className="bg-gradient-to-br from-cyan-600 to-blue-600 text-white p-2 rounded-lg shadow-lg shadow-cyan-500/20">
@@ -1141,6 +1247,9 @@
 
                             <div className="flex items-center gap-4">
                                 <div className="hidden md:flex items-center gap-3">
+                                    <div className="flex items-center gap-2 bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700/50">
+                                        <span className="text-xs font-bold text-amber-400">{era.name}</span>
+                                    </div>
                                     <div className="flex items-center gap-2 bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700/50">
                                         <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
                                         <span className="text-xs font-bold text-slate-300">TURN {turn}</span>
