@@ -1743,6 +1743,8 @@
                     // Discard card
                     setLastPlayedCard(card);
                     setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
+                    const { uniqueId: _, ...baseCard } = card;
+                    setDiscardPile(prev => [...prev, baseCard]);
 
                     return checkWinCondition(nextPlayerState, enemy);
                 }
