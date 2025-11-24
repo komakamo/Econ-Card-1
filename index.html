@@ -297,23 +297,155 @@
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
         );
 
+        const IconGlobe = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        );
+
+        // --- Localization Helpers ---
+        const UI_TEXT = {
+            ja: {
+                title: "エコノミクス・マスター",
+                subtitle: "経済学カードゲーム",
+                turn: "TURN",
+                goal: "目標",
+                start: "Start",
+                reset: "Reset",
+                startGame: "ゲーム開始",
+                playAgain: "もう一度プレイ",
+                victory: "VICTORY",
+                defeat: "GAME OVER",
+                victoryDesc: "経済目標達成",
+                defeatDesc: "政権崩壊 / 経済敗北",
+                resultReport: "Result Report",
+                nextGoal: "Next Goal",
+                comboGuide: "Combo Guide (コンボ図鑑)",
+                comboHint: "★ ヒント",
+                comboHintDesc: "直前にプレイしたカードのタグと噛み合うと<br/>効果が1.3倍になります！",
+                cardInfo: "カード解説",
+                cardInfoDesc: "カードにカーソルを合わせると<br/>詳しい解説が表示されます",
+                memo: "経済メモ",
+                detail: "効果詳細",
+                myCountry: "自国 (あなた)",
+                rivalCountry: "ライバル国",
+                gdp: "GDP",
+                money: "資金残高",
+                income: "収支",
+                interest: "利払",
+                support: "国民支持率",
+                debt: "債務残高",
+                inflation: "インフレ",
+                trillion: "兆",
+                selectPlaystyle: "Select Playstyle (思想・派閥)",
+                selectDifficulty: "Select Difficulty",
+                yourHand: "Your Hand",
+                bond: "国債発行",
+                endTurn: "ターン終了",
+                discard: "Discard / Last Played",
+                deck: "DECK",
+                noCards: "No cards available",
+                log: "Game Log",
+                live: "LIVE",
+                cost: "Cost",
+                successRate: "成功率",
+                cardTypeProd: "生産",
+                cardTypePolicy: "政策",
+                cardTypeAttack: "外交",
+                tagInfra: "インフラ",
+                tagInfraDesc: "「設備投資」や「公共事業」で付与。生産系カードの効果を高めます。",
+                tagEdu: "教育・人材",
+                tagEduDesc: "「人材育成」で付与。技術系カードの土台となります。",
+                tagInno: "イノベーション",
+                tagInnoDesc: "「技術革新」で付与。次の技術投資を大きくブーストします。",
+                tagTech: "先端技術",
+                tagTechDesc: "スタートアップ等。IT革命期に効果が倍増する強力なタグ。",
+            },
+            en: {
+                title: "Economics Master",
+                subtitle: "Strategic Card Game",
+                turn: "TURN",
+                goal: "GOAL",
+                start: "Start",
+                reset: "Reset",
+                startGame: "START GAME",
+                playAgain: "Play Again",
+                victory: "VICTORY",
+                defeat: "GAME OVER",
+                victoryDesc: "Economic Goal Achieved",
+                defeatDesc: "Administration Collapse / Defeat",
+                resultReport: "Result Report",
+                nextGoal: "Next Goal",
+                comboGuide: "Combo Guide",
+                comboHint: "★ Hint",
+                comboHintDesc: "Match tags with the last played card<br/>for a 1.3x Effect Bonus!",
+                cardInfo: "Card Info",
+                cardInfoDesc: "Hover over a card to see<br/>detailed information.",
+                memo: "Econ Memo",
+                detail: "Effect Details",
+                myCountry: "My Country (YOU)",
+                rivalCountry: "Rival Country",
+                gdp: "GDP",
+                money: "Funds",
+                income: "Income",
+                interest: "Interest",
+                support: "Support",
+                debt: "Debt",
+                inflation: "Inflation",
+                trillion: "T",
+                selectPlaystyle: "Select Playstyle",
+                selectDifficulty: "Select Difficulty",
+                yourHand: "Your Hand",
+                bond: "Issue Bonds",
+                endTurn: "End Turn",
+                discard: "Discard / Last Played",
+                deck: "DECK",
+                noCards: "No cards available",
+                log: "Game Log",
+                live: "LIVE",
+                cost: "Cost",
+                successRate: "Success",
+                cardTypeProd: "PROD",
+                cardTypePolicy: "POLICY",
+                cardTypeAttack: "DIPLO",
+                tagInfra: "Infrastructure",
+                tagInfraDesc: "Granted by 'Investment' or 'Public Works'. Boosts production cards.",
+                tagEdu: "Education",
+                tagEduDesc: "Granted by 'Human Capital'. Foundation for technology cards.",
+                tagInno: "Innovation",
+                tagInnoDesc: "Granted by 'Tech Innovation'. Boosts next tech investment.",
+                tagTech: "High-Tech",
+                tagTechDesc: "Startups etc. Doubles effect during IT Revolution.",
+            }
+        };
+
+        const getLoc = (obj, key, lang) => {
+             if (lang === 'en' && obj[key + '_en']) return obj[key + '_en'];
+             return obj[key];
+        };
+
+        const t = (key, lang) => {
+            return UI_TEXT[lang][key] || UI_TEXT['ja'][key] || key;
+        };
+
         // --- ゲームデータ定義 ---
 
         const CARD_TYPES = {
             PRODUCTION: {
                 label: '生産',
+                label_en: 'PROD',
                 baseStyle: 'bg-slate-800 border-cyan-800 hover:border-cyan-400 hover:shadow-cyan-500/20 text-cyan-100',
                 headerStyle: 'bg-cyan-950/50 text-cyan-400 border-b border-cyan-900',
                 icon: <IconZap size={14} className="text-cyan-400" />
             },
             POLICY: {
                 label: '政策',
+                label_en: 'POLICY',
                 baseStyle: 'bg-slate-800 border-emerald-800 hover:border-emerald-400 hover:shadow-emerald-500/20 text-emerald-100',
                 headerStyle: 'bg-emerald-950/50 text-emerald-400 border-b border-emerald-900',
                 icon: <IconBookOpen size={14} className="text-emerald-400" />
             },
             ATTACK: {
                 label: '外交',
+                label_en: 'DIPLO',
                 baseStyle: 'bg-slate-800 border-rose-800 hover:border-rose-400 hover:shadow-rose-500/20 text-rose-100',
                 headerStyle: 'bg-rose-950/50 text-rose-400 border-b border-rose-900',
                 icon: <IconShield size={14} className="text-rose-400" />
@@ -324,25 +456,33 @@
             {
                 id: 1,
                 name: '原油ショック',
+                name_en: 'Oil Shock',
                 description: '資源価格高騰であらゆる政策コストが20%上昇します。',
+                description_en: 'Resource prices soar, increasing all policy costs by 20%.',
                 effect: { costMultiplier: 1.2 },
             },
             {
                 id: 2,
                 name: '緊縮財政',
+                name_en: 'Fiscal Austerity',
                 description: '財政再建のため収入が毎ターン3兆円減少します。',
+                description_en: 'Income decreases by 3 trillion/turn for fiscal reconstruction.',
                 effect: { incomePenalty: 3 },
             },
             {
                 id: 3,
                 name: '技術革新ブーム',
+                name_en: 'Tech Innovation Boom',
                 description: 'カードの経済効果が1.3倍に増幅します。',
+                description_en: 'Economic effects of cards amplified by 1.3x.',
                 effect: { effectMultiplier: 1.3 },
             },
             {
                 id: 4,
                 name: '景気後退',
+                name_en: 'Recession',
                 description: 'カードの経済効果が0.7倍に縮小し、資金繰りが厳しくなります。',
+                description_en: 'Economic effects reduced by 0.7x, and funding becomes difficult.',
                 effect: { effectMultiplier: 0.7, costMultiplier: 1.1 },
             },
         ];
@@ -351,23 +491,32 @@
             GROWTH: {
                 id: 'GROWTH',
                 name: '高度経済成長期',
+                name_en: 'High Growth Era',
                 description: 'GDP↑ インフレ↑',
+                description_en: 'Increased GDP growth, inflation accelerates',
                 bgClass: 'bg-orange-900/10',
-                effectDesc: 'GDP上昇効果増・インフレ加速'
+                effectDesc: 'GDP上昇効果増・インフレ加速',
+                effectDesc_en: 'GDP growth bonus, Inflation accelerates'
             },
             STAGNATION: {
                 id: 'STAGNATION',
                 name: 'バブル崩壊・停滞期',
+                name_en: 'Bubble Burst / Stagnation',
                 description: 'コスト増・デフレ・収益減',
+                description_en: 'Card costs up, income down, deflation',
                 bgClass: 'bg-slate-950',
-                effectDesc: 'カードコスト増・収益減・デフレ進行'
+                effectDesc: 'カードコスト増・収益減・デフレ進行',
+                effectDesc_en: 'Costs increase, Income decreases, Deflation'
             },
             IT_REV: {
                 id: 'IT_REV',
                 name: 'IT革命・新時代',
+                name_en: 'IT Revolution',
                 description: '技術カード効果2倍',
+                description_en: 'Technology cards effect doubled',
                 bgClass: 'bg-cyan-950/20',
-                effectDesc: '技術系カードの効果が2倍'
+                effectDesc: '技術系カードの効果が2倍',
+                effectDesc_en: 'Technology cards effect doubled'
             }
         };
 
@@ -375,9 +524,13 @@
             KEYNESIAN: {
                 id: 'KEYNESIAN',
                 name: 'ケインズ派',
+                name_en: 'Keynesian',
                 label: '積極財政',
+                label_en: 'Active Fiscal',
                 description: '不況時は政府支出で需要を創出します。',
+                description_en: 'Create demand via government spending during recession.',
                 features: ['公共事業・金融緩和 多め', '初期支持率 高', '初期債務 あり'],
+                features_en: ['Public Works/Easing', 'High Initial Support', 'Initial Debt'],
                 initialStats: { support: 80, debt: 50, money: 120 },
                 deckWeights: { 3: 3, 4: 2, 6: 2 },
                 rankCriteria: { minGdp: 400, maxInflation: 4, minInflation: 2, maxDebt: 100 }
@@ -385,9 +538,13 @@
             MONETARIST: {
                 id: 'MONETARIST',
                 name: 'マネタリスト',
+                name_en: 'Monetarist',
                 label: '規律重視',
+                label_en: 'Discipline',
                 description: '通貨供給を管理し、インフレ抑制を最優先します。',
+                description_en: 'Control money supply, prioritize inflation control.',
                 features: ['増税・金融引き締め', 'インフレ抑制で高評価', '堅実な運営'],
+                features_en: ['Tax Hikes/Tightening', 'High Rating for Low Inf', 'Steady Management'],
                 initialStats: { support: 60, debt: 0, money: 70 },
                 deckWeights: { 5: 3, 4: 2, 11: 2 },
                 rankCriteria: { minGdp: 350, maxInflation: 2, minInflation: -1, maxDebt: 80 },
@@ -396,9 +553,13 @@
             SUPPLY_SIDE: {
                 id: 'SUPPLY_SIDE',
                 name: 'サプライサイド',
+                name_en: 'Supply-Side',
                 label: '成長戦略',
+                label_en: 'Growth Strategy',
                 description: '規制緩和と投資で供給力を高め、GDP成長を促します。',
+                description_en: 'Deregulation and investment to boost supply and GDP.',
                 features: ['設備投資・技術革新', 'GDP重視', '大器晩成'],
+                features_en: ['Investment/Innovation', 'GDP Focus', 'Late Bloomer'],
                 initialStats: { support: 70, debt: 20, money: 100 },
                 deckWeights: { 1: 3, 2: 3, 8: 3 },
                 rankCriteria: { minGdp: 450, maxInflation: 6, minInflation: 0, maxDebt: 150 }
@@ -409,28 +570,35 @@
             {
                 id: 1,
                 name: '設備投資',
+                name_en: 'Capital Investment',
                 cost: 30,
                 type: 'PRODUCTION',
                 effect: (me, opp) => ({ ...me, income: me.income + 5, gdp: me.gdp + 10 }),
                 description: '工場の機械などを購入し、生産能力を高めます。',
+                description_en: 'Purchase factory machinery to increase production capacity.',
                 tip: '【投資の乗数効果】投資は将来の生産力と所得を増やします。',
+                tip_en: '[Multiplier Effect] Investment increases future production capacity and income.',
                 providesTag: 'infrastructure',
                 combosWith: ['infrastructure']
             },
             {
                 id: 2,
                 name: '技術革新',
+                name_en: 'Tech Innovation',
                 cost: 60,
                 type: 'PRODUCTION',
                 effect: (me, opp) => ({ ...me, income: me.income + 10, gdp: me.gdp + 30 }),
                 description: 'AIやロボットなどの新技術を導入し、効率を劇的に上げます。',
+                description_en: 'Adopt AI/robots to dramatically increase efficiency.',
                 tip: '【イノベーション】技術進歩は経済成長の最大の要因の一つです。',
+                tip_en: '[Innovation] Tech progress is a major growth factor.',
                 providesTags: ['innovation', 'tech'],
                 combosWith: ['education', 'infrastructure']
             },
             {
                 id: 3,
                 name: '公共事業',
+                name_en: 'Public Works',
                 cost: 40,
                 type: 'POLICY',
                 inflationChange: 2,
@@ -440,17 +608,21 @@
                     gdp: me.gdp + 40,
                     activeEffects: [...(me.activeEffects || []), {
                         name: '公共事業の維持費',
+                        name_en: 'Maintenance Cost',
                         turnsLeft: 3,
                         effect: (s) => ({ ...s, income: Math.max(0, s.income - 5) })
                     }]
                 }),
                 description: '大規模なインフラ整備を行います。GDPは大きく伸びますが、将来の維持費がかさみます。',
+                description_en: 'Large-scale infrastructure. Boosts GDP but increases maintenance costs.',
                 tip: '【財政政策】政府支出は即効性がありますが、将来の財政硬直化（維持費増大）を招くリスクもあります。',
+                tip_en: '[Fiscal Policy] Quick impact, but risks future fiscal rigidity.',
                 providesTag: 'infrastructure'
             },
             {
                 id: 10,
                 name: 'ポピュリズム政策',
+                name_en: 'Populist Policy',
                 cost: 10,
                 type: 'POLICY',
                 supportChange: 20,
@@ -460,16 +632,20 @@
                     gdp: Math.max(0, me.gdp - 15),
                     activeEffects: [...(me.activeEffects || []), {
                         name: 'バラマキのツケ',
+                        name_en: 'Cost of Populism',
                         turnsLeft: 2,
                         effect: (s) => ({ ...s, inflation: s.inflation + 3 })
                     }]
                 }),
                 description: '現金給付などで支持率を爆上げしますが、成長を阻害し、近い将来インフレを招きます。',
-                tip: '【ポピュリズム】短期的な人気取り政策は、長期的には経済の基礎的条件（ファンダメンタルズ）を悪化させることがあります。'
+                description_en: 'Cash handouts boost support, but hinder growth and cause inflation.',
+                tip: '【ポピュリズム】短期的な人気取り政策は、長期的には経済の基礎的条件（ファンダメンタルズ）を悪化させることがあります。',
+                tip_en: '[Populism] Short-term popularity often harms long-term fundamentals.'
             },
             {
                 id: 11,
                 name: '大規模構造改革',
+                name_en: 'Structural Reform',
                 cost: 30,
                 type: 'POLICY',
                 supportChange: -15,
@@ -477,27 +653,34 @@
                     ...me,
                     activeEffects: [...(me.activeEffects || []), {
                         name: '改革の成果',
+                        name_en: 'Reform Success',
                         turnsLeft: 3,
                         effect: (s) => ({ ...s, gdp: s.gdp + 50 })
                     }]
                 }),
                 description: '既得権益を打破します。国民の反発を招きますが、数ターン後に大きな成長をもたらします。',
-                tip: '【構造改革】規制緩和や市場開放は、短期的には痛み（失業や反発）を伴いますが、長期的には生産性を向上させます。'
+                description_en: 'Break vested interests. Unpopular now, but brings huge growth later.',
+                tip: '【構造改革】規制緩和や市場開放は、短期的には痛み（失業や反発）を伴いますが、長期的には生産性を向上させます。',
+                tip_en: '[Structural Reform] Deregulation causes short-term pain but long-term gain.'
             },
             {
                 id: 4,
                 name: '金融緩和',
+                name_en: 'Monetary Easing',
                 cost: 0,
                 type: 'POLICY',
                 inflationChange: 1.5,
                 supportChange: 2,
                 effect: (me, opp) => ({ ...me, money: me.money + 40 }),
                 description: '市場にお金を流し込み、一時的に資金を潤沢にします。',
-                tip: '【マネタリーベース】金利を下げたりお金の供給量を増やし、投資を促します。'
+                description_en: 'Supply money to the market for liquidity.',
+                tip: '【マネタリーベース】金利を下げたりお金の供給量を増やし、投資を促します。',
+                tip_en: '[Monetary Base] Lowering rates promotes investment.'
             },
             {
                 id: 5,
                 name: '増税',
+                name_en: 'Tax Hike',
                 cost: 0,
                 type: 'POLICY',
                 inflationChange: -1,
@@ -505,45 +688,57 @@
                 baseSuccessRate: 90,
                 effect: (me, opp) => ({ ...me, money: me.money + 60, gdp: me.gdp - 10 }),
                 description: '税率を上げ資金を確保しますが、景気は少し冷え込みます。',
+                description_en: 'Raise taxes to secure funds, cooling the economy.',
                 tip: '【緊縮財政】財源確保には有効ですが、消費や投資を抑制する副作用があります。',
+                tip_en: '[Fiscal Austerity] Secures revenue but suppresses consumption.',
                 onFailure: (me) => ({ ...me, support: Math.max(0, me.support - 10) })
             },
             {
                 id: 6,
                 name: 'スタートアップ支援',
+                name_en: 'Startup Support',
                 cost: 20,
                 type: 'PRODUCTION',
                 supportChange: 4,
                 effect: (me, opp) => ({ ...me, income: me.income + 8 }),
                 description: '起業家を支援し、新たなビジネスを育てます。',
+                description_en: 'Support entrepreneurs to nurture new business.',
                 tip: '【新産業創出】新しい企業は将来の大きな税収源となります。',
+                tip_en: '[New Industry] New firms become future tax sources.',
                 providesTags: ['tech'],
                 combosWith: ['innovation', 'education']
             },
             {
                 id: 7,
                 name: '関税引き上げ',
+                name_en: 'Tariff Hike',
                 cost: 15,
                 type: 'ATTACK',
                 targetSupportChange: -5,
                 targetEffect: (opp) => ({ ...opp, income: Math.max(0, opp.income - 5), money: Math.max(0, opp.money - 10) }),
                 description: '輸入品に税金をかけ、相手国の輸出産業にダメージを与えます。',
-                tip: '【保護貿易】自国産業を守る一方で、貿易戦争のリスクがあります。'
+                description_en: 'Tax imports to damage rival export industries.',
+                tip: '【保護貿易】自国産業を守る一方で、貿易戦争のリスクがあります。',
+                tip_en: '[Protectionism] Protects domestic industry but risks trade war.'
             },
             {
                 id: 8,
                 name: '人材育成',
+                name_en: 'Human Capital',
                 cost: 25,
                 type: 'PRODUCTION',
                 supportChange: 5,
                 effect: (me, opp) => ({ ...me, income: me.income + 3, gdp: me.gdp + 15 }),
                 description: '教育に投資し、労働者のスキルを向上させます。',
+                description_en: 'Invest in education to improve skills.',
                 tip: '【人的資本】教育レベルの向上は、長期的な経済成長に不可欠です。',
+                tip_en: '[Human Capital] Education is essential for long-term growth.',
                 providesTag: 'education'
             },
             {
                 id: 9,
                 name: '大規模金融緩和',
+                name_en: 'Massive Easing',
                 cost: 0,
                 type: 'POLICY',
                 inflationChange: 3,
@@ -551,7 +746,9 @@
                 baseSuccessRate: 80,
                 effect: (me, opp) => ({ ...me, money: me.money + 100 }),
                 description: '異次元の金融緩和を行い、市場に大量の資金を供給します。',
+                description_en: 'Unprecedented easing. High risk of losing market confidence.',
                 tip: '【リスク】失敗すると市場の信認を失い、支持率が急落します。',
+                tip_en: '[Risk] Failure crashes support rate.',
                 onFailure: (me) => ({ ...me, support: Math.max(0, me.support - 20) })
             },
         ];
@@ -560,29 +757,35 @@
             BEGINNER: {
                 id: 'BEGINNER',
                 label: 'ビギナー',
+                label_en: 'Beginner',
                 targetGdp: 200,
                 initialMoney: 120,
                 initialDebt: 0,
                 eventDamageMultiplier: 0.5,
-                description: '勝利条件GDPが低く、初期資金が多い。イベントの悪影響も半減します。'
+                description: '勝利条件GDPが低く、初期資金が多い。イベントの悪影響も半減します。',
+                description_en: 'Low target GDP, high initial funds. Event damage halved.'
             },
             NORMAL: {
                 id: 'NORMAL',
                 label: 'ノーマル',
+                label_en: 'Normal',
                 targetGdp: 300,
                 initialMoney: 80,
                 initialDebt: 0,
                 eventDamageMultiplier: 1.0,
-                description: '標準的なバランスです。'
+                description: '標準的なバランスです。',
+                description_en: 'Standard balance.'
             },
             HARD: {
                 id: 'HARD',
                 label: 'ハード',
+                label_en: 'Hard',
                 targetGdp: 400,
                 initialMoney: 60,
                 initialDebt: 30,
                 eventDamageMultiplier: 1.5,
-                description: '目標GDPが高く、初期債務を抱えた状態からスタート。イベントの悪影響も強まります。'
+                description: '目標GDPが高く、初期債務を抱えた状態からスタート。イベントの悪影響も強まります。',
+                description_en: 'High target GDP, start with debt. Stronger event damage.'
             }
         };
 
@@ -630,7 +833,7 @@
             return Math.min(100, Math.max(0, Math.round(base + bonus)));
         };
 
-        const evaluateGame = (player, difficulty, isWin, ideology = null) => {
+        const evaluateGame = (player, difficulty, isWin, ideology = null, lang = 'ja') => {
             // 1. Basic Stats
             const gdp = player.gdp;
             const inflation = player.inflation;
@@ -646,17 +849,18 @@
             const criteria = ideology?.rankCriteria || { minGdp: 400, maxInflation: 4, minInflation: 2, maxDebt: 100 };
 
             // Inflation Eval
-            let inflationEval = "適正";
-            if (inflation < 0) { inflationEval = "デフレ気味"; comments.push("デフレ脱却が必要です"); }
-            else if (inflation < criteria.minInflation) { inflationEval = "やや低い"; }
-            else if (inflation <= criteria.maxInflation) { inflationEval = "理想的"; }
-            else if (inflation <= 8) { inflationEval = "やや高い"; }
-            else { inflationEval = "危険水域"; comments.push("インフレ抑制を最優先に"); }
-
-            // Debt Eval
-            let debtEval = "健全";
-            if (debt > 300) { debtEval = "危機的"; comments.push("財政再建が急務です"); }
-            else if (debt > 150) { debtEval = "要注意"; }
+            let inflationEval = lang === 'en' ? "Optimal" : "適正";
+            if (inflation < 0) {
+                inflationEval = lang === 'en' ? "Deflationary" : "デフレ気味";
+                comments.push(lang === 'en' ? "Need to escape deflation" : "デフレ脱却が必要です");
+            }
+            else if (inflation < criteria.minInflation) { inflationEval = lang === 'en' ? "Low" : "やや低い"; }
+            else if (inflation <= criteria.maxInflation) { inflationEval = lang === 'en' ? "Ideal" : "理想的"; }
+            else if (inflation <= 8) { inflationEval = lang === 'en' ? "High" : "やや高い"; }
+            else {
+                inflationEval = lang === 'en' ? "Dangerous" : "危険水域";
+                comments.push(lang === 'en' ? "Control inflation immediately" : "インフレ抑制を最優先に");
+            }
 
             // Rank Logic
             let rank = 'C';
@@ -667,7 +871,7 @@
                 rank = 'E';
                 rankLabel = 'FAILED';
                 rankColor = 'text-gray-500';
-                nextGoals.push("まずはクリアを目指しましょう！");
+                nextGoals.push(lang === 'en' ? "Try to clear the game first!" : "まずはクリアを目指しましょう！");
             } else {
                 // Check S (Ideology Specific)
                 // Default S: GDP 400, Inf 2-4, Debt 100, AAA, Support 60
@@ -694,39 +898,39 @@
                     rank = 'S';
                     rankLabel = 'LEGENDARY';
                     rankColor = 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]';
-                    nextGoals.push("完璧な手腕です！これ以上の称号はありません。");
-                    if(bonusAchieved) nextGoals.push("ボーナス目標（インフレ抑制）も達成！");
+                    nextGoals.push(lang === 'en' ? "Perfect Management! No higher title exists." : "完璧な手腕です！これ以上の称号はありません。");
+                    if(bonusAchieved) nextGoals.push(lang === 'en' ? "Bonus Goal (Inflation Control) Achieved!" : "ボーナス目標（インフレ抑制）も達成！");
                 } else if (isA) {
                     rank = 'A';
                     rankLabel = 'EXCELLENT';
                     rankColor = 'text-emerald-400';
                     // Advice for S
-                    if (gdp < criteria.minGdp) nextGoals.push(`次はGDP ${criteria.minGdp}兆円を目指そう`);
-                    if (inflation < criteria.minInflation || inflation > criteria.maxInflation) nextGoals.push(`インフレ率 ${criteria.minInflation}-${criteria.maxInflation}% を目指そう`);
-                    if (debt > criteria.maxDebt) nextGoals.push(`債務 ${criteria.maxDebt}兆円以下の健全財政を目指そう`);
+                    if (gdp < criteria.minGdp) nextGoals.push(lang === 'en' ? `Aim for GDP ${criteria.minGdp}T next` : `次はGDP ${criteria.minGdp}兆円を目指そう`);
+                    if (inflation < criteria.minInflation || inflation > criteria.maxInflation) nextGoals.push(lang === 'en' ? `Keep Inflation ${criteria.minInflation}-${criteria.maxInflation}%` : `インフレ率 ${criteria.minInflation}-${criteria.maxInflation}% を目指そう`);
+                    if (debt > criteria.maxDebt) nextGoals.push(lang === 'en' ? `Keep Debt under ${criteria.maxDebt}T` : `債務 ${criteria.maxDebt}兆円以下の健全財政を目指そう`);
                 } else {
                     rank = 'B';
                     rankLabel = 'GOOD';
                     rankColor = 'text-cyan-400';
                      // Advice for A
-                    if (inflation > 6) nextGoals.push("インフレを 5%以下 に抑えてAランクを目指そう");
-                    if (debt > 200) nextGoals.push("債務を減らして格付けを維持しよう");
-                    if (support < 50) nextGoals.push("支持率 50%以上 をキープしよう");
+                    if (inflation > 6) nextGoals.push(lang === 'en' ? "Keep Inflation under 5% for Rank A" : "インフレを 5%以下 に抑えてAランクを目指そう");
+                    if (debt > 200) nextGoals.push(lang === 'en' ? "Reduce Debt to maintain Rating" : "債務を減らして格付けを維持しよう");
+                    if (support < 50) nextGoals.push(lang === 'en' ? "Keep Support above 50%" : "支持率 50%以上 をキープしよう");
                 }
             }
 
             // Default advice if empty
-            if (nextGoals.length === 0) nextGoals.push("さらなる高みを目指して...");
+            if (nextGoals.length === 0) nextGoals.push(lang === 'en' ? "Aim for even greater heights..." : "さらなる高みを目指して...");
 
             return {
                 rank,
                 rankLabel,
                 rankColor,
                 stats: [
-                    { label: '最終GDP', value: `${gdp}兆`, note: gdp >= 400 ? 'S基準達成' : '' },
-                    { label: 'インフレ率', value: `${inflation.toFixed(1)}%`, note: inflationEval },
-                    { label: '債務残高', value: `${debt}兆`, note: `格付:${rating}` },
-                    { label: '支持率', value: `${support}%`, note: support >= 60 ? '高支持' : '' },
+                    { label: lang === 'en' ? 'Final GDP' : '最終GDP', value: `${gdp}${t('trillion', lang)}`, note: gdp >= 400 ? (lang === 'en' ? 'S Rank' : 'S基準達成') : '' },
+                    { label: lang === 'en' ? 'Inflation' : 'インフレ率', value: `${inflation.toFixed(1)}%`, note: inflationEval },
+                    { label: lang === 'en' ? 'Debt' : '債務残高', value: `${debt}${t('trillion', lang)}`, note: `${lang === 'en' ? 'Rating' : '格付'}:${rating}` },
+                    { label: lang === 'en' ? 'Support' : '支持率', value: `${support}%`, note: support >= 60 ? (lang === 'en' ? 'High' : '高支持') : '' },
                 ],
                 nextGoal: nextGoals[0]
             };
@@ -828,15 +1032,15 @@
             );
         };
 
-        const CardInfoPanel = ({ card }) => {
+        const CardInfoPanel = ({ card, lang }) => {
             if (!card) {
                 return (
                      <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center text-center h-48 animate-fade-in hidden lg:flex">
                         <div className="p-3 rounded-full bg-slate-800 mb-3 opacity-50">
                             <IconBookOpen size={24} className="text-slate-400" />
                         </div>
-                        <h3 className="text-sm font-bold text-slate-500 mb-1">カード解説</h3>
-                        <p className="text-xs text-slate-600">カードにカーソルを合わせると<br/>詳しい解説が表示されます</p>
+                        <h3 className="text-sm font-bold text-slate-500 mb-1">{t('cardInfo', lang)}</h3>
+                        <p className="text-xs text-slate-600" dangerouslySetInnerHTML={{ __html: t('cardInfoDesc', lang)}}></p>
                      </div>
                 );
             }
@@ -848,7 +1052,7 @@
                     {/* Header */}
                     <div className={`px-4 py-3 border-b border-slate-800 flex items-center gap-2 ${typeInfo?.headerStyle?.replace('bg-', 'bg-opacity-20 bg-')}`}>
                          {typeInfo?.icon}
-                         <span className="font-bold text-sm tracking-wider">{card.name}</span>
+                         <span className="font-bold text-sm tracking-wider">{getLoc(card, 'name', lang)}</span>
                     </div>
 
                     <div className="p-4 space-y-4">
@@ -857,18 +1061,18 @@
                              <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
                              <div className="flex items-start gap-2 mb-1">
                                  <IconBookOpen size={14} className="text-indigo-400 mt-0.5" />
-                                 <span className="text-xs font-bold text-indigo-300">経済メモ</span>
+                                 <span className="text-xs font-bold text-indigo-300">{t('memo', lang)}</span>
                              </div>
                              <p className="text-xs text-slate-300 leading-relaxed pl-1">
-                                {card.tip}
+                                {getLoc(card, 'tip', lang)}
                              </p>
                         </div>
 
                         {/* Description */}
                         <div>
-                            <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">効果詳細</div>
+                            <div className="text-[10px] font-bold text-slate-500 uppercase mb-1">{t('detail', lang)}</div>
                             <p className="text-xs text-slate-400 leading-relaxed">
-                                {card.description}
+                                {getLoc(card, 'description', lang)}
                             </p>
                         </div>
 
@@ -887,30 +1091,30 @@
             );
         };
 
-        const ComboGuidePanel = () => {
+        const ComboGuidePanel = ({ lang }) => {
             const combos = [
                 {
                     tag: 'infrastructure',
-                    label: 'インフラ',
-                    desc: '「設備投資」や「公共事業」で付与。生産系カードの効果を高めます。',
+                    label: t('tagInfra', lang),
+                    desc: t('tagInfraDesc', lang),
                     color: 'text-amber-400 bg-amber-900/20 border-amber-500/30'
                 },
                 {
                     tag: 'education',
-                    label: '教育・人材',
-                    desc: '「人材育成」で付与。技術系カードの土台となります。',
+                    label: t('tagEdu', lang),
+                    desc: t('tagEduDesc', lang),
                     color: 'text-emerald-400 bg-emerald-900/20 border-emerald-500/30'
                 },
                 {
                     tag: 'innovation',
-                    label: 'イノベーション',
-                    desc: '「技術革新」で付与。次の技術投資を大きくブーストします。',
+                    label: t('tagInno', lang),
+                    desc: t('tagInnoDesc', lang),
                     color: 'text-cyan-400 bg-cyan-900/20 border-cyan-500/30'
                 },
                 {
                     tag: 'tech',
-                    label: '先端技術',
-                    desc: 'スタートアップ等。IT革命期に効果が倍増する強力なタグ。',
+                    label: t('tagTech', lang),
+                    desc: t('tagTechDesc', lang),
                     color: 'text-purple-400 bg-purple-900/20 border-purple-500/30'
                 }
             ];
@@ -919,7 +1123,7 @@
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg mt-6">
                     <div className="bg-slate-800/50 p-3 border-b border-slate-800 flex items-center gap-2">
                          <IconZap size={14} className="text-yellow-400" />
-                         <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Combo Guide (コンボ図鑑)</span>
+                         <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('comboGuide', lang)}</span>
                     </div>
                     <div className="p-4 space-y-2">
                         {combos.map(c => (
@@ -933,16 +1137,15 @@
                             </div>
                         ))}
                          <div className="mt-2 pt-2 border-t border-slate-800/50 text-[10px] text-slate-500 text-center leading-tight">
-                            <span className="text-amber-400 font-bold">★ ヒント</span><br/>
-                            直前にプレイしたカードのタグと噛み合うと<br/>
-                            <span className="font-bold text-white">効果が1.3倍</span> になります！
+                            <span className="text-amber-400 font-bold">{t('comboHint', lang)}</span><br/>
+                            <span dangerouslySetInnerHTML={{ __html: t('comboHintDesc', lang) }}></span>
                         </div>
                     </div>
                 </div>
             );
         };
 
-        const StatusPanel = ({ data, isEnemy, interest, isShaking }) => {
+        const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => {
             if (!data) return <div className="p-4 border rounded text-red-500">Error: No Data</div>;
 
             const inflationAlert = (value) => {
@@ -983,23 +1186,23 @@
                             <div>
                                 <div className="flex items-center gap-2">
                                     <h3 className={`font-bold text-lg leading-none ${theme.text}`}>
-                                        {isEnemy ? 'ライバル国' : '自国 (あなた)'}
+                                        {isEnemy ? t('rivalCountry', lang) : t('myCountry', lang)}
                                     </h3>
                                     <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${isEnemy ? 'bg-slate-700 text-slate-400' : 'bg-cyan-950 text-cyan-400 border border-cyan-900'}`}>
                                         {isEnemy ? 'AI' : 'YOU'}
                                     </span>
                                 </div>
                                 <div className="text-xs text-slate-400 mt-1 font-medium flex items-center gap-1">
-                                    信用格付:
+                                    RATING:
                                     <span className={`font-bold ${['AAA','BBB'].includes(data.rating) ? 'text-emerald-400' : 'text-amber-400'}`}>{data.rating}</span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="text-right">
-                            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">GDP</div>
+                            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">{t('gdp', lang)}</div>
                             <div className={`text-3xl font-black tracking-tighter ${isEnemy ? 'text-slate-500' : 'text-cyan-400'}`}>
-                                <NumberCounter value={data.gdp} /><span className="text-sm font-bold ml-1 text-slate-600">兆</span>
+                                <NumberCounter value={data.gdp} /><span className="text-sm font-bold ml-1 text-slate-600">{t('trillion', lang)}</span>
                             </div>
                         </div>
                     </div>
@@ -1010,7 +1213,7 @@
                         <div className={`${theme.highlight} p-3 rounded-xl border border-slate-700/50`}>
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
-                                    資金残高
+                                    {t('money', lang)}
                                 </span>
                                 <span className="text-sm font-bold font-mono text-slate-300">¥<NumberCounter value={data.money} /></span>
                             </div>
@@ -1018,15 +1221,15 @@
                                 <div className={`h-full rounded-full transition-all duration-500 ${theme.bar}`} style={{ width: `${Math.min(100, data.money)}%` }}></div>
                             </div>
                             <div className="flex justify-between text-[10px] font-medium text-slate-400">
-                                <span>収支: <span className="text-emerald-400">+<NumberCounter value={data.income} /></span></span>
-                                <span>利払: <span className="text-rose-400">-<NumberCounter value={interest} /></span></span>
+                                <span>{t('income', lang)}: <span className="text-emerald-400">+<NumberCounter value={data.income} /></span></span>
+                                <span>{t('interest', lang)}: <span className="text-rose-400">-<NumberCounter value={interest} /></span></span>
                             </div>
                         </div>
 
                         {/* Support */}
                         <div className={`${theme.highlight} p-3 rounded-xl border border-slate-700/50`}>
                             <div className="flex justify-between items-center mb-2">
-                                <span className="text-xs font-bold text-slate-500">国民支持率</span>
+                                <span className="text-xs font-bold text-slate-500">{t('support', lang)}</span>
                                 <span className={`text-sm font-bold font-mono ${data.support < 30 ? 'text-rose-400' : 'text-slate-300'}`}><NumberCounter value={data.support} />%</span>
                             </div>
                             <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
@@ -1038,11 +1241,11 @@
                     {/* Footer Stats */}
                     <div className="flex gap-2">
                         <div className="flex-1 bg-slate-900/50 p-2 rounded-lg border border-slate-700/50 flex justify-between items-center">
-                            <span className="text-[10px] font-bold text-slate-500">債務残高</span>
-                            <span className="text-xs font-bold text-slate-400"><NumberCounter value={data.debt} />兆</span>
+                            <span className="text-[10px] font-bold text-slate-500">{t('debt', lang)}</span>
+                            <span className="text-xs font-bold text-slate-400"><NumberCounter value={data.debt} />{t('trillion', lang)}</span>
                         </div>
                         <div className={`flex-1 p-2 rounded-lg border flex justify-between items-center ${alert.color}`}>
-                            <span className="text-[10px] font-bold opacity-70">インフレ</span>
+                            <span className="text-[10px] font-bold opacity-70">{t('inflation', lang)}</span>
                             <span className="text-xs font-bold">{data.inflation.toFixed(1)}%</span>
                         </div>
                     </div>
@@ -1067,6 +1270,7 @@
             const [hoveredCard, setHoveredCard] = useState(null);
             const [crisisAlert, setCrisisAlert] = useState(null); // { message: string, type: 'danger'|'warning' }
             const [evaluation, setEvaluation] = useState(null);
+            const [lang, setLang] = useState('ja'); // 'ja' | 'en'
 
             // Difficulty State
             const [selectedDifficulty, setSelectedDifficulty] = useState(DIFFICULTY_SETTINGS.NORMAL.id);
@@ -1094,7 +1298,9 @@
 
                 if (nextEra.id !== era.id) {
                     setEra(nextEra);
-                    addLog(`📢 時代変遷: 「${nextEra.name}」に突入しました！(${nextEra.effectDesc})`);
+                    const eraName = getLoc(nextEra, 'name', lang);
+                    const eraEffect = getLoc(nextEra, 'effectDesc', lang);
+                    addLog(`📢 ${eraName} - ${eraEffect}`);
                     SoundManager.playTone(200, 'sawtooth', 0.5, 0.05); // Era change sound
                 }
             }, [turn, player, gameState]); // Changed dependency from player.gdp to player to avoid undefined access
@@ -1148,11 +1354,12 @@
                      // Only trigger if we aren't already showing one?
                      if (!crisisAlert) {
                          SoundManager.playCrisis();
-                         setCrisisAlert({ message: "暴動の危機！\n(インフレ12%突破)", type: 'danger' });
+                         const msg = lang === 'en' ? "CRISIS: RIOTS!\n(Inflation > 12%)" : "暴動の危機！\n(インフレ12%突破)";
+                         setCrisisAlert({ message: msg, type: 'danger' });
                          setTimeout(() => setCrisisAlert(null), 3000);
                      }
                 }
-            }, [player.inflation, gameState]);
+            }, [player.inflation, gameState, lang]);
 
             // UI Enhancement: Add Floating Text
             const addFloatingText = (x, y, text, type = 'default') => {
@@ -1195,7 +1402,11 @@
                     gdp: Math.max(0, state.gdp - gdpPenalty),
                 };
 
-                addLog(`${actorLabel}: インフレ高騰により「国民の不満」が${angerLevel}、所得-${incomePenalty}${gdpPenalty ? ` / GDP-${gdpPenalty}` : ''}`);
+                const msg = lang === 'en'
+                    ? `${actorLabel}: High inflation causes unrest! Income -${incomePenalty}${gdpPenalty ? ` / GDP -${gdpPenalty}` : ''}`
+                    : `${actorLabel}: インフレ高騰により「国民の不満」が${angerLevel}、所得-${incomePenalty}${gdpPenalty ? ` / GDP-${gdpPenalty}` : ''}`;
+
+                addLog(msg);
                 return penalizedState;
             };
 
@@ -1203,14 +1414,20 @@
                 if (!delta) return state;
                 const prevSupport = state.support ?? 0;
                 const nextSupport = Math.min(100, Math.max(0, prevSupport + delta));
-                addLog(`${actorLabel}: ${reason}で支持率が${prevSupport}% → ${nextSupport}%に変化`);
+                const msg = lang === 'en'
+                    ? `${actorLabel}: Support ${prevSupport}% -> ${nextSupport}% (${reason})`
+                    : `${actorLabel}: ${reason}で支持率が${prevSupport}% → ${nextSupport}%に変化`;
+                addLog(msg);
                 return { ...state, support: nextSupport };
             };
 
             const applyRatingUpdate = (state, actorLabel) => {
                 const nextRating = getRatingByDebt(state.debt ?? 0);
                 if (state.rating === nextRating) return state;
-                addLog(`${actorLabel}: 債務残高${state.debt}兆により格付けが${state.rating} → ${nextRating}に変化`);
+                const msg = lang === 'en'
+                    ? `${actorLabel}: Rating changed ${state.rating} -> ${nextRating} (Debt: ${state.debt})`
+                    : `${actorLabel}: 債務残高${state.debt}兆により格付けが${state.rating} → ${nextRating}に変化`;
+                addLog(msg);
                 return { ...state, rating: nextRating };
             };
 
@@ -1223,7 +1440,10 @@
                 const interest = getInterestForTurn(state);
                 if (!interest) return state;
                 const afterPayment = { ...state, money: Math.max(0, state.money - interest) };
-                addLog(`${actorLabel}: 債務利払いとして ${interest}兆円を支払いました（格付け: ${state.rating}）`);
+                const msg = lang === 'en'
+                    ? `${actorLabel}: Paid ${interest}T interest (Rating: ${state.rating})`
+                    : `${actorLabel}: 債務利払いとして ${interest}兆円を支払いました（格付け: ${state.rating}）`;
+                addLog(msg);
                 return afterPayment;
             };
 
@@ -1284,9 +1504,15 @@
                 setPlayerHand([]);
                 setLastTags([]);
                 setTurn(1);
+
+                const eventName = getLoc(event, 'name', lang);
+                const eventDesc = getLoc(event, 'description', lang);
+                const diffLabel = getLoc(difficulty, 'label', lang);
+                const ideologyName = getLoc(ideology, 'name', lang);
+
                 setLogs([
-                    `📢 今ターンのイベント: 「${event.name}」 - ${event.description}`,
-                    `ゲーム開始！難易度: ${difficulty.label} / 思想: ${ideology.name}`
+                    lang === 'en' ? `📢 Event: ${eventName} - ${eventDesc}` : `📢 今ターンのイベント: 「${eventName}」 - ${eventDesc}`,
+                    lang === 'en' ? `Game Start! Diff: ${diffLabel} / Style: ${ideologyName}` : `ゲーム開始！難易度: ${diffLabel} / 思想: ${ideologyName}`
                 ]);
                 setGameState('PLAYING');
                 setLastPlayedCard(null);
@@ -1310,7 +1536,9 @@
             const selectTurnEvent = () => {
                 const event = chooseRandomEvent();
                 setActiveEvent(event);
-                addLog(`📢 今ターンのイベント: 「${event.name}」 - ${event.description}`);
+                const eventName = getLoc(event, 'name', lang);
+                const eventDesc = getLoc(event, 'description', lang);
+                addLog(lang === 'en' ? `📢 Event: ${eventName} - ${eventDesc}` : `📢 今ターンのイベント: 「${eventName}」 - ${eventDesc}`);
             };
 
             // カードドロー機能
@@ -1343,7 +1571,10 @@
                         interestDue: (prev.interestDue ?? 0) + 5,
                     };
                     const rated = applyRatingUpdate(updated, 'あなた');
-                    addLog('あなた: 国債発行！資金+50兆 / 債務+50兆、利払い5兆/ターンを追加');
+                    const msg = lang === 'en'
+                        ? 'YOU: Bond Issued! +50 Money, +50 Debt, Interest +5/turn'
+                        : 'あなた: 国債発行！資金+50兆 / 債務+50兆、利払い5兆/ターンを追加';
+                    addLog(msg);
                     return rated;
                 });
             };
@@ -1432,6 +1663,7 @@
                 const adjustedCost = calculateAdjustedCost(card.cost, player.inflation);
                 const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
                 const providedTags = getCardProvidedTags(card);
+                const cardName = getLoc(card, 'name', lang);
 
                 // Era Effect: IT Revolution (Tech x2)
                 const isTech = providedTags.includes('tech');
@@ -1441,7 +1673,7 @@
 
                 if (player.money < adjustedCost) {
                     SoundManager.playError();
-                    addLog(`資金不足です（必要: ${adjustedCost}兆円、インフレ影響を反映）`);
+                    addLog(lang === 'en' ? `Not enough funds (Need: ${adjustedCost}T)` : `資金不足です（必要: ${adjustedCost}兆円、インフレ影響を反映）`);
                     return;
                 }
 
@@ -1465,12 +1697,15 @@
                     SoundManager.playError();
                     triggerShake('player');
                     addFloatingText(e.clientX, e.clientY, "FAILED!", "damage");
-                    addLog(`あなた: 「${card.name}」の実行に失敗... (成功率 ${successRate}%)`);
+                    const failMsg = lang === 'en'
+                        ? `YOU: Failed to execute "${cardName}"... (Success Rate ${successRate}%)`
+                        : `あなた: 「${cardName}」の実行に失敗... (成功率 ${successRate}%)`;
+                    addLog(failMsg);
 
                     let penaltyState = afterCost;
                     if (card.onFailure) {
                         penaltyState = card.onFailure(penaltyState);
-                        addLog(`副作用: 政策の失敗により支持率が急落しました。`);
+                        addLog(lang === 'en' ? `Side Effect: Support plummeted due to policy failure.` : `副作用: 政策の失敗により支持率が急落しました。`);
                     }
                     nextPlayerState = penaltyState;
                     setPlayer(nextPlayerState);
@@ -1486,13 +1721,16 @@
                 SoundManager.playCard(card.type);
 
                 if (comboReadyTags.length > 0) {
-                    addLog(`★コンボ発動！タグ『${comboReadyTags.join('・')}』が共鳴し、生産性が爆発的に向上！ (x${COMBO_MULTIPLIER})`);
+                    const msg = lang === 'en'
+                        ? `★COMBO! Tags [${comboReadyTags.join(', ')}] matched! Efficiency x${COMBO_MULTIPLIER}!`
+                        : `★コンボ発動！タグ『${comboReadyTags.join('・')}』が共鳴し、生産性が爆発的に向上！ (x${COMBO_MULTIPLIER})`;
+                    addLog(msg);
                     // Visual Feedback for Combo
                     addFloatingText(e ? e.clientX : window.innerWidth/2, e ? e.clientY - 50 : window.innerHeight/2, `⚡ COMBO x${COMBO_MULTIPLIER}!!`, 'combo');
                 }
 
                 if (card.type === 'ATTACK') {
-                    const afterSupport = applySupportChange(afterCost, card.supportChange, 'あなた', `「${card.name}」の政治的影響`);
+                    const afterSupport = applySupportChange(afterCost, card.supportChange, 'あなた', lang === 'en' ? `"${cardName}" political impact` : `「${cardName}」の政治的影響`);
                     nextPlayerState = afterSupport;
                 } else {
                     // 1. Base Effect
@@ -1535,10 +1773,13 @@
                     const afterInflation = applyInflationChange(afterEvent, inflationDelta);
 
                     if (inflationDelta) {
-                        addLog(`あなた: 「${card.name}」が物価に影響 (${inflationDelta > 0 ? '+' : ''}${inflationDelta.toFixed(1)}%)`);
+                        const infMsg = lang === 'en'
+                            ? `YOU: "${cardName}" inflation impact (${inflationDelta > 0 ? '+' : ''}${inflationDelta.toFixed(1)}%)`
+                            : `あなた: 「${cardName}」が物価に影響 (${inflationDelta > 0 ? '+' : ''}${inflationDelta.toFixed(1)}%)`;
+                        addLog(infMsg);
                     }
                     const afterUnrest = applyUnrestPenalty(afterInflation, 'あなた');
-                    const afterSupport = applySupportChange(afterUnrest, card.supportChange, 'あなた', `「${card.name}」の効果`);
+                    const afterSupport = applySupportChange(afterUnrest, card.supportChange, 'あなた', lang === 'en' ? `"${cardName}" effect` : `「${cardName}」の効果`);
                     nextPlayerState = afterSupport;
                 }
 
@@ -1551,19 +1792,20 @@
                         const effected = card.targetEffect ? card.targetEffect(prev, nextPlayerState) : prev;
                         const comboBoosted = applyComboBonus(prev, effected, comboReadyTags);
                         const unrested = applyUnrestPenalty(comboBoosted, 'ライバル');
-                        const withSupport = applySupportChange(unrested, card.targetSupportChange, 'ライバル', `「${card.name}」の影響`);
+                        const withSupport = applySupportChange(unrested, card.targetSupportChange, 'ライバル', lang === 'en' ? `"${cardName}" impact` : `「${cardName}」の影響`);
                         updatedEnemyState = withSupport;
                         return withSupport;
                     });
                     triggerShake('enemy'); // Shake enemy panel
-                    addLog(`あなた: 「${card.name}」を使用！相手を妨害した。`);
+                    addLog(lang === 'en' ? `YOU: Used "${cardName}" to attack rival!` : `あなた: 「${cardName}」を使用！相手を妨害した。`);
                 } else {
-                    addLog(`あなた: 「${card.name}」を使用。経済効果発動！`);
+                    addLog(lang === 'en' ? `YOU: Used "${cardName}". Effect activated.` : `あなた: 「${cardName}」を使用。経済効果発動！`);
                 }
 
                 // Tip Log
                 if (card.tip) {
-                    addLog(`💡 【経済メモ】${card.tip}`);
+                    const tipText = getLoc(card, 'tip', lang);
+                    addLog(lang === 'en' ? `💡 [Memo] ${tipText}` : `💡 【経済メモ】${tipText}`);
                 }
 
                 // UI update for discard
@@ -1603,7 +1845,10 @@
                 currentPlayerState.activeEffects = nextActiveEffects;
 
                 if (effectsTriggered.length > 0) {
-                    addLog(`⏰ 時間差効果発動: ${effectsTriggered.join(', ')}`);
+                    const msg = lang === 'en'
+                        ? `⏰ Delayed Effects: ${effectsTriggered.join(', ')}`
+                        : `⏰ 時間差効果発動: ${effectsTriggered.join(', ')}`;
+                    addLog(msg);
                     addFloatingText(window.innerWidth / 2, window.innerHeight / 2 - 50, "Delayed Effect!", "income");
                 }
 
@@ -1647,14 +1892,18 @@
                 // --- Ruin Logic: Debt Collapse ---
                 if (unrestApplied.debt >= 400 && unrestApplied.rating === 'D') {
                     SoundManager.playDoom();
-                    addLog('📉 市場の信認崩壊… 債務超過により経済が麻痺しています');
+                    const msg = lang === 'en' ? '📉 Market Collapse... Economy paralyzed by excess debt.' : '📉 市場の信認崩壊… 債務超過により経済が麻痺しています';
+                    addLog(msg);
                     // Add a visual flash too?
-                    setCrisisAlert({ message: "市場の信認崩壊…", type: 'danger' });
+                    setCrisisAlert({ message: lang === 'en' ? "Market Collapse..." : "市場の信認崩壊…", type: 'danger' });
                     setTimeout(() => setCrisisAlert(null), 3000);
                 }
                 // --------------------------------
 
-                addLog(`ターン終了: 収入 +${playerIncomeGain}兆円${incomePenalty ? ` (イベントで-${incomePenalty})` : ''}、利払い -${interestPaid}兆円、インフレ率 ${player.inflation.toFixed(1)} → ${driftedInflation.toFixed(1)}%、格付け ${ratedPlayer.rating}`);
+                const turnEndMsg = lang === 'en'
+                    ? `Turn End: Income +${playerIncomeGain}T, Interest -${interestPaid}T, Inflation ${player.inflation.toFixed(1)} -> ${driftedInflation.toFixed(1)}%`
+                    : `ターン終了: 収入 +${playerIncomeGain}兆円${incomePenalty ? ` (イベントで-${incomePenalty})` : ''}、利払い -${interestPaid}兆円、インフレ率 ${player.inflation.toFixed(1)} → ${driftedInflation.toFixed(1)}%、格付け ${ratedPlayer.rating}`;
+                addLog(turnEndMsg);
 
                 // 2. 勝利判定
                 if (checkWinCondition()) return;
@@ -1702,12 +1951,12 @@
                     currentEnemyState.activeEffects = nextActiveEffects;
 
                     if (effectsTriggered.length > 0) {
-                        addLog(`ライバル: 時間差効果発動: ${effectsTriggered.join(', ')}`);
+                        addLog(lang === 'en' ? `RIVAL: Delayed effects: ${effectsTriggered.join(', ')}` : `ライバル: 時間差効果発動: ${effectsTriggered.join(', ')}`);
                     }
 
                     const drifted = applyInflationDrift(currentEnemyState.inflation, driftTarget);
                     if (drifted !== currentEnemyState.inflation) {
-                        addLog(`ライバル: インフレ率 ${currentEnemyState.inflation.toFixed(1)}% → ${drifted.toFixed(1)}% (自動調整)`);
+                        addLog(lang === 'en' ? `RIVAL: Inflation drift ${currentEnemyState.inflation.toFixed(1)}% -> ${drifted.toFixed(1)}%` : `ライバル: インフレ率 ${currentEnemyState.inflation.toFixed(1)}% → ${drifted.toFixed(1)}% (自動調整)`);
                     }
                     const afterDrift = { ...currentEnemyState, inflation: drifted };
                     const ratingInfo = getRatingInfo(afterDrift.rating);
@@ -1721,7 +1970,7 @@
                     const potentialActions = ALL_CARDS.filter(c => calculateAdjustedCost(c.cost, unrestAdjusted.inflation) <= unrestAdjusted.money);
 
                     if (potentialActions.length === 0) {
-                        addLog(`ライバル: 資金不足のため資金を温存。`);
+                        addLog(lang === 'en' ? `RIVAL: Saving funds.` : `ライバル: 資金不足のため資金を温存。`);
                         latestEnemyState = unrestAdjusted;
                         return unrestAdjusted;
                     }
@@ -1729,17 +1978,18 @@
                     const aiCard = potentialActions[Math.floor(Math.random() * potentialActions.length)];
                     const inflatedCost = calculateAdjustedCost(aiCard.cost, unrestAdjusted.inflation);
                     let afterPayment = { ...unrestAdjusted, money: unrestAdjusted.money - inflatedCost };
+                    const aiCardName = getLoc(aiCard, 'name', lang); // Use localized name for AI logs
 
                     if (aiCard.type === 'ATTACK') {
-                        const afterSupport = applySupportChange(afterPayment, aiCard.supportChange, 'ライバル', `「${aiCard.name}」の政治的影響`);
+                        const afterSupport = applySupportChange(afterPayment, aiCard.supportChange, 'ライバル', lang === 'en' ? `"${aiCardName}" political impact` : `「${aiCard.name}」の政治的影響`);
                         const eventAwareSetPlayer = withEventMultiplier(setPlayer);
                         eventAwareSetPlayer(prev => {
                             const effected = aiCard.targetEffect ? aiCard.targetEffect(prev, afterSupport) : prev;
                             const unrested = applyUnrestPenalty(effected, 'あなた');
-                            return applySupportChange(unrested, aiCard.targetSupportChange, 'あなた', `「${aiCard.name}」の影響`);
+                            return applySupportChange(unrested, aiCard.targetSupportChange, 'あなた', lang === 'en' ? `"${aiCardName}" impact` : `「${aiCard.name}」の影響`);
                         });
                         triggerShake('player'); // Shake player panel
-                        addLog(`ライバル: 「${aiCard.name}」を使用！`);
+                        addLog(lang === 'en' ? `RIVAL: Used "${aiCardName}"!` : `ライバル: 「${aiCard.name}」を使用！`);
                         latestEnemyState = afterSupport;
                         return afterSupport;
                     }
@@ -1747,11 +1997,11 @@
                     const afterEffect = applyEventMultiplier(afterPayment, aiCard.effect(afterPayment, player));
                     const afterInflation = applyInflationChange(afterEffect, aiCard.inflationChange);
                     if (aiCard.inflationChange) {
-                        addLog(`ライバル: 「${aiCard.name}」で物価が変動 (${aiCard.inflationChange > 0 ? '+' : ''}${aiCard.inflationChange}%)`);
+                        addLog(lang === 'en' ? `RIVAL: "${aiCardName}" inflation impact` : `ライバル: 「${aiCard.name}」で物価が変動 (${aiCard.inflationChange > 0 ? '+' : ''}${aiCard.inflationChange}%)`);
                     }
-                    addLog(`ライバル: 「${aiCard.name}」を使用し成長中...`);
+                    addLog(lang === 'en' ? `RIVAL: Used "${aiCardName}".` : `ライバル: 「${aiCard.name}」を使用し成長中...`);
                     const unrested = applyUnrestPenalty(afterInflation, 'ライバル');
-                    const afterSupport = applySupportChange(unrested, aiCard.supportChange, 'ライバル', `「${aiCard.name}」の効果`);
+                    const afterSupport = applySupportChange(unrested, aiCard.supportChange, 'ライバル', lang === 'en' ? `"${aiCardName}" effect` : `「${aiCard.name}」の効果`);
                     latestEnemyState = afterSupport;
                     return afterSupport;
                 });
@@ -1769,16 +2019,16 @@
 
                 if (nextPlayer.gdp >= target) {
                     won = true;
-                    reason = '経済目標達成！';
+                    reason = lang === 'en' ? 'Economic Goal Achieved!' : '経済目標達成！';
                 } else if (nextEnemy.gdp >= target) {
                     lost = true;
-                    reason = 'ライバル国に敗北...';
+                    reason = lang === 'en' ? 'Defeated by Rival...' : 'ライバル国に敗北...';
                 } else if (nextPlayer.support <= 0) {
                     lost = true;
-                    reason = '支持率低下により政権崩壊';
+                    reason = lang === 'en' ? 'Administration collapsed due to low support' : '支持率低下により政権崩壊';
                 } else if (nextEnemy.support <= 0) {
                     won = true;
-                    reason = 'ライバル国が自滅！';
+                    reason = lang === 'en' ? 'Rival administration collapsed!' : 'ライバル国が自滅！';
                 }
 
                 if (won || lost) {
@@ -1788,7 +2038,7 @@
                     addLog(isWin ? `🎉 ${reason}` : `💀 ${reason}`);
 
                     // Calculate Evaluation
-                    const result = evaluateGame(nextPlayer, currentDifficulty, isWin, IDEOLOGIES[selectedIdeology]);
+                    const result = evaluateGame(nextPlayer, currentDifficulty, isWin, IDEOLOGIES[selectedIdeology], lang);
                     setEvaluation(result);
                     return true;
                 }
@@ -1818,7 +2068,7 @@
                     ))}
 
                     {/* TOP HEADER */}
-                    <header className="bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-0 z-50">
+                    <header className="bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-0 z-[110]">
                         {/* Era Indicator Progress Bar */}
                         <div className="absolute top-0 left-0 h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-rose-500 transition-all duration-1000" style={{ width: `${(turn / 30) * 100}%`, opacity: 0.5 }}></div>
 
@@ -1836,15 +2086,22 @@
                             <div className="flex items-center gap-4">
                                 <div className="hidden md:flex items-center gap-3">
                                     <div className="flex items-center gap-2 bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700/50">
-                                        <span className="text-xs font-bold text-amber-400">{era.name}</span>
+                                        <span className="text-xs font-bold text-amber-400">{getLoc(era, 'name', lang)}</span>
                                     </div>
                                     <div className="flex items-center gap-2 bg-slate-800/50 px-3 py-1.5 rounded-full border border-slate-700/50">
                                         <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></span>
-                                        <span className="text-xs font-bold text-slate-300">TURN {turn}</span>
+                                        <span className="text-xs font-bold text-slate-300">{t('turn', lang)} {turn}</span>
                                     </div>
-                                    <div className="text-xs font-bold text-slate-500">GOAL: GDP {currentDifficulty.targetGdp}T</div>
+                                    <div className="text-xs font-bold text-slate-500">{t('goal', lang)}: GDP {currentDifficulty.targetGdp}T</div>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setLang(l => l === 'ja' ? 'en' : 'ja')}
+                                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors active:scale-95 flex items-center gap-1"
+                                    >
+                                        <IconGlobe size={18} />
+                                        <span className="text-xs font-bold">{lang === 'ja' ? 'EN' : 'JA'}</span>
+                                    </button>
                                     <button
                                         onClick={() => setIsMuted(!isMuted)}
                                         className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors active:scale-95"
@@ -1856,7 +2113,7 @@
                                         className="text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 transition-all flex items-center gap-2 active:scale-95"
                                     >
                                         <IconRefreshCw size={14} />
-                                        {gameState === 'START' ? 'Start' : 'Reset'}
+                                        {gameState === 'START' ? t('start', lang) : t('reset', lang)}
                                     </button>
                                 </div>
                             </div>
@@ -1870,19 +2127,19 @@
                             
                             {/* 1. OPPONENT FIELD */}
                             <section>
-                                <StatusPanel data={enemy} isEnemy={true} interest={getInterestForTurn(enemy)} isShaking={shake.enemy} />
+                                <StatusPanel data={enemy} isEnemy={true} interest={getInterestForTurn(enemy)} isShaking={shake.enemy} lang={lang} />
                             </section>
 
                             {/* 2. MIDDLE ZONE (Deck, Event, Discard) */}
                             <section className="grid grid-cols-1 md:grid-cols-3 gap-4 min-h-[140px]">
                                 {/* Discard Pile (Visual) */}
                                 <div className="hidden md:flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-800 bg-slate-900/30 p-4 relative group">
-                                    <span className="text-xs font-bold text-slate-700 uppercase mb-2">Discard / Last Played</span>
+                                    <span className="text-xs font-bold text-slate-700 uppercase mb-2">{t('discard', lang)}</span>
                                     {lastPlayedCard ? (
                                          <div className="w-20 h-28 bg-slate-800 border border-slate-600 rounded-lg flex items-center justify-center shadow-lg relative transform group-hover:scale-110 transition-transform">
                                             <div className="text-[10px] text-center p-1">
-                                                <div className="font-bold text-slate-300 mb-1 truncate">{lastPlayedCard.name}</div>
-                                                <div className="text-slate-500 text-[9px]">{CARD_TYPES[lastPlayedCard.type].label}</div>
+                                                <div className="font-bold text-slate-300 mb-1 truncate">{getLoc(lastPlayedCard, 'name', lang)}</div>
+                                                <div className="text-slate-500 text-[9px]">{t('label', lang)}</div>
                                             </div>
                                          </div>
                                     ) : (
@@ -1902,8 +2159,8 @@
                                             <div className="flex items-center gap-2 mb-2">
                                                 <span className="bg-amber-900/50 text-amber-500 text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider border border-amber-900">Event</span>
                                             </div>
-                                            <h3 className="font-bold text-amber-500 text-lg leading-tight mb-1">{activeEvent.name}</h3>
-                                            <p className="text-xs text-amber-200/70 leading-relaxed">{activeEvent.description}</p>
+                                            <h3 className="font-bold text-amber-500 text-lg leading-tight mb-1">{getLoc(activeEvent, 'name', lang)}</h3>
+                                            <p className="text-xs text-amber-200/70 leading-relaxed">{getLoc(activeEvent, 'description', lang)}</p>
                                         </div>
                                     ) : (
                                         <div className="h-full flex items-center justify-center text-slate-700 text-xs font-bold uppercase tracking-widest border border-slate-800 rounded-xl bg-slate-900/50">
@@ -1921,7 +2178,7 @@
                                         <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-800 rounded-lg border border-slate-600 flex items-center justify-center shadow-2xl">
                                             <div className="text-center">
                                                 <IconTrendingUp className="text-cyan-900 mb-1 mx-auto" size={24} />
-                                                <span className="text-[10px] font-bold text-cyan-900 uppercase tracking-widest">DECK</span>
+                                                <span className="text-[10px] font-bold text-cyan-900 uppercase tracking-widest">{t('deck', lang)}</span>
                                             </div>
                                         </div>
                                      </div>
@@ -1930,14 +2187,14 @@
 
                             {/* 3. PLAYER FIELD */}
                             <section>
-                                <StatusPanel data={player} isEnemy={false} interest={getInterestForTurn(player)} isShaking={shake.player} />
+                                <StatusPanel data={player} isEnemy={false} interest={getInterestForTurn(player)} isShaking={shake.player} lang={lang} />
                             </section>
 
                             {/* 4. HAND AREA */}
                             <section className="bg-slate-900/50 rounded-2xl border border-slate-800 p-4 md:p-6">
                                 <div className="flex justify-between items-center mb-4">
                                     <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
-                                        <IconWallet size={16} /> Your Hand
+                                        <IconWallet size={16} /> {t('yourHand', lang)}
                                     </h3>
                                     <div className="flex gap-2">
                                         <button
@@ -1946,14 +2203,14 @@
                                             className="bg-amber-700/20 text-amber-500 border border-amber-900/50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-amber-700/40 transition-all disabled:opacity-50 flex items-center gap-1.5 active:scale-95"
                                         >
                                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                                            国債発行 (+50兆)
+                                            {t('bond', lang)}
                                         </button>
                                         <button
                                             onClick={endTurn}
                                             disabled={gameState !== 'PLAYING'}
                                             className="bg-cyan-600 text-white px-5 py-1.5 rounded-lg text-xs font-bold hover:bg-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20 transition-all disabled:opacity-50 flex items-center gap-2 active:scale-95"
                                         >
-                                            ターン終了 <IconArrowRight size={14} />
+                                            {t('endTurn', lang)} <IconArrowRight size={14} />
                                         </button>
                                     </div>
                                 </div>
@@ -2000,11 +2257,11 @@
                                                 {/* Body */}
                                                 <div className="p-3 flex flex-col flex-grow bg-slate-900/40 backdrop-blur-sm">
                                                     <h4 className="font-bold text-slate-200 text-xs mb-1.5 min-h-[2.5em] flex items-center leading-snug">
-                                                        {card.name}
+                                                        {getLoc(card, 'name', lang)}
                                                     </h4>
 
                                                     <p className="text-[10px] text-slate-400 mb-3 flex-grow leading-relaxed line-clamp-3">
-                                                        {card.description}
+                                                        {getLoc(card, 'description', lang)}
                                                     </p>
 
                                                     <div className="space-y-1">
@@ -2012,7 +2269,7 @@
                                                         {inflatedCost !== card.cost && (
                                                             <div className="text-[9px] text-amber-500 bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-900/50 flex items-center gap-1 w-max">
                                                                 <IconAlertCircle size={8} />
-                                                                Cost: {card.cost}→{inflatedCost}
+                                                                {t('cost', lang)}: {card.cost}→{inflatedCost}
                                                             </div>
                                                         )}
 
@@ -2023,7 +2280,7 @@
                                                                 : 'text-emerald-400 bg-emerald-950/30 border-emerald-900/50'
                                                         }`}>
                                                             {isRisky && <IconAlertCircle size={8} />}
-                                                            成功率: {successRate}%
+                                                            {t('successRate', lang)}: {successRate}%
                                                         </div>
 
                                                         {/* Tags */}
@@ -2049,7 +2306,7 @@
                                     {playerHand.length === 0 && (
                                         <div className="col-span-full py-8 flex flex-col items-center justify-center text-slate-600 border-2 border-dashed border-slate-800 rounded-xl">
                                             <IconBookOpen className="mb-2 opacity-50" size={24} />
-                                            <p className="text-xs font-medium">No cards available</p>
+                                            <p className="text-xs font-medium">{t('noCards', lang)}</p>
                                         </div>
                                     )}
                                 </div>
@@ -2060,15 +2317,15 @@
                         <div className="lg:col-span-3 space-y-6">
 
                             {/* Card Info Panel */}
-                            <CardInfoPanel card={hoveredCard || lastPlayedCard} />
+                            <CardInfoPanel card={hoveredCard || lastPlayedCard} lang={lang} />
 
                             {/* Game Log Component */}
                             <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col h-[350px] shadow-lg shadow-black/20">
                                 <div className="bg-slate-800/50 p-3 border-b border-slate-800 flex justify-between items-center">
                                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                        <IconRefreshCw size={12} /> Game Log
+                                        <IconRefreshCw size={12} /> {t('log', lang)}
                                     </h3>
-                                    <span className="text-[10px] text-slate-600 font-mono">LIVE</span>
+                                    <span className="text-[10px] text-slate-600 font-mono">{t('live', lang)}</span>
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900">
@@ -2085,7 +2342,7 @@
                             </div>
 
                             {/* Combo Guide */}
-                            <ComboGuidePanel />
+                            <ComboGuidePanel lang={lang} />
 
                             {/* START SCREEN / OVERLAY */}
                             {gameState === 'START' && (
@@ -2097,15 +2354,16 @@
                                             <IconTrendingUp size={48} className="text-cyan-400" />
                                         </div>
 
-                                        <h2 className="text-3xl font-black text-white mb-2 tracking-tighter">Economics Master</h2>
-                                        <p className="text-slate-400 mb-8 font-medium">経済戦略カードゲームへようこそ</p>
+                                        <h2 className="text-3xl font-black text-white mb-2 tracking-tighter">{t('title', lang)}</h2>
+                                        <p className="text-slate-400 mb-8 font-medium">{t('subtitle', lang)}</p>
 
                                         {/* Ideology Selector */}
                                         <div className="mb-8 text-left">
-                                            <div className="text-xs font-bold text-slate-500 uppercase mb-3 tracking-wider">Select Playstyle (思想・派閥)</div>
+                                            <div className="text-xs font-bold text-slate-500 uppercase mb-3 tracking-wider">{t('selectPlaystyle', lang)}</div>
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                                                 {Object.values(IDEOLOGIES).map(ideology => {
                                                     const isSelected = selectedIdeology === ideology.id;
+                                                    const feats = getLoc(ideology, 'features', lang);
                                                     return (
                                                         <button
                                                             key={ideology.id}
@@ -2118,11 +2376,11 @@
                                                             `}
                                                         >
                                                             {isSelected && <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>}
-                                                            <div className="font-bold text-sm mb-0.5">{ideology.name}</div>
-                                                            <div className="text-[10px] font-bold opacity-70 mb-2 text-indigo-300">{ideology.label}</div>
-                                                            <div className="text-[10px] opacity-60 leading-tight mb-2">{ideology.description}</div>
+                                                            <div className="font-bold text-sm mb-0.5">{getLoc(ideology, 'name', lang)}</div>
+                                                            <div className="text-[10px] font-bold opacity-70 mb-2 text-indigo-300">{getLoc(ideology, 'label', lang)}</div>
+                                                            <div className="text-[10px] opacity-60 leading-tight mb-2">{getLoc(ideology, 'description', lang)}</div>
                                                             <div className="flex flex-wrap gap-1">
-                                                                {ideology.features.map((f, i) => (
+                                                                {feats.map((f, i) => (
                                                                     <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-black/20 text-slate-300">{f}</span>
                                                                 ))}
                                                             </div>
@@ -2134,7 +2392,7 @@
 
                                         {/* Difficulty Selector */}
                                         <div className="mb-8 text-left">
-                                            <div className="text-xs font-bold text-slate-500 uppercase mb-3 tracking-wider">Select Difficulty</div>
+                                            <div className="text-xs font-bold text-slate-500 uppercase mb-3 tracking-wider">{t('selectDifficulty', lang)}</div>
                                             <div className="grid grid-cols-3 gap-3 mb-4">
                                                 {Object.values(DIFFICULTY_SETTINGS).map(diff => {
                                                     const isSelected = selectedDifficulty === diff.id;
@@ -2150,7 +2408,7 @@
                                                             `}
                                                         >
                                                             {isSelected && <div className="absolute top-0 left-0 w-full h-1 bg-cyan-500"></div>}
-                                                            <div className="font-bold text-sm mb-0.5">{diff.label}</div>
+                                                            <div className="font-bold text-sm mb-0.5">{getLoc(diff, 'label', lang)}</div>
                                                             <div className="text-[10px] opacity-70">GDP {diff.targetGdp}T</div>
                                                         </button>
                                                     );
@@ -2160,10 +2418,10 @@
                                             <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 min-h-[80px] flex items-center">
                                                 <div>
                                                     <span className="text-xs font-bold text-cyan-400 block mb-1">
-                                                        {DIFFICULTY_SETTINGS[selectedDifficulty].label} Mode
+                                                        {getLoc(DIFFICULTY_SETTINGS[selectedDifficulty], 'label', lang)} Mode
                                                     </span>
                                                     <p className="text-xs text-slate-300 leading-relaxed">
-                                                        {DIFFICULTY_SETTINGS[selectedDifficulty].description}
+                                                        {getLoc(DIFFICULTY_SETTINGS[selectedDifficulty], 'description', lang)}
                                                     </p>
                                                 </div>
                                             </div>
@@ -2173,7 +2431,7 @@
                                             onClick={startGame}
                                             className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-cyan-900/20 hover:scale-105 transition-transform active:scale-95"
                                         >
-                                            START GAME
+                                            {t('startGame', lang)}
                                         </button>
                                     </div>
                                 </div>
@@ -2189,12 +2447,12 @@
 
                                         {/* Header */}
                                         <div className="text-center mb-6 relative z-10">
-                                            <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-2">Result Report</div>
+                                            <div className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500 mb-2">{t('resultReport', lang)}</div>
                                             <h2 className={`text-5xl font-black tracking-tighter mb-2 ${gameState === 'WON' ? 'text-white' : 'text-rose-500'}`}>
-                                                {gameState === 'WON' ? 'VICTORY' : 'GAME OVER'}
+                                                {gameState === 'WON' ? t('victory', lang) : t('defeat', lang)}
                                             </h2>
                                             <div className={`text-sm font-bold px-4 py-1 rounded-full inline-block ${gameState === 'WON' ? 'bg-cyan-950 text-cyan-400' : 'bg-rose-950 text-rose-400'}`}>
-                                                {gameState === 'WON' ? '経済目標達成' : '政権崩壊 / 経済敗北'}
+                                                {gameState === 'WON' ? t('victoryDesc', lang) : t('defeatDesc', lang)}
                                             </div>
                                         </div>
 
@@ -2228,7 +2486,7 @@
                                         <div className="bg-indigo-900/20 border border-indigo-500/30 rounded-xl p-4 mb-8 text-left relative z-10">
                                             <div className="flex items-center gap-2 mb-2">
                                                 <IconZap size={14} className="text-indigo-400" />
-                                                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">Next Goal</span>
+                                                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider">{t('nextGoal', lang)}</span>
                                             </div>
                                             <p className="text-sm text-indigo-100 leading-relaxed font-medium">
                                                 {evaluation.nextGoal}
@@ -2239,7 +2497,7 @@
                                             onClick={startGame}
                                             className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all hover:scale-[1.02] active:scale-95 ${gameState === 'WON' ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-cyan-900/20' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
                                         >
-                                            Play Again
+                                            {t('playAgain', lang)}
                                         </button>
                                     </div>
                                 </div>
