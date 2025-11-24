@@ -1486,7 +1486,7 @@
                 const initialDebt = (ideology.initialStats.debt || 0) + (difficulty.initialDebt || 0);
 
                 const initialPlayerState = {
-                    money: ideology.initialStats.money || 100,
+                    money: (ideology.initialStats.money || 100) + (difficulty.initialMoney - DIFFICULTY_SETTINGS.NORMAL.initialMoney),
                     income: 20,
                     gdp: 0,
                     inflation: 0,
