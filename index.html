@@ -1536,7 +1536,7 @@
                 // Better: drawCards uses gameDeck from state, but it's empty right now!
                 // Fix: Pass the deck to drawCards or handle initial draw separately.
                 // Let's modify drawCards to accept an optional deck source.
-                drawCards(3, shuffledDeck);
+                drawCards(3, shuffledDeck, []);
             };
 
             const addLog = (msg) => {
@@ -1554,9 +1554,9 @@
             };
 
             // カードドロー機能
-            const drawCards = (count, sourceDeck = null) => {
+            const drawCards = (count, sourceDeck = null, sourceDiscard = null) => {
                 let deck = sourceDeck ? [...sourceDeck] : [...gameDeck];
-                let discarded = [...discardPile];
+                let discarded = sourceDiscard ? [...sourceDiscard] : [...discardPile];
                 const drawnCards = [];
 
                 for (let i = 0; i < count; i++) {
