@@ -1277,6 +1277,16 @@
             const [currentDifficulty, setCurrentDifficulty] = useState(DIFFICULTY_SETTINGS.NORMAL);
             const [selectedIdeology, setSelectedIdeology] = useState(IDEOLOGIES.KEYNESIAN.id);
             const [gameDeck, setGameDeck] = useState([]);
+            const [discardPile, setDiscardPile] = useState([]);
+
+            const shuffleArray = (arr) => {
+                const copy = [...arr];
+                for (let i = copy.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [copy[i], copy[j]] = [copy[j], copy[i]];
+                }
+                return copy;
+            };
 
             useEffect(() => {
                 SoundManager.isMuted = isMuted;
@@ -1465,7 +1475,9 @@
                         newDeck.push(card);
                     }
                 });
-                setGameDeck(newDeck);
+                const shuffledDeck = shuffleArray(newDeck);
+                setGameDeck(shuffledDeck);
+                setDiscardPile([]);
 
                 const event = chooseRandomEvent();
                 setActiveEvent(event);
@@ -1524,7 +1536,7 @@
                 // Better: drawCards uses gameDeck from state, but it's empty right now!
                 // Fix: Pass the deck to drawCards or handle initial draw separately.
                 // Let's modify drawCards to accept an optional deck source.
-                drawCards(3, newDeck);
+                drawCards(3, shuffledDeck);
             };
 
             const addLog = (msg) => {
@@ -1543,15 +1555,33 @@
 
             // カードドロー機能
             const drawCards = (count, sourceDeck = null) => {
-                const deckToUse = sourceDeck || gameDeck;
-                if (!deckToUse || deckToUse.length === 0) return;
+                let deck = sourceDeck ? [...sourceDeck] : [...gameDeck];
+                let discarded = [...discardPile];
+                const drawnCards = [];
 
-                const newCards = [];
                 for (let i = 0; i < count; i++) {
-                    const randomCard = deckToUse[Math.floor(Math.random() * deckToUse.length)];
-                    newCards.push({ ...randomCard, uniqueId: Math.random() });
+                    if (deck.length === 0) {
+                        if (discarded.length === 0) {
+                            if (i === 0) {
+                                addLog(lang === 'en' ? 'Deck is empty. No cards to draw.' : '山札が空です。カードを引けません。');
+                            }
+                            break;
+                        }
+                        deck = shuffleArray(discarded);
+                        discarded = [];
+                        addLog(lang === 'en' ? 'Discard pile reshuffled into deck.' : '捨て札をシャッフルして山札を再構築しました。');
+                    }
+
+                    const [card] = deck.splice(-1, 1);
+                    drawnCards.push({ ...card, uniqueId: Math.random() });
                 }
-                setPlayerHand(prev => [...prev, ...newCards]);
+
+                if (drawnCards.length > 0) {
+                    setPlayerHand(prev => [...prev, ...drawnCards]);
+                }
+
+                setGameDeck(deck);
+                setDiscardPile(discarded);
             };
 
             const issueBonds = (e) => {
@@ -1813,6 +1843,8 @@
 
                 // 手札から削除
                 setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
+                const { uniqueId: _, ...baseCard } = card;
+                setDiscardPile(prev => [...prev, baseCard]);
 
                 if (providedTags.length > 0) {
                     setLastTags(prev => Array.from(new Set([...prev, ...providedTags])));
@@ -2171,7 +2203,7 @@
 
                                 {/* Deck (Visual) */}
                                 <div className="hidden md:flex flex-col items-center justify-center rounded-xl border border-slate-800 bg-slate-900/50 p-4">
-                                     <div className="relative w-24 h-32 cursor-pointer hover:-translate-y-1 transition-transform">
+                                     <div className={`relative w-24 h-32 transition-transform ${gameDeck.length === 0 ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:-translate-y-1'}`}>
                                         {/* Card Stack Effect */}
                                         <div className="absolute inset-0 bg-slate-800 rounded-lg border border-slate-700 translate-x-2 translate-y-2"></div>
                                         <div className="absolute inset-0 bg-slate-800 rounded-lg border border-slate-700 translate-x-1 translate-y-1"></div>
@@ -2181,6 +2213,15 @@
                                                 <span className="text-[10px] font-bold text-cyan-900 uppercase tracking-widest">{t('deck', lang)}</span>
                                             </div>
                                         </div>
+                                     </div>
+                                     <div className="mt-3 text-center space-y-1">
+                                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('deck', lang)}</div>
+                                        <div className={`text-sm font-black ${gameDeck.length === 0 ? 'text-rose-400' : 'text-cyan-400'}`}>
+                                            {gameDeck.length}{lang === 'en' ? ' cards' : '枚'}
+                                        </div>
+                                        {gameDeck.length === 0 && (
+                                            <div className="text-[10px] text-rose-300">{lang === 'en' ? 'No cards to draw' : 'ドロー不可'}</div>
+                                        )}
                                      </div>
                                 </div>
                             </section>
