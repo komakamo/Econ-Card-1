@@ -1847,7 +1847,9 @@
                 setDiscardPile(prev => [...prev, baseCard]);
 
                 if (providedTags.length > 0) {
-                    setLastTags(prev => Array.from(new Set([...prev, ...providedTags])));
+                    setLastTags(providedTags);
+                } else {
+                    setLastTags([]);
                 }
 
                 return checkWinCondition(nextPlayerState, updatedEnemyState ?? enemy);
