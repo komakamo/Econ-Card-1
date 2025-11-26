@@ -358,6 +358,10 @@
                 tagInnoDesc: "「技術革新」で付与。次の技術投資を大きくブーストします。",
                 tagTech: "先端技術",
                 tagTechDesc: "スタートアップ等。IT革命期に効果が倍増する強力なタグ。",
+                turnSummary: "ターンサマリー",
+                highlight: "このターンのハイライト",
+                outlook: "次ターンへの注意",
+                continue: "続ける",
             },
             en: {
                 title: "Economics Master",
@@ -414,6 +418,10 @@
                 tagInnoDesc: "Granted by 'Tech Innovation'. Boosts next tech investment.",
                 tagTech: "High-Tech",
                 tagTechDesc: "Startups etc. Doubles effect during IT Revolution.",
+                turnSummary: "Turn Summary",
+                highlight: "This Turn's Highlight",
+                outlook: "Next Turn's Outlook",
+                continue: "Continue",
             }
         };
 
@@ -1068,6 +1076,51 @@
              );
         };
 
+        const TurnSummaryPanel = ({ data, onContinue, lang }) => {
+            if (!data) return null;
+
+            return (
+                <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-slate-800 border-2 border-slate-700 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center relative overflow-hidden animate-pop-in">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-purple-500"></div>
+
+                        <h2 className="text-2xl font-black text-white mb-6 tracking-tighter">{t('turnSummary', lang).toUpperCase()} {data.turn}</h2>
+
+                        {/* Highlight Section */}
+                        <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50 mb-6 text-left">
+                             <div className="flex items-center gap-2 mb-3">
+                                <IconTrendingUp size={16} className="text-yellow-400" />
+                                <span className="text-xs font-bold text-yellow-300 uppercase tracking-wider">{t('highlight', lang)}</span>
+                            </div>
+                            <p className="text-lg text-slate-200 leading-relaxed font-medium">
+                                {data.highlight}
+                            </p>
+                        </div>
+
+                        {/* Warning Section */}
+                        <div className="bg-rose-900/20 border border-rose-500/30 rounded-xl p-4 mb-8 text-left">
+                            <div className="flex items-center gap-2 mb-3">
+                                <IconAlertCircle size={16} className="text-rose-400" />
+                                <span className="text-xs font-bold text-rose-300 uppercase tracking-wider">{t('outlook', lang)}</span>
+                            </div>
+                            <ul className="text-sm text-rose-100 leading-relaxed font-medium list-disc list-inside space-y-1">
+                                {data.warnings.map((warning, i) => (
+                                    <li key={i}>{warning}</li>
+                                ))}
+                            </ul>
+                        </div>
+
+                        <button
+                            onClick={onContinue}
+                            className="w-full py-3 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold text-base shadow-lg shadow-cyan-900/20 hover:scale-105 transition-transform active:scale-95 flex items-center justify-center gap-2"
+                        >
+                            {t('continue', lang)} <IconArrowRight size={18} />
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
         const Confetti = () => {
             const particles = Array.from({ length: 50 }).map((_, i) => ({
                 id: i,
@@ -1376,6 +1429,9 @@
             const [comboChain, setComboChain] = useState({ tag: null, count: 0 });
             const [activeMission, setActiveMission] = useState(null); // { missionId, turnsLeft }
             const [completedMissionCount, setCompletedMissionCount] = useState(0);
+            const [turnSummaryData, setTurnSummaryData] = useState(null);
+            const [showTurnSummary, setShowTurnSummary] = useState(false);
+            const [turnHighlight, setTurnHighlight] = useState({ gdpGain: 0, text: '' });
 
             useEffect(() => {
                 // These helpers are exposed for testing/scripting from outside React.
@@ -1651,6 +1707,7 @@
                 setFloatingTexts([]);
                 setActiveMission(null);
                 setCompletedMissionCount(0);
+                setTurnHighlight({ gdpGain: 0, text: '' });
 
                 // Draw initial cards from the NEW deck.
                 // Note: drawCards uses 'gameDeck' state, but state updates are async.
@@ -2003,6 +2060,26 @@
                     nextPlayerState = afterSupport;
                 }
 
+                const gdpGain = nextPlayerState.gdp - player.gdp;
+                if (gdpGain > turnHighlight.gdpGain) {
+                    let highlightText = '';
+                    const cardNameText = getLoc(card, 'name', lang);
+
+                    if (comboMultiplier > 1.0 && lastPlayedCard) {
+                        const prevCardName = getLoc(lastPlayedCard, 'name', lang);
+                        highlightText = lang === 'en'
+                            ? `GDP +${gdpGain}T (${prevCardName} × ${cardNameText} Combo)`
+                            : `GDP +${gdpGain}兆（${prevCardName} × ${cardNameText} コンボ）`;
+                    } else if (gdpGain > 0) {
+                        highlightText = lang === 'en'
+                            ? `GDP +${gdpGain}T (${cardNameText})`
+                            : `GDP +${gdpGain}兆（${cardNameText}）`;
+                    }
+
+                    if (highlightText) {
+                        setTurnHighlight({ gdpGain, text: highlightText });
+                    }
+                }
                 setPlayer(nextPlayerState);
 
                 // 効果発動
@@ -2063,7 +2140,7 @@
 
             // ターン終了処理 & AIターン
             const endTurn = () => {
-                if (gameState !== 'PLAYING') return;
+                if (gameState !== 'PLAYING' || showTurnSummary) return;
 
                 SoundManager.playClick();
 
@@ -2104,7 +2181,7 @@
                     currentPlayerState.activeEffects.forEach(eff => {
                         if (eff.turnsLeft <= 1) {
                             currentPlayerState = eff.effect(currentPlayerState);
-                            effectsTriggered.push(eff.name);
+                            effectsTriggered.push(getLoc(eff, 'name', lang));
                         } else {
                             nextActiveEffects.push({ ...eff, turnsLeft: eff.turnsLeft - 1 });
                         }
@@ -2117,7 +2194,6 @@
                         ? `⏰ Delayed Effects: ${effectsTriggered.join(', ')}`
                         : `⏰ 時間差効果発動: ${effectsTriggered.join(', ')}`;
                     addLog(msg);
-                    addFloatingText(window.innerWidth / 2, window.innerHeight / 2 - 50, "Delayed Effect!", "income");
                 }
 
                 // Era Effect: Stagnation Deflation Drift
@@ -2135,10 +2211,7 @@
                 const driftedInflation = applyInflationDrift(currentPlayerState.inflation, driftTarget);
                 const ratingInfo = getRatingInfo(currentPlayerState.rating);
 
-                // Calculate base penalty
                 let basePenalty = (activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier + eraIncomePenalty;
-
-                // Apply difficulty multiplier to the penalty
                 const incomePenalty = Math.round(basePenalty * diffMult);
 
                 const playerIncomeGain = Math.max(0, currentPlayerState.income - incomePenalty);
@@ -2147,9 +2220,6 @@
                     money: currentPlayerState.money + playerIncomeGain,
                     inflation: driftedInflation,
                 };
-
-                // Show Summary Feedback (Center screen)
-                addFloatingText(window.innerWidth / 2, window.innerHeight / 2, `Income +${playerIncomeGain}`, "income");
 
                 const interestPaid = getInterestForTurn(playerAfterIncome);
                 playerAfterIncome = applyInterestPayment(playerAfterIncome, 'あなた');
@@ -2162,16 +2232,33 @@
                     SoundManager.playDoom();
                     const msg = lang === 'en' ? '📉 Market Collapse... Economy paralyzed by excess debt.' : '📉 市場の信認崩壊… 債務超過により経済が麻痺しています';
                     addLog(msg);
-                    // Add a visual flash too?
                     setCrisisAlert({ message: lang === 'en' ? "Market Collapse..." : "市場の信認崩壊…", type: 'danger' });
                     setTimeout(() => setCrisisAlert(null), 3000);
                 }
-                // --------------------------------
 
-                const turnEndMsg = lang === 'en'
-                    ? `Turn End: Income +${playerIncomeGain}T, Interest -${interestPaid}T, Inflation ${player.inflation.toFixed(1)} -> ${driftedInflation.toFixed(1)}%`
-                    : `ターン終了: 収入 +${playerIncomeGain}兆円${incomePenalty ? ` (イベントで-${incomePenalty})` : ''}、利払い -${interestPaid}兆円、インフレ率 ${player.inflation.toFixed(1)} → ${driftedInflation.toFixed(1)}%、格付け ${ratedPlayer.rating}`;
-                addLog(turnEndMsg);
+                // 2. Prepare Summary Data
+                const warnings = [];
+                if (interestPaid > 0) {
+                    warnings.push((lang === 'en' ? 'Interest Payment: ' : '利払い: ') + `-${interestPaid}${t('trillion', lang)}`);
+                }
+
+                const inflationChange = driftedInflation - player.inflation;
+                 if (Math.abs(inflationChange) > 0.1) {
+                    warnings.push((lang === 'en' ? 'Expected Inflation: ' : '想定インフレ: ') + `${inflationChange > 0 ? '+' : ''}${inflationChange.toFixed(1)}%`);
+                }
+
+                const summary = {
+                    turn,
+                    highlight: turnHighlight.text || (lang === 'en' ? 'A steady turn.' : '堅実なターンでした。'),
+                    warnings: warnings.length > 0 ? warnings : [lang === 'en' ? 'No immediate concerns.' : '特に懸念事項なし。']
+                };
+
+                setTurnSummaryData(summary);
+                setShowTurnSummary(true);
+            };
+
+            const proceedToNextTurn = () => {
+                setShowTurnSummary(false);
 
                 // 2. 勝利判定
                 if (checkWinCondition()) return;
@@ -2188,6 +2275,7 @@
 
                 setLastTags([]);
                 setComboChain({ tag: null, count: 0 }); // Reset combo chain at turn end
+                setTurnHighlight({ gdpGain: 0, text: '' }); // Reset for new turn
             };
 
             const aiTurn = () => {
@@ -2318,6 +2406,7 @@
             return (
                 <div className={`min-h-screen text-slate-200 relative transition-colors duration-1000 ${era.bgClass}`}>
                     {gameState === 'WON' && <Confetti />}
+                    {showTurnSummary && <TurnSummaryPanel data={turnSummaryData} onContinue={proceedToNextTurn} lang={lang} />}
                     <ComboOverlay message={comboMessage} show={!!comboMessage} />
                     <TurnOverlay turn={turn} show={showTurnOverlay} />
                     <CrisisOverlay message={crisisAlert?.message} show={!!crisisAlert} type={crisisAlert?.type} />
