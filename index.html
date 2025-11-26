@@ -751,6 +751,56 @@
                 tip_en: '[Risk] Failure crashes support rate.',
                 onFailure: (me) => ({ ...me, support: Math.max(0, me.support - 20) })
             },
+            // --- Mission Reward Cards ---
+            {
+                id: 101,
+                name: '緊急利下げ',
+                name_en: 'Emergency Rate Cut',
+                cost: 0,
+                type: 'POLICY',
+                effect: (me, opp) => ({ ...me, inflation: Math.max(-2, me.inflation - 3), gdp: me.gdp + 20 }),
+                description: '【ミッション報酬】金融政策を総動員し、インフレを強力に抑制しつつ景気を刺激します。',
+                description_en: '[Mission Reward] Mobilize monetary policy to strongly curb inflation while stimulating the economy.',
+                tip: '【非伝統的金融政策】危機対応時には、通常の政策の枠を超えた大胆な措置が取られることがあります。',
+                tip_en: '[Unconventional Monetary Policy] In a crisis, bold measures beyond normal policy may be taken.',
+            },
+            {
+                id: 102,
+                name: '国債買いオペ',
+                name_en: 'QE Operation',
+                cost: 0,
+                type: 'POLICY',
+                effect: (me, opp) => ({ ...me, debt: Math.max(0, me.debt - 50), money: me.money + 50, inflation: clampInflation(me.inflation + 1) }),
+                description: '【ミッション報酬】中央銀行が国債を買い取り、政府債務を圧縮しつつ市場に資金を供給します。',
+                description_en: '[Mission Reward] The central bank buys government bonds, reducing debt while supplying funds to the market.',
+                tip: '【量的緩和】市場に資金を供給することで金利を下げ、経済を活性化させる効果が期待されますが、インフレ圧力も生みます。',
+                tip_en: '[Quantitative Easing] Expected to lower interest rates and stimulate the economy, but also creates inflationary pressure.',
+            }
+        ];
+
+        const MISSIONS = [
+            {
+                id: 'INFLATION_CRISIS',
+                name: 'インフレ危機',
+                name_en: 'Inflation Crisis',
+                trigger: (player) => player.inflation >= 5 && player.inflation < 8,
+                objective: (player) => player.inflation < 5,
+                objective_text: '3ターン以内にインフレを 5% 未満にせよ',
+                objective_text_en: 'Reduce inflation below 5% within 3 turns',
+                turns: 3,
+                rewardCardId: 101,
+            },
+            {
+                id: 'DEBT_SPIRAL',
+                name: '債務スパイラル懸念',
+                name_en: 'Debt Spiral Risk',
+                trigger: (player) => player.debt >= 150 && player.debt < 250,
+                objective: (player) => player.debt < 150,
+                objective_text: '3ターン以内に債務を 150兆 以下に戻せ',
+                objective_text_en: 'Reduce debt below 150T within 3 turns',
+                turns: 3,
+                rewardCardId: 102,
+            }
         ];
 
         const DIFFICULTY_SETTINGS = {
@@ -833,7 +883,7 @@
             return Math.min(100, Math.max(0, Math.round(base + bonus)));
         };
 
-        const evaluateGame = (player, difficulty, isWin, ideology = null, lang = 'ja') => {
+        const evaluateGame = (player, difficulty, isWin, ideology = null, lang = 'ja', completedMissionCount = 0) => {
             // 1. Basic Stats
             const gdp = player.gdp;
             const inflation = player.inflation;
@@ -888,18 +938,22 @@
                             && (rating === 'AAA' || rating === 'BBB')
                             && support >= 50;
 
-                // Monetarist Bonus: If inflation is perfectly managed, boost rank?
+                // Monetarist Bonus: If inflation is perfectly managed, boost rank
                 const bonusAchieved = ideology?.bonusCondition && ideology.bonusCondition(player);
                 const effectiveRank = isS ? 'S' : (isA ? 'A' : 'B');
 
-                // Apply Bonus to promote A to S if close? (For now just use S/A logic directly)
+                // Mission Bonus: 1+ completed missions can boost an A rank to S
+                const missionBonus = completedMissionCount > 0;
 
-                if (isS || (isA && bonusAchieved && effectiveRank !== 'S')) {
+                if (isS || (isA && bonusAchieved && effectiveRank !== 'S') || (isA && missionBonus)) {
                     rank = 'S';
                     rankLabel = 'LEGENDARY';
                     rankColor = 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]';
-                    nextGoals.push(lang === 'en' ? "Perfect Management! No higher title exists." : "完璧な手腕です！これ以上の称号はありません。");
+                    if(missionBonus && !isS) {
+                        nextGoals.unshift(lang === 'en' ? "Crisis Averted! A rank promoted to S." : "危機回避ボーナスでAランクから昇格！");
+                    }
                     if(bonusAchieved) nextGoals.push(lang === 'en' ? "Bonus Goal (Inflation Control) Achieved!" : "ボーナス目標（インフレ抑制）も達成！");
+                    nextGoals.push(lang === 'en' ? "Perfect Management! No higher title exists." : "完璧な手腕です！これ以上の称号はありません。");
                 } else if (isA) {
                     rank = 'A';
                     rankLabel = 'EXCELLENT';
@@ -908,6 +962,7 @@
                     if (gdp < criteria.minGdp) nextGoals.push(lang === 'en' ? `Aim for GDP ${criteria.minGdp}T next` : `次はGDP ${criteria.minGdp}兆円を目指そう`);
                     if (inflation < criteria.minInflation || inflation > criteria.maxInflation) nextGoals.push(lang === 'en' ? `Keep Inflation ${criteria.minInflation}-${criteria.maxInflation}%` : `インフレ率 ${criteria.minInflation}-${criteria.maxInflation}% を目指そう`);
                     if (debt > criteria.maxDebt) nextGoals.push(lang === 'en' ? `Keep Debt under ${criteria.maxDebt}T` : `債務 ${criteria.maxDebt}兆円以下の健全財政を目指そう`);
+                    if (completedMissionCount === 0) nextGoals.push(lang === 'en' ? "Complete a mission for a rank bonus!" : "ミッション達成でランクボーナス！");
                 } else {
                     rank = 'B';
                     rankLabel = 'GOOD';
@@ -937,6 +992,22 @@
         };
 
         // --- Visual Components ---
+
+        const ComboOverlay = ({ message, show }) => {
+            if (!show) return null;
+            return (
+                <div className="fixed inset-0 z-[80] flex items-center justify-center pointer-events-none animate-fade-in">
+                    <div
+                        // The key forces a re-render and re-animation when the message changes
+                        key={message}
+                        className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] animate-pop-in"
+                        style={{ textStroke: '1px rgba(0,0,0,0.3)', WebkitTextStroke: '1px rgba(0,0,0,0.3)' }}
+                    >
+                        {message}
+                    </div>
+                </div>
+            );
+        };
 
         const NumberCounter = ({ value, duration = 1000 }) => {
             const [displayValue, setDisplayValue] = useState(value);
@@ -1145,6 +1216,36 @@
             );
         };
 
+        const MissionPanel = ({ activeMission, lang }) => {
+            if (!activeMission) return null;
+
+            const mission = MISSIONS.find(m => m.id === activeMission.missionId);
+            if (!mission) return null;
+
+            return (
+                <div className="bg-purple-950/30 border-2 border-purple-700/50 rounded-2xl overflow-hidden shadow-lg animate-fade-in ring-4 ring-purple-500/30">
+                    <div className="bg-purple-900/30 p-3 border-b border-purple-800/50 flex justify-between items-center">
+                        <h3 className="text-xs font-bold text-purple-300 uppercase tracking-wider flex items-center gap-2">
+                            <IconAlertCircle size={12} /> MISSION
+                        </h3>
+                        <span className="text-[10px] font-mono text-purple-400">ACTIVE</span>
+                    </div>
+
+                    <div className="p-4 space-y-3">
+                        <h4 className="text-sm font-bold text-purple-200">{getLoc(mission, 'name', lang)}</h4>
+                        <p className="text-xs text-purple-300/80 bg-black/20 p-2 rounded-md border border-purple-900">
+                            {getLoc(mission, 'objective_text', lang)}
+                        </p>
+                        <div className="flex justify-end">
+                             <div className="text-sm font-bold bg-slate-900/50 border border-slate-700 px-3 py-1 rounded-lg text-amber-400">
+                                 {lang === 'en' ? 'Turns Left:' : '残り'}: <span className="text-xl">{activeMission.turnsLeft}</span>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => {
             if (!data) return <div className="p-4 border rounded text-red-500">Error: No Data</div>;
 
@@ -1271,6 +1372,23 @@
             const [crisisAlert, setCrisisAlert] = useState(null); // { message: string, type: 'danger'|'warning' }
             const [evaluation, setEvaluation] = useState(null);
             const [lang, setLang] = useState('ja'); // 'ja' | 'en'
+            const [comboMessage, setComboMessage] = useState(null);
+            const [comboChain, setComboChain] = useState({ tag: null, count: 0 });
+            const [activeMission, setActiveMission] = useState(null); // { missionId, turnsLeft }
+            const [completedMissionCount, setCompletedMissionCount] = useState(0);
+
+            useEffect(() => {
+                // These helpers are exposed for testing/scripting from outside React.
+                // In a real production build, these would be removed.
+                window.setPlayer = setPlayer;
+                window.setHandByIds = (ids) => {
+                    const newHand = ids.map(id => {
+                        const card = ALL_CARDS.find(c => c.id === id);
+                        return card ? { ...card, uniqueId: Math.random() } : null;
+                    }).filter(Boolean);
+                    setPlayerHand(newHand);
+                };
+            }, []);
 
             // Difficulty State
             const [selectedDifficulty, setSelectedDifficulty] = useState(DIFFICULTY_SETTINGS.NORMAL.id);
@@ -1380,6 +1498,8 @@
 
                 if (type === 'cost') colorClass = 'text-amber-400';
                 if (type === 'income') colorClass = 'text-emerald-400';
+                if (type === 'gdp') colorClass = 'text-cyan-300';
+                if (type === 'support') colorClass = 'text-indigo-300';
                 if (type === 'damage') colorClass = 'text-rose-500';
                 if (type === 'combo') {
                     colorClass = 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]';
@@ -1529,6 +1649,8 @@
                 setGameState('PLAYING');
                 setLastPlayedCard(null);
                 setFloatingTexts([]);
+                setActiveMission(null);
+                setCompletedMissionCount(0);
 
                 // Draw initial cards from the NEW deck.
                 // Note: drawCards uses 'gameDeck' state, but state updates are async.
@@ -1642,21 +1764,7 @@
                 };
             };
 
-            const COMBO_MULTIPLIER = 1.3;
-
-            const applyComboBonus = (prevState, nextState, matchedTags = []) => {
-                if (!matchedTags.length) return nextState;
-                const applyScale = (key) => {
-                    const delta = nextState[key] - prevState[key];
-                    return prevState[key] + Math.round(delta * COMBO_MULTIPLIER);
-                };
-                return {
-                    ...nextState,
-                    money: applyScale('money'),
-                    income: applyScale('income'),
-                    gdp: applyScale('gdp'),
-                };
-            };
+            // Combo logic is now inside playCard and more complex.
 
             const getCardProvidedTags = (card) => {
                 const tags = [];
@@ -1752,13 +1860,54 @@
                 // SUCCESS
                 SoundManager.playCard(card.type);
 
+                let comboMultiplier = 1.0;
+
                 if (comboReadyTags.length > 0) {
+                    const comboTag = comboReadyTags[0];
+                    let newComboChain;
+
+                    if (comboChain.tag === comboTag) {
+                        newComboChain = { tag: comboTag, count: comboChain.count + 1 };
+                    } else {
+                        newComboChain = { tag: comboTag, count: 1 };
+                    }
+                    setComboChain(newComboChain);
+
+                    if (newComboChain.count === 1) comboMultiplier = 1.3;
+                    else if (newComboChain.count === 2) comboMultiplier = 1.5;
+                    else comboMultiplier = 1.8;
+
+                    const comboName = newComboChain.count > 1
+                        ? `⚡ ${newComboChain.count} CHAIN COMBO!`
+                        : `⚡ ${getLoc(card, 'name', lang)} COMBO!`;
+
+                    setComboMessage(comboName);
+                    setTimeout(() => setComboMessage(null), 2500);
+
                     const msg = lang === 'en'
-                        ? `★COMBO! Tags [${comboReadyTags.join(', ')}] matched! Efficiency x${COMBO_MULTIPLIER}!`
-                        : `★コンボ発動！タグ『${comboReadyTags.join('・')}』が共鳴し、生産性が爆発的に向上！ (x${COMBO_MULTIPLIER})`;
+                        ? (newComboChain.count > 1
+                            ? `★★ ${newComboChain.count} CHAIN COMBO! Effect x${comboMultiplier}!`
+                            : `★COMBO! [${comboReadyTags.join(', ')}] matched! Effect x${comboMultiplier}!`)
+                        : (newComboChain.count > 1
+                            ? `★★ ${newComboChain.count}連続コンボ！ 効果が ${comboMultiplier}倍に！`
+                            : `★コンボ発動！タグ『${comboReadyTags.join('・')}』が共鳴し、効果が ${comboMultiplier}倍に！`);
                     addLog(msg);
-                    // Visual Feedback for Combo
-                    addFloatingText(e ? e.clientX : window.innerWidth/2, e ? e.clientY - 50 : window.innerHeight/2, `⚡ COMBO x${COMBO_MULTIPLIER}!!`, 'combo');
+                    SoundManager.playSuccess();
+
+                    // Combo Risk/Reward
+                    setPlayer(p => {
+                        const newState = {
+                            ...p,
+                            inflation: clampInflation(p.inflation + 0.5),
+                            support: Math.max(0, p.support - 2)
+                        };
+                        const riskMsg = lang === 'en' ? `💥Combo side effect: Inflation +0.5%, Support -2%...` : `💥コンボの副作用でインフレが少し上昇(+0.5%)し、支持率が低下(-2%)した...`;
+                        addLog(riskMsg);
+                        return newState;
+                    });
+
+                } else {
+                    setComboChain({ tag: null, count: 0 });
                 }
 
                 if (card.type === 'ATTACK') {
@@ -1794,7 +1943,46 @@
                         }
                     }
 
-                    const comboBoosted = applyComboBonus(afterCost, boostedState, comboReadyTags);
+                    const applyComboBonus = (prevState, nextState, multiplier) => {
+                        if (multiplier <= 1.0) return nextState;
+                        const applyScale = (key) => {
+                            const delta = nextState[key] - prevState[key];
+                            if (delta <= 0) return prevState[key]; // Only boost positive effects
+                            return prevState[key] + Math.round(delta * multiplier);
+                        };
+                        return {
+                            ...nextState,
+                            money: applyScale('money'),
+                            income: applyScale('income'),
+                            gdp: applyScale('gdp'),
+                        };
+                    };
+
+                    const comboBoosted = applyComboBonus(afterCost, boostedState, comboMultiplier);
+
+                    // Show detailed combo feedback
+                    if (comboMultiplier > 1.0) {
+                        const gdpGain = comboBoosted.gdp - afterCost.gdp;
+                        const incomeGain = comboBoosted.income - afterCost.income;
+                        const moneyGain = comboBoosted.money - afterCost.money;
+
+                        const textX = e ? e.clientX : window.innerWidth / 2;
+                        const textY = e ? e.clientY : window.innerHeight / 2;
+                        let yOffset = -60;
+
+                        if (gdpGain > 0) {
+                            addFloatingText(textX, textY + yOffset, `+${gdpGain}T GDP!`, 'gdp');
+                            yOffset += 30;
+                        }
+                        if (incomeGain > 0) {
+                             addFloatingText(textX, textY + yOffset, `+${incomeGain}T ${t('income', lang)}!`, 'income');
+                             yOffset += 30;
+                        }
+                        if (moneyGain > 0) {
+                             addFloatingText(textX, textY + yOffset, `+${moneyGain}T ${t('money', lang)}!`, 'income');
+                        }
+                    }
+
                     const afterEvent = applyEventMultiplier(afterCost, comboBoosted);
 
                     // Inflation
@@ -1854,7 +2042,23 @@
                     setLastTags([]);
                 }
 
+                // After an action, check if any mission should be triggered
+                checkForNewMission(nextPlayerState);
+
                 return checkWinCondition(nextPlayerState, updatedEnemyState ?? enemy);
+            };
+
+            const checkForNewMission = (playerState) => {
+                if (activeMission) return; // Don't stack missions
+
+                const triggeredMission = MISSIONS.find(m => m.trigger(playerState));
+                if (triggeredMission) {
+                    setActiveMission({ missionId: triggeredMission.id, turnsLeft: triggeredMission.turns });
+                    const missionName = getLoc(triggeredMission, 'name', lang);
+                    const missionObjective = getLoc(triggeredMission, 'objective_text', lang);
+                    addLog(`🚨 MISSION: ${missionName} - ${missionObjective}`);
+                    SoundManager.playTone(440, 'sine', 0.5, 0.1);
+                }
             };
 
             // ターン終了処理 & AIターン
@@ -1863,8 +2067,36 @@
 
                 SoundManager.playClick();
 
+                // -1. Mission Check (at start of turn)
+                let missionClearedPlayerState = { ...player };
+                if (activeMission) {
+                    const mission = MISSIONS.find(m => m.id === activeMission.missionId);
+                    if (mission && mission.objective(player)) {
+                        // SUCCESS
+                        const rewardCard = ALL_CARDS.find(c => c.id === mission.rewardCardId);
+                        if (rewardCard) {
+                            setPlayerHand(prev => [...prev, { ...rewardCard, uniqueId: Math.random() }]);
+                            const cardName = getLoc(rewardCard, 'name', lang);
+                            const missionName = getLoc(mission, 'name', lang);
+                            addLog(`🏆 MISSION CLEARED! Acquired [${cardName}] for clearing "${missionName}".`);
+                            SoundManager.playSuccess();
+                            setCompletedMissionCount(c => c + 1);
+                        }
+                        setActiveMission(null);
+                    } else if (activeMission.turnsLeft <= 1) {
+                        // FAILURE (time's up)
+                        const missionName = getLoc(mission, 'name', lang);
+                        addLog(`❌ MISSION FAILED... Timed out on "${missionName}".`);
+                        SoundManager.playError();
+                        setActiveMission(null);
+                    } else {
+                        // CONTINUE
+                        setActiveMission(am => ({ ...am, turnsLeft: am.turnsLeft - 1 }));
+                    }
+                }
+
                 // 0. Process Delayed Effects (Player)
-                let currentPlayerState = { ...player };
+                let currentPlayerState = missionClearedPlayerState;
                 let effectsTriggered = [];
                 let nextActiveEffects = [];
 
@@ -1955,6 +2187,7 @@
                 }
 
                 setLastTags([]);
+                setComboChain({ tag: null, count: 0 }); // Reset combo chain at turn end
             };
 
             const aiTurn = () => {
@@ -2074,7 +2307,7 @@
                     addLog(isWin ? `🎉 ${reason}` : `💀 ${reason}`);
 
                     // Calculate Evaluation
-                    const result = evaluateGame(nextPlayer, currentDifficulty, isWin, IDEOLOGIES[selectedIdeology], lang);
+                        const result = evaluateGame(nextPlayer, currentDifficulty, isWin, IDEOLOGIES[selectedIdeology], lang, completedMissionCount);
                     setEvaluation(result);
                     return true;
                 }
@@ -2085,6 +2318,7 @@
             return (
                 <div className={`min-h-screen text-slate-200 relative transition-colors duration-1000 ${era.bgClass}`}>
                     {gameState === 'WON' && <Confetti />}
+                    <ComboOverlay message={comboMessage} show={!!comboMessage} />
                     <TurnOverlay turn={turn} show={showTurnOverlay} />
                     <CrisisOverlay message={crisisAlert?.message} show={!!crisisAlert} type={crisisAlert?.type} />
 
@@ -2361,11 +2595,14 @@
                         {/* RIGHT COLUMN: LOGS & INFO */}
                         <div className="lg:col-span-3 space-y-6">
 
+                            {/* Mission Panel */}
+                            <MissionPanel activeMission={activeMission} lang={lang} />
+
                             {/* Card Info Panel */}
                             <CardInfoPanel card={hoveredCard || lastPlayedCard} lang={lang} />
 
                             {/* Game Log Component */}
-                            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col h-[350px] shadow-lg shadow-black/20">
+                            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col h-[250px] shadow-lg shadow-black/20">
                                 <div className="bg-slate-800/50 p-3 border-b border-slate-800 flex justify-between items-center">
                                     <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
                                         <IconRefreshCw size={12} /> {t('log', lang)}
