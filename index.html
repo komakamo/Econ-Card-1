@@ -305,6 +305,10 @@
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 17 17 23 15.79 13.88"></polyline></svg>
         );
 
+        const IconStar = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+        );
+
         // --- Localization Helpers ---
         const UI_TEXT = {
             ja: {
@@ -594,7 +598,44 @@
             }
         };
 
+        const ACHIEVEMENTS = {
+            HIGH_SUPPORT: {
+                id: 'HIGH_SUPPORT',
+                name: '圧倒的支持',
+                name_en: 'Overwhelming Support',
+                description: '支持率90%以上でクリア',
+                description_en: 'Clear with over 90% support',
+                check: (player, isWin) => isWin && player.support >= 90,
+                icon: IconStar,
+                unlocksCard: 201,
+            },
+            // Future achievements can be added here
+        };
+
         const ALL_CARDS = [
+            {
+                id: 201,
+                name: '国民皆保険制度',
+                name_en: 'Universal Health Care',
+                cost: 50,
+                type: 'POLICY',
+                supportChange: 15,
+                effect: (me, opp) => ({
+                    ...me,
+                    income: Math.max(0, me.income - 10),
+                    activeEffects: [...(me.activeEffects || []), {
+                        name: '健康増進',
+                        name_en: 'Health Boost',
+                        turnsLeft: 5,
+                        effect: (s) => ({ ...s, gdp: s.gdp + 10, support: s.support + 1 })
+                    }]
+                }),
+                description: '全国民に医療保険を提供します。財政負担は大きいですが、長期的に見て国民の幸福度と生産性を高めます。',
+                description_en: 'Provide health insurance to all citizens. A heavy fiscal burden, but increases long-term happiness and productivity.',
+                tip: '【社会保障】充実した社会保障は、国民の生活満足度を高め、安定した社会の基盤となります。',
+                tip_en: '[Social Security] A robust social security system enhances citizen well-being and forms the foundation of a stable society.',
+                requiredAchievement: 'HIGH_SUPPORT',
+            },
             {
                 id: 1,
                 name: '設備投資',
@@ -1472,6 +1513,7 @@
             const [showTurnSummary, setShowTurnSummary] = useState(false);
             const [turnHighlight, setTurnHighlight] = useState({ gdpGain: 0, text: '' });
             const [earnedTitles, setEarnedTitles] = useState({});
+            const [unlockedAchievements, setUnlockedAchievements] = useState({});
 
             useEffect(() => {
                 try {
@@ -1479,23 +1521,28 @@
                     if (savedTitles) {
                         setEarnedTitles(JSON.parse(savedTitles));
                     }
+                    const savedAchievements = localStorage.getItem('unlockedAchievements');
+                    if (savedAchievements) {
+                        setUnlockedAchievements(JSON.parse(savedAchievements));
+                    }
                 } catch (e) {
-                    console.error("Failed to load titles from localStorage", e);
+                    console.error("Failed to load data from localStorage", e);
                 }
             }, []);
 
             useEffect(() => {
                 // These helpers are exposed for testing/scripting from outside React.
                 // In a real production build, these would be removed.
+                const availableCards = ALL_CARDS.filter(card => !card.requiredAchievement || unlockedAchievements[card.requiredAchievement]);
                 window.setPlayer = setPlayer;
                 window.setHandByIds = (ids) => {
                     const newHand = ids.map(id => {
-                        const card = ALL_CARDS.find(c => c.id === id);
+                        const card = availableCards.find(c => c.id === id);
                         return card ? { ...card, uniqueId: Math.random() } : null;
                     }).filter(Boolean);
                     setPlayerHand(newHand);
                 };
-            }, []);
+            }, [unlockedAchievements]);
 
             // Difficulty State
             const [selectedDifficulty, setSelectedDifficulty] = useState(DIFFICULTY_SETTINGS.NORMAL.id);
@@ -1694,9 +1741,12 @@
 
                 const ideology = IDEOLOGIES[selectedIdeology];
 
+                // Determine available cards based on achievements
+                const availableCards = ALL_CARDS.filter(card => !card.requiredAchievement || unlockedAchievements[card.requiredAchievement]);
+
                 // Build Deck based on Ideology
                 const newDeck = [];
-                ALL_CARDS.forEach(card => {
+                availableCards.forEach(card => {
                     const weight = ideology.deckWeights[card.id] || 1;
                     for(let i=0; i<weight; i++) {
                         newDeck.push(card);
@@ -2449,16 +2499,40 @@
                     const result = evaluateGame(nextPlayer, currentDifficulty, isWin, IDEOLOGIES[selectedIdeology], lang, completedMissionCount);
                     setEvaluation(result);
 
-                    if (result.rank === 'S' && isWin) {
-                        try {
-                            const newTitles = { ...earnedTitles, [selectedIdeology]: true };
-                            setEarnedTitles(newTitles);
-                            localStorage.setItem('earnedTitles', JSON.stringify(newTitles));
-                            const ideologyName = getLoc(IDEOLOGIES[selectedIdeology], 'name', lang);
-                            const titleName = getLoc(IDEOLOGIES[selectedIdeology], 'title', lang);
-                            addLog(`🏆 Title Unlocked: [${titleName}] (${ideologyName} S Rank)`);
-                        } catch (e) {
-                            console.error("Failed to save titles to localStorage", e);
+                    if (isWin) {
+                        // Title check
+                        if (result.rank === 'S') {
+                            try {
+                                const newTitles = { ...earnedTitles, [selectedIdeology]: true };
+                                setEarnedTitles(newTitles);
+                                localStorage.setItem('earnedTitles', JSON.stringify(newTitles));
+                                const ideologyName = getLoc(IDEOLOGIES[selectedIdeology], 'name', lang);
+                                const titleName = getLoc(IDEOLOGIES[selectedIdeology], 'title', lang);
+                                addLog(`🏆 Title Unlocked: [${titleName}] (${ideologyName} S Rank)`);
+                            } catch (e) {
+                                console.error("Failed to save titles to localStorage", e);
+                            }
+                        }
+
+                        // Achievement check
+                        let newAchievementsFound = false;
+                        const newAchievements = { ...unlockedAchievements };
+                        for (const key in ACHIEVEMENTS) {
+                            const achievement = ACHIEVEMENTS[key];
+                            if (!newAchievements[achievement.id] && achievement.check(nextPlayer, isWin)) {
+                                newAchievements[achievement.id] = true;
+                                newAchievementsFound = true;
+                                const achievementName = getLoc(achievement, 'name', lang);
+                                addLog(`⭐ Achievement Unlocked: [${achievementName}]`);
+                            }
+                        }
+                        if (newAchievementsFound) {
+                            try {
+                                setUnlockedAchievements(newAchievements);
+                                localStorage.setItem('unlockedAchievements', JSON.stringify(newAchievements));
+                            } catch (e) {
+                                console.error("Failed to save achievements to localStorage", e);
+                            }
                         }
                     }
 
@@ -2795,6 +2869,38 @@
 
                                         <h2 className="text-3xl font-black text-white mb-2 tracking-tighter">{t('title', lang)}</h2>
                                         <p className="text-slate-400 mb-8 font-medium">{t('subtitle', lang)}</p>
+
+                                        {/* Achievements Display */}
+                                        <div className="mb-8 text-center">
+                                            <div className="text-xs font-bold text-slate-500 uppercase mb-3 tracking-wider">Achievements</div>
+                                            <div className="flex justify-center items-center gap-3 p-2 bg-slate-900/50 rounded-xl border border-slate-700/50 min-h-[50px]">
+                                                {Object.values(ACHIEVEMENTS).map(ach => {
+                                                    const isUnlocked = unlockedAchievements[ach.id];
+                                                    const Icon = ach.icon;
+                                                    return (
+                                                        <div key={ach.id} data-testid={isUnlocked ? `achievement-${ach.id}-unlocked` : `achievement-${ach.id}-locked`} className={`relative group p-2 rounded-full transition-all duration-300 ${isUnlocked ? 'bg-yellow-400/10 border-yellow-400/30' : 'bg-slate-800 border-slate-700'}`}>
+                                                            <Icon size={20} className={isUnlocked ? 'text-yellow-400' : 'text-slate-600'} />
+                                                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-48 bg-slate-900 border border-slate-700 p-2 rounded-lg text-xs text-left opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                                                <div className="font-bold text-yellow-300">{getLoc(ach, 'name', lang)}</div>
+                                                                <div className="text-slate-400">{getLoc(ach, 'description', lang)}</div>
+                                                                {!isUnlocked && <div className="text-center mt-1 text-[10px] text-rose-400">[LOCKED]</div>}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        {/* Progress Bar */}
+                                        <div className="mb-8">
+                                            <div className="flex justify-between items-center mb-1 text-xs">
+                                                <span className="font-bold text-slate-400">経済マスター度</span>
+                                                <span className="font-mono text-cyan-400">{`${Math.round((Object.keys(unlockedAchievements).length / Object.keys(ACHIEVEMENTS).length) * 100)}%`}</span>
+                                            </div>
+                                            <div className="w-full bg-slate-900 rounded-full h-2 border border-slate-700">
+                                                <div className="bg-cyan-500 h-full rounded-full" style={{ width: `${(Object.keys(unlockedAchievements).length / Object.keys(ACHIEVEMENTS).length) * 100}%` }}></div>
+                                            </div>
+                                        </div>
 
                                         {/* Ideology Selector */}
                                         <div className="mb-8 text-left">
