@@ -301,6 +301,10 @@
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
         );
 
+        const IconAward = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 17 17 23 15.79 13.88"></polyline></svg>
+        );
+
         // --- Localization Helpers ---
         const UI_TEXT = {
             ja: {
@@ -362,6 +366,8 @@
                 highlight: "このターンのハイライト",
                 outlook: "次ターンへの注意",
                 continue: "続ける",
+                ideologyMission: "思想ミッション (Sランク)",
+                ideologyMissionDesc: "現在の思想でSランクを獲得するための条件です。",
             },
             en: {
                 title: "Economics Master",
@@ -422,6 +428,8 @@
                 highlight: "This Turn's Highlight",
                 outlook: "Next Turn's Outlook",
                 continue: "Continue",
+                ideologyMission: "Ideology Mission (S Rank)",
+                ideologyMissionDesc: "Conditions to achieve S Rank with the current ideology.",
             }
         };
 
@@ -541,7 +549,11 @@
                 features_en: ['Public Works/Easing', 'High Initial Support', 'Initial Debt'],
                 initialStats: { support: 80, debt: 50, money: 120 },
                 deckWeights: { 3: 3, 4: 2, 6: 2 },
-                rankCriteria: { minGdp: 400, maxInflation: 4, minInflation: 2, maxDebt: 100 }
+                rankCriteria: { minGdp: 400, maxInflation: 4, minInflation: 2, maxDebt: 100 },
+                title: "大恐慌バスター",
+                title_en: "Depression Buster",
+                rankCriteria_text: "GDP≥400T, インフレ2-4%, 債務≤100T, 支持率≥60, AAA",
+                rankCriteria_text_en: "GDP≥400T, Inf 2-4%, Debt≤100T, Support≥60, AAA"
             },
             MONETARIST: {
                 id: 'MONETARIST',
@@ -556,7 +568,11 @@
                 initialStats: { support: 60, debt: 0, money: 70 },
                 deckWeights: { 5: 3, 4: 2, 11: 2 },
                 rankCriteria: { minGdp: 350, maxInflation: 2, minInflation: -1, maxDebt: 80 },
-                bonusCondition: (stats) => stats.inflation >= -1 && stats.inflation <= 2
+                bonusCondition: (stats) => stats.inflation >= -1 && stats.inflation <= 2,
+                title: "インフレハンター",
+                title_en: "Inflation Hunter",
+                rankCriteria_text: "GDP≥350T, インフレ-1-2%, 債務≤80T, 支持率≥60, AAA",
+                rankCriteria_text_en: "GDP≥350T, Inf -1-2%, Debt≤80T, Support≥60, AAA"
             },
             SUPPLY_SIDE: {
                 id: 'SUPPLY_SIDE',
@@ -570,7 +586,11 @@
                 features_en: ['Investment/Innovation', 'GDP Focus', 'Late Bloomer'],
                 initialStats: { support: 70, debt: 20, money: 100 },
                 deckWeights: { 1: 3, 2: 3, 8: 3 },
-                rankCriteria: { minGdp: 450, maxInflation: 6, minInflation: 0, maxDebt: 150 }
+                rankCriteria: { minGdp: 450, maxInflation: 6, minInflation: 0, maxDebt: 150 },
+                title: "成長の魔術師",
+                title_en: "Growth Magician",
+                rankCriteria_text: "GDP≥450T, インフレ0-6%, 債務≤150T, 支持率≥60, AAA",
+                rankCriteria_text_en: "GDP≥450T, Inf 0-6%, Debt≤150T, Support≥60, AAA"
             }
         };
 
@@ -1269,6 +1289,25 @@
             );
         };
 
+        const IdeologyMissionPanel = ({ ideology, lang }) => {
+            if (!ideology) return null;
+
+            return (
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+                    <div className="bg-slate-800/50 p-3 border-b border-slate-800 flex items-center gap-2">
+                        <IconAward size={14} className="text-yellow-400" />
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('ideologyMission', lang)}</span>
+                    </div>
+                    <div className="p-4 space-y-2">
+                        <p className="text-xs text-slate-400 pb-2 border-b border-slate-800">{getLoc(ideology, 'name', lang)}</p>
+                        <p className="text-sm text-amber-300 bg-amber-900/20 p-2 rounded-md border border-amber-500/20 font-mono text-center tracking-tighter">
+                            {getLoc(ideology, 'rankCriteria_text', lang)}
+                        </p>
+                    </div>
+                </div>
+            );
+        };
+
         const MissionPanel = ({ activeMission, lang }) => {
             if (!activeMission) return null;
 
@@ -1432,6 +1471,18 @@
             const [turnSummaryData, setTurnSummaryData] = useState(null);
             const [showTurnSummary, setShowTurnSummary] = useState(false);
             const [turnHighlight, setTurnHighlight] = useState({ gdpGain: 0, text: '' });
+            const [earnedTitles, setEarnedTitles] = useState({});
+
+            useEffect(() => {
+                try {
+                    const savedTitles = localStorage.getItem('earnedTitles');
+                    if (savedTitles) {
+                        setEarnedTitles(JSON.parse(savedTitles));
+                    }
+                } catch (e) {
+                    console.error("Failed to load titles from localStorage", e);
+                }
+            }, []);
 
             useEffect(() => {
                 // These helpers are exposed for testing/scripting from outside React.
@@ -2395,8 +2446,22 @@
                     addLog(isWin ? `🎉 ${reason}` : `💀 ${reason}`);
 
                     // Calculate Evaluation
-                        const result = evaluateGame(nextPlayer, currentDifficulty, isWin, IDEOLOGIES[selectedIdeology], lang, completedMissionCount);
+                    const result = evaluateGame(nextPlayer, currentDifficulty, isWin, IDEOLOGIES[selectedIdeology], lang, completedMissionCount);
                     setEvaluation(result);
+
+                    if (result.rank === 'S' && isWin) {
+                        try {
+                            const newTitles = { ...earnedTitles, [selectedIdeology]: true };
+                            setEarnedTitles(newTitles);
+                            localStorage.setItem('earnedTitles', JSON.stringify(newTitles));
+                            const ideologyName = getLoc(IDEOLOGIES[selectedIdeology], 'name', lang);
+                            const titleName = getLoc(IDEOLOGIES[selectedIdeology], 'title', lang);
+                            addLog(`🏆 Title Unlocked: [${titleName}] (${ideologyName} S Rank)`);
+                        } catch (e) {
+                            console.error("Failed to save titles to localStorage", e);
+                        }
+                    }
+
                     return true;
                 }
 
@@ -2684,6 +2749,9 @@
                         {/* RIGHT COLUMN: LOGS & INFO */}
                         <div className="lg:col-span-3 space-y-6">
 
+                            {/* Ideology Mission Panel */}
+                            {gameState === 'PLAYING' && <IdeologyMissionPanel ideology={IDEOLOGIES[selectedIdeology]} lang={lang} />}
+
                             {/* Mission Panel */}
                             <MissionPanel activeMission={activeMission} lang={lang} />
 
@@ -2735,6 +2803,7 @@
                                                 {Object.values(IDEOLOGIES).map(ideology => {
                                                     const isSelected = selectedIdeology === ideology.id;
                                                     const feats = getLoc(ideology, 'features', lang);
+                                                    const isEarned = earnedTitles[ideology.id];
                                                     return (
                                                         <button
                                                             key={ideology.id}
@@ -2747,6 +2816,13 @@
                                                             `}
                                                         >
                                                             {isSelected && <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>}
+
+                                                            {isEarned && (
+                                                                <div className="absolute top-2 right-2 flex items-center gap-1 bg-yellow-400/10 text-yellow-400 px-1.5 py-0.5 rounded-full text-[8px] font-bold border border-yellow-400/20">
+                                                                    <IconAward size={10} /> S-RANK
+                                                                </div>
+                                                            )}
+
                                                             <div className="font-bold text-sm mb-0.5">{getLoc(ideology, 'name', lang)}</div>
                                                             <div className="text-[10px] font-bold opacity-70 mb-2 text-indigo-300">{getLoc(ideology, 'label', lang)}</div>
                                                             <div className="text-[10px] opacity-60 leading-tight mb-2">{getLoc(ideology, 'description', lang)}</div>
