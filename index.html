@@ -2229,6 +2229,9 @@
                     const { uniqueId: _, ...baseCard } = card;
                     setDiscardPile(prev => [...prev, baseCard]);
 
+                    // Bug Fix: Clear tags on failure so combo chain breaks
+                    setLastTags([]);
+
                     return checkWinCondition(nextPlayerState, enemy);
                 }
 
