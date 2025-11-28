@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import EconomicCardGame from '../src/Game';
+import EconomicCardGame, { SoundManagerInstance as SoundManager } from '../src/Game';
 
 // Mocking requestAnimationFrame for Jest
 global.requestAnimationFrame = (callback) => {
@@ -12,6 +12,10 @@ global.cancelAnimationFrame = (id) => {
 };
 
 describe('EconomicCardGame', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   test('should start the game and display the player hand', async () => {
     render(<EconomicCardGame />);
 
@@ -108,5 +112,62 @@ describe('EconomicCardGame', () => {
     const targetGdp = parseInt(screen.getByTestId('target-gdp').textContent.replace(/[^\d]/g, ''), 10);
     expect(playerDebt).toBe(120);
     expect(targetGdp).toBe(400);
+  });
+
+  test('mute toggle updates SoundManager and prevents card sound when muted', async () => {
+    render(<EconomicCardGame />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(/START GAME/i));
+    });
+
+    const muteToggle = screen.getByTestId('mute-toggle');
+    const cardSoundSpy = jest.spyOn(SoundManager, 'playCard');
+
+    await act(async () => {
+      fireEvent.click(muteToggle);
+    });
+
+    expect(SoundManager.isMuted).toBe(true);
+
+    const cardButton = await screen.findByTestId('card-Test Card');
+
+    await act(async () => {
+      fireEvent.click(cardButton);
+    });
+
+    expect(cardSoundSpy).not.toHaveBeenCalled();
+  });
+
+  test('event playback respects mute state', async () => {
+    render(<EconomicCardGame />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(/START GAME/i));
+    });
+
+    const muteToggle = screen.getByTestId('mute-toggle');
+    const eventSoundSpy = jest.spyOn(SoundManager, 'playCrisis');
+    const eventButton = await screen.findByTestId('trigger-event');
+
+    await act(async () => {
+      fireEvent.click(muteToggle);
+    });
+
+    await act(async () => {
+      fireEvent.click(eventButton);
+    });
+
+    expect(eventSoundSpy).not.toHaveBeenCalled();
+
+    await act(async () => {
+      fireEvent.click(muteToggle);
+    });
+
+    await act(async () => {
+      fireEvent.click(eventButton);
+    });
+
+    expect(eventSoundSpy).toHaveBeenCalled();
   });
 });
