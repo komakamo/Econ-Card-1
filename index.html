@@ -97,25 +97,39 @@
             animation: flashRed 0.5s ease-in-out 3;
         }
 
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 10px rgba(6, 182, 212, 0.2); }
+            50% { box-shadow: 0 0 25px rgba(6, 182, 212, 0.6); }
+        }
+        .animate-pulse-glow {
+            animation: pulseGlow 2s infinite;
+        }
+
         body {
-            background-color: #0f172a; /* Slate 900 */
-            color: #e2e8f0; /* Slate 200 */
+            background-color: #0f172a;
+            background-image:
+                radial-gradient(circle at 50% 0%, #1e293b 0%, transparent 70%),
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 40px 40px, 40px 40px;
+            color: #e2e8f0;
             min-height: 100vh;
         }
 
         /* Scrollbar customization */
         ::-webkit-scrollbar {
-            width: 8px;
+            width: 10px;
         }
         ::-webkit-scrollbar-track {
-            background: #1e293b;
+            background: #0f172a;
         }
         ::-webkit-scrollbar-thumb {
-            background: #475569;
-            border-radius: 4px;
+            background: #334155;
+            border-radius: 5px;
+            border: 2px solid #0f172a;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
+            background: #475569;
         }
     </style>
 </head>
@@ -1596,48 +1610,48 @@
 
             // Theme colors (Dark Mode)
             const theme = isEnemy ? {
-                bg: 'bg-slate-800/80',
-                border: 'border-slate-700',
+                bg: 'bg-slate-800/40 backdrop-blur-md',
+                border: 'border-slate-700/50',
                 text: 'text-slate-300',
                 accent: 'text-slate-400',
-                highlight: 'bg-slate-700',
+                highlight: 'bg-slate-700/30',
                 bar: 'bg-slate-500'
             } : {
-                bg: 'bg-slate-800/90',
-                border: 'border-cyan-900',
-                text: 'text-slate-200',
+                bg: 'bg-slate-900/60 backdrop-blur-md',
+                border: 'border-cyan-500/30',
+                text: 'text-slate-100',
                 accent: 'text-cyan-400',
-                highlight: 'bg-cyan-950',
+                highlight: 'bg-cyan-950/40',
                 bar: 'bg-cyan-500'
             };
 
             return (
-                <div className={`relative overflow-hidden p-5 rounded-2xl border-2 transition-all duration-300 backdrop-blur-sm ${theme.bg} ${theme.border} ${!isEnemy && 'shadow-xl shadow-cyan-900/10 ring-1 ring-cyan-500/20'} ${isShaking ? 'animate-shake' : ''}`}>
+                <div className={`relative overflow-hidden p-6 rounded-3xl border transition-all duration-300 ${theme.bg} ${theme.border} ${!isEnemy && 'shadow-2xl shadow-cyan-900/10 ring-1 ring-cyan-500/20'} ${isShaking ? 'animate-shake' : ''}`}>
                     {/* Header */}
                     <div className="flex justify-between items-start mb-6">
-                        <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${isEnemy ? 'bg-slate-700 text-slate-400 border border-slate-600' : 'bg-gradient-to-br from-cyan-600 to-cyan-500 text-white shadow-cyan-900/50'}`}>
-                                {isEnemy ? <IconZap size={20} /> : <IconWallet size={20} />}
+                        <div className="flex items-center gap-4">
+                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${isEnemy ? 'bg-slate-700/50 text-slate-400 border border-slate-600' : 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-cyan-500/30'}`}>
+                                {isEnemy ? <IconZap size={24} /> : <IconWallet size={24} />}
                             </div>
                             <div>
-                                <div className="flex items-center gap-2">
-                                    <h3 className={`font-bold text-lg leading-none ${theme.text}`}>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <h3 className={`font-black text-xl leading-none tracking-tight ${theme.text}`}>
                                         {isEnemy ? t('rivalCountry', lang) : t('myCountry', lang)}
                                     </h3>
-                                    <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${isEnemy ? 'bg-slate-700 text-slate-400' : 'bg-cyan-950 text-cyan-400 border border-cyan-900'}`}>
+                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-widest ${isEnemy ? 'bg-slate-700/50 text-slate-400' : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'}`}>
                                         {isEnemy ? 'AI' : 'YOU'}
                                     </span>
                                 </div>
-                                <div className="text-xs text-slate-400 mt-1 font-medium flex items-center gap-1">
-                                    RATING:
-                                    <span className={`font-bold ${['AAA','BBB'].includes(data.rating) ? 'text-emerald-400' : 'text-amber-400'}`}>{data.rating}</span>
+                                <div className="text-xs text-slate-400 font-medium flex items-center gap-1.5 bg-black/20 px-2 py-0.5 rounded w-max">
+                                    <span className="opacity-70 text-[10px] uppercase tracking-wide">Rating</span>
+                                    <span className={`font-black font-mono ${['AAA','BBB'].includes(data.rating) ? 'text-emerald-400' : 'text-amber-400'}`}>{data.rating}</span>
                                 </div>
                             </div>
                         </div>
 
                         <div className="text-right">
-                            <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold mb-0.5">{t('gdp', lang)}</div>
-                            <div className={`text-3xl font-black tracking-tighter ${isEnemy ? 'text-slate-500' : 'text-cyan-400'}`}>
+                            <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold mb-1">{t('gdp', lang)}</div>
+                            <div className={`text-4xl font-black tracking-tighter leading-none ${isEnemy ? 'text-slate-500' : 'text-transparent bg-clip-text bg-gradient-to-br from-cyan-300 to-blue-400 drop-shadow-sm'}`}>
                                 <NumberCounter value={data.gdp} /><span className="text-sm font-bold ml-1 text-slate-600">{t('trillion', lang)}</span>
                             </div>
                         </div>
@@ -2999,11 +3013,17 @@
                                                 disabled={!canAfford || gameState !== 'PLAYING'}
                                                 className={`
                                                     relative text-left group
-                                                    flex flex-col h-full rounded-xl border-2 transition-all duration-300 overflow-hidden
+                                                    flex flex-col h-full rounded-xl border-2 transition-all duration-500 ease-out overflow-hidden
                                                     ${typeInfo.baseStyle}
-                                                    ${canAfford ? 'cursor-pointer hover:-translate-y-1 hover:brightness-110 active:scale-95' : 'opacity-40 cursor-not-allowed grayscale border-slate-700 bg-slate-900'}
-                                                    ${comboReadyTags.length > 0 && canAfford ? 'ring-2 ring-amber-400 shadow-[0_0_20px_rgba(251,191,36,0.5)] border-amber-400 z-10 scale-[1.02]' : ''}
+                                                    ${canAfford
+                                                        ? 'cursor-pointer hover:-translate-y-2 hover:shadow-2xl hover:scale-[1.02]'
+                                                        : 'opacity-40 cursor-not-allowed grayscale border-slate-700 bg-slate-900'}
+                                                    ${comboReadyTags.length > 0 && canAfford ? 'ring-2 ring-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.4)] border-amber-400 z-10 animate-pulse-glow' : ''}
                                                 `}
+                                                style={{
+                                                    transformStyle: 'preserve-3d',
+                                                    perspective: '1000px'
+                                                }}
                                             >
                                                 {comboReadyTags.length > 0 && canAfford && (
                                                     <div className="absolute -top-3 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg z-20 animate-bounce">
@@ -3117,16 +3137,17 @@
 
                             {/* START SCREEN / OVERLAY */}
                             {gameState === 'START' && (
-                                <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4">
-                                    <div className="bg-slate-800 border border-slate-700 p-8 rounded-2xl shadow-2xl max-w-lg w-full text-center relative overflow-hidden">
-                                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-rose-500"></div>
+                                <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-4">
+                                    <div className="bg-slate-800/80 border border-slate-700/50 p-8 rounded-3xl shadow-2xl max-w-lg w-full text-center relative overflow-hidden backdrop-blur-md">
+                                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-cyan-500 via-purple-500 to-rose-500"></div>
+                                        <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"></div>
 
-                                        <div className="bg-slate-900 inline-flex p-4 rounded-full mb-6 border border-slate-700 shadow-xl">
+                                        <div className="bg-slate-900 p-5 rounded-3xl mb-6 border border-slate-700 shadow-[0_0_30px_rgba(6,182,212,0.3)] inline-flex ring-1 ring-cyan-500/20">
                                             <IconTrendingUp size={48} className="text-cyan-400" />
                                         </div>
 
-                                        <h2 className="text-3xl font-black text-white mb-2 tracking-tighter">{t('title', lang)}</h2>
-                                        <p className="text-slate-400 mb-8 font-medium">{t('subtitle', lang)}</p>
+                                        <h2 className="text-4xl font-black text-white mb-2 tracking-tighter drop-shadow-lg">{t('title', lang)}</h2>
+                                        <p className="text-slate-400 mb-8 font-medium text-lg tracking-wide">{t('subtitle', lang)}</p>
 
                                         {/* Achievements Display */}
                                         <div className="mb-8 text-center">
@@ -3272,9 +3293,12 @@
 
                                         <button
                                             onClick={startGame}
-                                            className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-cyan-900/20 hover:scale-105 transition-transform active:scale-95"
+                                             className="w-full py-4 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 text-white rounded-xl font-black text-xl shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-[1.02] transition-all active:scale-95 relative overflow-hidden group"
                                         >
-                                            {t('startGame', lang)}
+                                             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                                             <span className="relative z-10 flex items-center justify-center gap-2">
+                                                 <IconZap size={24} className="animate-pulse" /> {t('startGame', lang)}
+                                             </span>
                                         </button>
                                     </div>
                                 </div>
