@@ -65,11 +65,14 @@ const ERAS = { GROWTH: { id: 'GROWTH', name: 'Growth', name_en: 'Growth', bgClas
 const IDEOLOGIES = {
   KEYNESIAN: { id: 'KEYNESIAN', name: 'Keynesian', name_en: 'Keynesian', label: 'Keynesian', label_en: 'Keynesian', description: 'desc', description_en: 'desc', features: [], features_en: [], initialStats: { support: 70, debt: 50, money: 120 }, deckWeights: {1: 1}, rankCriteria: {} },
 };
+const DEFAULT_CARD_EFFECT = (state) => state;
+const withDefaultEffect = (card) => ({ ...card, effect: typeof card?.effect === 'function' ? card.effect : DEFAULT_CARD_EFFECT });
+
 const ALL_CARDS = [
-  { id: 1, name: 'テストカード', name_en: 'Test Card', cost: 10, type: 'PRODUCTION', description: 'desc', description_en: 'desc', effect: (me) => me, combosWith: [] },
-  { id: 2, name: '資源開発', name_en: 'Resource Development', cost: 8, type: 'PRODUCTION', description: 'desc', description_en: 'desc', effect: (me) => me, combosWith: [] },
-  { id: 3, name: '教育投資', name_en: 'Education Investment', cost: 12, type: 'POLICY', description: 'desc', description_en: 'desc', effect: (me) => me, combosWith: [] },
-];
+  { id: 1, name: 'テストカード', name_en: 'Test Card', cost: 10, type: 'PRODUCTION', description: 'desc', description_en: 'desc', combosWith: [] },
+  { id: 2, name: '資源開発', name_en: 'Resource Development', cost: 8, type: 'PRODUCTION', description: 'desc', description_en: 'desc', combosWith: [] },
+  { id: 3, name: '教育投資', name_en: 'Education Investment', cost: 12, type: 'POLICY', description: 'desc', description_en: 'desc', combosWith: [] },
+].map(withDefaultEffect);
 const CARD_TYPES = {
   PRODUCTION: { label: 'PROD', baseStyle: '', headerStyle: '', icon: <IconZap/> },
   POLICY: { label: 'POLICY', baseStyle: '', headerStyle: '', icon: <IconBookOpen/> },
@@ -116,7 +119,7 @@ const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => (
 );
 
 // --- Main Game Component ---
-function EconomicCardGame() {
+function EconomicCardGame({ initialDeck = ALL_CARDS }) {
     const [turn, setTurn] = useState(1);
     const [era, setEra] = useState(ERAS.GROWTH);
     const [gameState, setGameState] = useState('START');
@@ -165,7 +168,7 @@ function EconomicCardGame() {
     const startGame = () => {
         const difficulty = getDifficultyById(selectedDifficulty);
         const ideology = IDEOLOGIES[selectedIdeology];
-        const baseDeck = shuffleArray(ALL_CARDS);
+        const baseDeck = shuffleArray((initialDeck || ALL_CARDS).map(withDefaultEffect));
         const initialPlayerState = buildInitialPlayerState(difficulty, ideology);
         const initialDebt = difficulty.initialDebt ?? 0;
         setPlayerHand([]);
@@ -212,7 +215,8 @@ function EconomicCardGame() {
         }
 
         let nextPlayerState = { ...player, money: player.money - cost };
-        nextPlayerState = card.effect(nextPlayerState, enemy);
+        const cardEffect = typeof card?.effect === 'function' ? card.effect : DEFAULT_CARD_EFFECT;
+        nextPlayerState = cardEffect(nextPlayerState, enemy);
         setPlayer(nextPlayerState);
 
         const providedTags = getCardProvidedTags(card);
