@@ -62,4 +62,25 @@ describe('EconomicCardGame', () => {
     // Check if money was deducted correctly
     expect(newMoney).toBe(initialMoney - 10);
   });
+
+  test('renders English and Japanese card names based on language selection', async () => {
+    render(<EconomicCardGame />);
+
+    // Start game in English
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('lang-en'));
+      fireEvent.click(screen.getByText(/START GAME/i));
+    });
+
+    const englishCard = await screen.findByTestId('card-Test Card');
+    expect(englishCard).toBeInTheDocument();
+
+    // Switch to Japanese and ensure localized text is used
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('lang-ja'));
+    });
+
+    const japaneseCard = await screen.findByTestId('card-テストカード');
+    expect(japaneseCard).toBeInTheDocument();
+  });
 });
