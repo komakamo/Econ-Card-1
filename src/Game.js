@@ -6,6 +6,13 @@ import React, { useState, useEffect } from 'react';
 // --- Mocks for global objects that would normally be in index.html ---
 const SoundManager = {
   init: () => {},
+  isMuted: false,
+  setMuted(value) {
+    this.isMuted = Boolean(value);
+  },
+  toggleMute() {
+    this.setMuted(!this.isMuted);
+  },
   playTone: () => {},
   playClick: () => {},
   playError: () => {},
@@ -14,7 +21,6 @@ const SoundManager = {
   playGameEnd: () => {},
   playCrisis: () => {},
   playDoom: () => {},
-  isMuted: false,
 };
 
 // --- Icon Components ---
@@ -131,6 +137,10 @@ function EconomicCardGame() {
     const [selectedIdeology, setSelectedIdeology] = useState(IDEOLOGIES.KEYNESIAN.id);
     const [gameDeck, setGameDeck] = useState([]);
     const [discardPile, setDiscardPile] = useState([]);
+
+    useEffect(() => {
+        SoundManager.setMuted(isMuted);
+    }, [isMuted]);
     const buildInitialPlayerState = (difficulty, ideology) => {
         const baseMoney = ideology.initialStats.money ?? DIFFICULTY_SETTINGS.NORMAL.initialMoney;
         const adjustedMoney = baseMoney + ((difficulty.initialMoney ?? DIFFICULTY_SETTINGS.NORMAL.initialMoney) - DIFFICULTY_SETTINGS.NORMAL.initialMoney);
@@ -196,6 +206,10 @@ function EconomicCardGame() {
         if (gameState !== 'PLAYING') return;
         const cost = calculateAdjustedCost(card.cost, player.inflation);
         if (player.money < cost) return;
+
+        if (!SoundManager.isMuted) {
+            SoundManager.playCard();
+        }
 
         let nextPlayerState = { ...player, money: player.money - cost };
         nextPlayerState = card.effect(nextPlayerState, enemy);
@@ -271,11 +285,20 @@ function EconomicCardGame() {
         return tags;
     };
 
+    useEffect(() => {
+        if (activeEvent && !SoundManager.isMuted) {
+            SoundManager.playCrisis();
+        }
+    }, [activeEvent]);
+
     return (
         <div className={`min-h-screen ${era.bgClass}`}>
             <div>
                 <button onClick={() => setLang('en')} data-testid="lang-en">English</button>
                 <button onClick={() => setLang('ja')} data-testid="lang-ja">日本語</button>
+                <button onClick={() => setIsMuted(prev => !prev)} data-testid="mute-toggle">
+                    {isMuted ? 'Unmute' : 'Mute'}
+                </button>
             </div>
             {gameState === 'START' && (
                 <div>
@@ -312,6 +335,12 @@ function EconomicCardGame() {
                             ))}
                         </div>
                         <button onClick={endTurn}>{t('endTurn', lang)}</button>
+                        <button
+                            onClick={() => setActiveEvent({ ...EVENTS[0], instanceId: Math.random() })}
+                            data-testid="trigger-event"
+                        >
+                            Trigger Event
+                        </button>
                     </div>
                 </div>
             )}
@@ -320,3 +349,4 @@ function EconomicCardGame() {
 }
 
 export default EconomicCardGame;
+export { SoundManager as SoundManagerInstance };
