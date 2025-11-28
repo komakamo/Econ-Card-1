@@ -142,6 +142,40 @@ describe('EconomicCardGame', () => {
     expect(screen.getByTestId('player-money')).toBeInTheDocument();
   });
 
+  test('playing Tariff Hike attack card does not crash the game', async () => {
+    const tariffHike = {
+      id: 'tariff-hike',
+      name: '関税引き上げ',
+      name_en: 'Tariff Hike',
+      cost: 15,
+      type: 'ATTACK',
+      targetSupportChange: -5,
+      targetEffect: (opp) => ({
+        ...opp,
+        income: Math.max(0, opp.income - 5),
+        money: Math.max(0, opp.money - 10),
+      }),
+      description: '輸入品に税金をかけ、相手国の輸出産業にダメージを与えます。',
+      description_en: 'Tax imports to damage rival export industries.',
+      tip: '[Protectionism] Protects domestic industry but risks trade war.',
+      tip_en: '[Protectionism] Protects domestic industry but risks trade war.',
+    };
+
+    render(<EconomicCardGame initialDeck={[tariffHike]} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(/START GAME/i));
+    });
+
+    const cardButton = await screen.findByTestId('card-Tariff Hike');
+
+    await act(async () => {
+      fireEvent.click(cardButton);
+    });
+
+    expect(screen.getByTestId('enemy-money')).toBeInTheDocument();
+  });
+
   test('mute toggle updates SoundManager and prevents card sound when muted', async () => {
     render(<EconomicCardGame />);
 
