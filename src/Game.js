@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 // This file is a self-contained module for testing the EconomicCardGame component.
 // It includes all necessary sub-components, constants, and helper functions.
@@ -38,20 +38,22 @@ const IconGlobe = ({ size = 24, className = "" }) => <svg/>;
 
 // --- Helper Functions and Constants ---
 const UI_TEXT = {
-  ja: {
-    startGame: "ゲーム開始",
-    yourHand: "Your Hand",
-    endTurn: "ターン終了",
-    myCountry: "自国 (あなた)",
-    rivalCountry: "敵国",
-  },
-  en: {
-    startGame: "START GAME",
-    yourHand: "Your Hand",
-    endTurn: "End Turn",
-    myCountry: "My Country (YOU)",
-    rivalCountry: "Rival Country",
-  },
+    ja: {
+        startGame: "ゲーム開始",
+        yourHand: "Your Hand",
+        endTurn: "ターン終了",
+        myCountry: "自国 (あなた)",
+        rivalCountry: "敵国",
+        insufficientFunds: "資金が足りません",
+    },
+    en: {
+        startGame: "START GAME",
+        yourHand: "Your Hand",
+        endTurn: "End Turn",
+        myCountry: "My Country (YOU)",
+        rivalCountry: "Rival Country",
+        insufficientFunds: "Not enough money",
+    },
 };
 const t = (key, lang) => UI_TEXT[lang][key] || key;
 const getLoc = (obj, key, lang) => {
@@ -140,6 +142,8 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
     const [selectedIdeology, setSelectedIdeology] = useState(IDEOLOGIES.KEYNESIAN.id);
     const [gameDeck, setGameDeck] = useState([]);
     const [discardPile, setDiscardPile] = useState([]);
+    const [errorMessage, setErrorMessage] = useState('');
+    const errorTimeoutRef = useRef(null);
 
     useEffect(() => {
         SoundManager.setMuted(isMuted);
@@ -164,6 +168,26 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
 
     const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
     const addLog = (msg) => setLogs(prev => [msg, ...prev]);
+
+    const clearErrorMessage = () => {
+        if (errorTimeoutRef.current) {
+            clearTimeout(errorTimeoutRef.current);
+            errorTimeoutRef.current = null;
+        }
+        setErrorMessage('');
+    };
+
+    const showErrorMessage = (message) => {
+        clearErrorMessage();
+        setErrorMessage(message);
+        errorTimeoutRef.current = setTimeout(() => {
+            setErrorMessage('');
+            errorTimeoutRef.current = null;
+        }, 3000);
+        if (!SoundManager.isMuted && typeof SoundManager.playError === 'function') {
+            SoundManager.playError();
+        }
+    };
 
     const startGame = () => {
         const difficulty = getDifficultyById(selectedDifficulty);
@@ -208,12 +232,16 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
     const playCard = (card, e) => {
         if (gameState !== 'PLAYING') return;
         const cost = calculateAdjustedCost(card.cost, player.inflation);
-        if (player.money < cost) return;
+        if (player.money < cost) {
+            showErrorMessage(t('insufficientFunds', lang));
+            return;
+        }
 
         if (!SoundManager.isMuted) {
             SoundManager.playCard();
         }
 
+        clearErrorMessage();
         let nextPlayerState = { ...player, money: player.money - cost };
         const cardEffect = typeof card?.effect === 'function' ? card.effect : DEFAULT_CARD_EFFECT;
         nextPlayerState = cardEffect(nextPlayerState, enemy);
@@ -240,6 +268,8 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
 
     const endTurn = () => {
         if (gameState !== 'PLAYING') return;
+
+        clearErrorMessage();
 
         setPlayer(prev => {
             const afterIncome = { ...prev, money: prev.money + (prev.income || 0) };
@@ -295,6 +325,10 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         }
     }, [activeEvent]);
 
+    useEffect(() => {
+        return () => clearErrorMessage();
+    }, []);
+
     return (
         <div className={`min-h-screen ${era.bgClass}`}>
             <div>
@@ -338,6 +372,11 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
                                 </button>
                             ))}
                         </div>
+                        {errorMessage && (
+                            <div role="alert" className="text-red-600" data-testid="error-message">
+                                {errorMessage}
+                            </div>
+                        )}
                         <button onClick={endTurn}>{t('endTurn', lang)}</button>
                         <button
                             onClick={() => setActiveEvent({ ...EVENTS[0], instanceId: Math.random() })}
