@@ -114,6 +114,34 @@ describe('EconomicCardGame', () => {
     expect(targetGdp).toBe(400);
   });
 
+  test('playing a card without an effect does not crash the game', async () => {
+    const deckWithoutEffect = [
+      {
+        id: 'no-effect',
+        name: 'No Effect',
+        name_en: 'No Effect',
+        cost: 0,
+        type: 'PRODUCTION',
+        description: 'desc',
+        description_en: 'desc',
+      },
+    ];
+
+    render(<EconomicCardGame initialDeck={deckWithoutEffect} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(/START GAME/i));
+    });
+
+    const cardButton = await screen.findByTestId('card-No Effect');
+
+    await act(async () => {
+      fireEvent.click(cardButton);
+    });
+
+    expect(screen.getByTestId('player-money')).toBeInTheDocument();
+  });
+
   test('mute toggle updates SoundManager and prevents card sound when muted', async () => {
     render(<EconomicCardGame />);
 
