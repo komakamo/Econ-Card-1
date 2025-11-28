@@ -36,14 +36,19 @@ const UI_TEXT = {
   en: { startGame: "START GAME", yourHand: "Your Hand", endTurn: "End Turn", myCountry: "My Country (YOU)" },
 };
 const t = (key, lang) => UI_TEXT[lang][key] || key;
-const getLoc = (obj, key, lang) => obj[`${key}_en`] || obj[key] || '';
+const getLoc = (obj, key, lang) => {
+    const primaryKey = lang === 'en' ? `${key}_en` : key;
+    const fallbackKey = lang === 'en' ? key : `${key}_en`;
+
+    return (obj && (obj[primaryKey] || obj[fallbackKey])) || '';
+};
 const EVENTS = [{ id: 1, name: 'Test Event', name_en: 'Test Event', description: 'Test', description_en: 'Test', effect: {} }];
 const ERAS = { GROWTH: { id: 'GROWTH', name: 'Growth', name_en: 'Growth', bgClass: '' }, STAGNATION: { id: 'STAGNATION' }, IT_REV: { id: 'IT_REV' } };
 const IDEOLOGIES = {
   KEYNESIAN: { id: 'KEYNESIAN', name: 'Keynesian', name_en: 'Keynesian', label: 'Keynesian', label_en: 'Keynesian', description: 'desc', description_en: 'desc', features: [], features_en: [], initialStats: { support: 70, debt: 50, money: 120 }, deckWeights: {1: 1}, rankCriteria: {} },
 };
 const ALL_CARDS = [
-  { id: 1, name: 'Test Card', name_en: 'Test Card', cost: 10, type: 'PRODUCTION', description: 'desc', description_en: 'desc', effect: (me) => me, combosWith: [] },
+  { id: 1, name: 'テストカード', name_en: 'Test Card', cost: 10, type: 'PRODUCTION', description: 'desc', description_en: 'desc', effect: (me) => me, combosWith: [] },
 ];
 const CARD_TYPES = {
   PRODUCTION: { label: 'PROD', baseStyle: '', headerStyle: '', icon: <IconZap/> },
@@ -154,6 +159,10 @@ function EconomicCardGame() {
 
     return (
         <div className={`min-h-screen ${era.bgClass}`}>
+            <div>
+                <button onClick={() => setLang('en')} data-testid="lang-en">English</button>
+                <button onClick={() => setLang('ja')} data-testid="lang-ja">日本語</button>
+            </div>
             {gameState === 'START' && (
                 <div>
                     <button onClick={startGame}>{t('startGame', lang)}</button>
