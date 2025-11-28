@@ -70,8 +70,18 @@ const CARD_TYPES = {
 const DIFFICULTY_SETTINGS = {
   NORMAL: { id: 'NORMAL', label: 'Normal', label_en: 'Normal', description: 'desc', description_en: 'desc', targetGdp: 300, initialMoney: 100, initialDebt: 0 },
 };
-const getRatingByDebt = () => 'AAA';
-const getRatingInfo = () => ({});
+const RATING_TIERS = [
+  { label: 'AAA', threshold: 0, interestMultiplier: 1 },
+  { label: 'BBB', threshold: 150, interestMultiplier: 1.25 },
+  { label: 'CCC', threshold: 250, interestMultiplier: 1.6 },
+  { label: 'D', threshold: 400, interestMultiplier: 2 },
+];
+const getRatingByDebt = (debt = 0) => {
+  const sorted = [...RATING_TIERS].sort((a, b) => b.threshold - a.threshold);
+  const found = sorted.find(tier => debt >= tier.threshold);
+  return found?.label ?? 'AAA';
+};
+const getRatingInfo = (rating = 'AAA') => RATING_TIERS.find(tier => tier.label === rating) ?? RATING_TIERS[0];
 const calculateInflatedCost = (cost) => cost;
 const calculateSuccessRate = () => 100;
 const evaluateGame = () => ({});
@@ -121,7 +131,6 @@ function EconomicCardGame() {
 
     const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
     const addLog = (msg) => setLogs(prev => [msg, ...prev]);
-    const getInterestForTurn = () => 0;
 
     const startGame = () => {
         const difficulty = DIFFICULTY_SETTINGS[selectedDifficulty];
@@ -144,15 +153,24 @@ function EconomicCardGame() {
 
     const drawCards = (count, sourceDeck = null, sourceDiscard = null) => {
         let deck = sourceDeck ? [...sourceDeck] : [...gameDeck];
+        let discarded = sourceDiscard ? [...sourceDiscard] : [...discardPile];
         const drawnCards = [];
         for (let i = 0; i < count; i++) {
+            if (deck.length === 0 && discarded.length > 0) {
+                deck = shuffleArray(discarded);
+                discarded = [];
+                addLog('Discard pile reshuffled into deck.');
+            }
             if (deck.length > 0) {
                 const [card] = deck.splice(-1, 1);
                 drawnCards.push({ ...card, uniqueId: Math.random() });
             }
         }
-        setPlayerHand(prev => [...prev, ...drawnCards]);
+        if (drawnCards.length > 0) {
+            setPlayerHand(prev => [...prev, ...drawnCards]);
+        }
         setGameDeck(deck);
+        setDiscardPile(discarded);
     };
 
     const playCard = (card, e) => {
@@ -164,16 +182,75 @@ function EconomicCardGame() {
         nextPlayerState = card.effect(nextPlayerState, enemy);
         setPlayer(nextPlayerState);
 
+        const providedTags = getCardProvidedTags(card);
+        if (providedTags.length > 0) {
+            setLastTags(providedTags);
+        }
+
         setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
+        addLog(`${getLoc(card, 'name', lang)} played.`);
     };
 
     const calculateAdjustedCost = (baseCost, inflationRate = 0) => {
         return Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
     };
 
-    const endTurn = () => {};
-    const issueBonds = () => {};
-    const getCardProvidedTags = () => [];
+    const getInterestForTurn = (state = player) => {
+        const ratingInfo = getRatingInfo(state.rating);
+        const baseInterest = state.interestDue ?? Math.round((state.debt ?? 0) * 0.02);
+        return Math.max(0, Math.round(baseInterest * (ratingInfo?.interestMultiplier || 1)));
+    };
+
+    const endTurn = () => {
+        if (gameState !== 'PLAYING') return;
+
+        setPlayer(prev => {
+            const afterIncome = { ...prev, money: prev.money + (prev.income || 0) };
+            const interest = getInterestForTurn(afterIncome);
+            const afterInterest = { ...afterIncome, money: Math.max(0, afterIncome.money - interest) };
+            if (interest > 0) {
+                addLog(`Interest payment: -${interest}`);
+            }
+            addLog('Income received.');
+            return afterInterest;
+        });
+
+        setEnemy(prev => {
+            const next = { ...prev, money: prev.money + (prev.income || 0) };
+            addLog('Enemy acted.');
+            return next;
+        });
+
+        drawCards(1);
+        setTurn(prev => prev + 1);
+    };
+
+    const issueBonds = (amount = 50, interestRate = 0.1, defaultRisk = 0.02) => {
+        if (gameState !== 'PLAYING') return;
+        const interestDelta = Math.round(amount * interestRate);
+        setPlayer(prev => {
+            const updated = {
+                ...prev,
+                money: prev.money + amount,
+                debt: (prev.debt || 0) + amount,
+                interestDue: (prev.interestDue || 0) + interestDelta,
+            };
+            const nextRating = getRatingByDebt(updated.debt);
+            addLog(`Issued bonds: +${amount} money, +${interestDelta}/turn interest, default risk ${Math.round(defaultRisk * 100)}%`);
+            return { ...updated, rating: nextRating };
+        });
+    };
+
+    const getCardProvidedTags = (card) => {
+        const tags = [];
+        if (Array.isArray(card?.providesTags)) {
+            tags.push(...card.providesTags);
+        }
+        if (card?.providesTag) {
+            tags.push(card.providesTag);
+        }
+        return tags;
+    };
 
     return (
         <div className={`min-h-screen ${era.bgClass}`}>
