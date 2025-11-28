@@ -2172,6 +2172,25 @@
                 return Math.max(0, Math.round(inflated * multiplier));
             };
 
+            const applyComboBonus = (prevState, nextState, multiplier = 1) => {
+                const normalizedMultiplier = Number.isFinite(multiplier) ? multiplier : Number(multiplier) || 1;
+
+                if (normalizedMultiplier <= 1.0) return nextState;
+
+                const applyScale = (key) => {
+                    const delta = nextState[key] - prevState[key];
+                    if (delta <= 0) return prevState[key]; // Only boost positive effects
+                    return prevState[key] + Math.round(delta * normalizedMultiplier);
+                };
+
+                return {
+                    ...nextState,
+                    money: applyScale('money'),
+                    income: applyScale('income'),
+                    gdp: applyScale('gdp'),
+                };
+            };
+
             // プレイヤーのターン処理
             const playCard = (card, e) => {
                 if (gameState !== 'PLAYING') return;
@@ -2340,21 +2359,6 @@
                         }
                     }
 
-                    const applyComboBonus = (prevState, nextState, multiplier) => {
-                        if (multiplier <= 1.0) return nextState;
-                        const applyScale = (key) => {
-                            const delta = nextState[key] - prevState[key];
-                            if (delta <= 0) return prevState[key]; // Only boost positive effects
-                            return prevState[key] + Math.round(delta * multiplier);
-                        };
-                        return {
-                            ...nextState,
-                            money: applyScale('money'),
-                            income: applyScale('income'),
-                            gdp: applyScale('gdp'),
-                        };
-                    };
-
                     const comboBoosted = applyComboBonus(afterCost, boostedState, comboMultiplier);
 
                     // Show detailed combo feedback
@@ -2427,7 +2431,7 @@
                     const eventAwareSetEnemy = withEventMultiplier(setEnemy);
                     eventAwareSetEnemy(prev => {
                         const effected = card.targetEffect ? card.targetEffect(prev, nextPlayerState) : prev;
-                        const comboBoosted = applyComboBonus(prev, effected, comboReadyTags);
+                        const comboBoosted = applyComboBonus(prev, effected, comboMultiplier);
                         const unrested = applyUnrestPenalty(comboBoosted, 'ライバル');
                         const withSupport = applySupportChange(unrested, card.targetSupportChange, 'ライバル', lang === 'en' ? `"${cardName}" impact` : `「${cardName}」の影響`);
                         updatedEnemyState = withSupport;
