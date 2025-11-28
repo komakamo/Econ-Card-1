@@ -988,6 +988,9 @@
 
         const clampInflation = (value) => Math.min(INFLATION_MAX, Math.max(INFLATION_MIN, Number(value.toFixed(1))));
 
+        // AI Logic Constants
+        const MAX_STANDARD_CARD_ID = 100; // AI only plays cards with ID < 100
+
         const applyInflationDrift = (value, target = 0) => {
             const diff = target - value;
             const step = 0.3;
@@ -2661,7 +2664,7 @@
                     const ratedEnemy = applyRatingUpdate(afterIncome, 'ライバル');
                     const unrestAdjusted = applyUnrestPenalty(ratedEnemy, 'ライバル');
 
-                    const potentialActions = ALL_CARDS.filter(c => calculateAdjustedCost(c.cost, unrestAdjusted.inflation) <= unrestAdjusted.money);
+                    const potentialActions = ALL_CARDS.filter(c => c.id < MAX_STANDARD_CARD_ID && calculateAdjustedCost(c.cost, unrestAdjusted.inflation) <= unrestAdjusted.money);
 
                     if (potentialActions.length === 0) {
                         addLog(lang === 'en' ? `RIVAL: Saving funds.` : `ライバル: 資金不足のため資金を温存。`);
