@@ -126,14 +126,20 @@ function EconomicCardGame() {
     const startGame = () => {
         const difficulty = DIFFICULTY_SETTINGS[selectedDifficulty];
         const ideology = IDEOLOGIES[selectedIdeology];
+        const baseDeck = shuffleArray(ALL_CARDS);
         const initialPlayerState = {
             money: (ideology.initialStats.money || 100) + (difficulty.initialMoney - DIFFICULTY_SETTINGS.NORMAL.initialMoney),
             income: 20, gdp: 0, inflation: 0, support: ideology.initialStats.support || 70, debt: 0, rating: 'AAA',
         };
+        setPlayerHand([]);
+        setDiscardPile([]);
+        setGameDeck(baseDeck);
+        setLogs([]);
+        setActiveEvent(null);
         setPlayer(initialPlayerState);
         setEnemy({ money: difficulty.initialMoney, income: 20, gdp: 0, inflation: 0, support: 70, debt: 0, rating: 'AAA' });
         setGameState('PLAYING');
-        drawCards(3, ALL_CARDS, []);
+        drawCards(3, baseDeck, []);
     };
 
     const drawCards = (count, sourceDeck = null, sourceDiscard = null) => {
