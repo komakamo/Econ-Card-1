@@ -83,4 +83,30 @@ describe('EconomicCardGame', () => {
     const japaneseCard = await screen.findByTestId('card-テストカード');
     expect(japaneseCard).toBeInTheDocument();
   });
+
+  test('recalculates deck and finances when changing difficulty', async () => {
+    render(<EconomicCardGame />);
+
+    const difficultySelect = screen.getByTestId('difficulty-select');
+
+    await act(async () => {
+      fireEvent.change(difficultySelect, { target: { value: 'HARD' } });
+      fireEvent.click(screen.getByText(/START GAME/i));
+    });
+
+    await screen.findByText(/Your Hand/i);
+
+    const cards = await screen.findAllByTestId(/card-/);
+    expect(cards).toHaveLength(3);
+
+    const playerMoney = parseInt(screen.getByTestId('player-money').textContent.replace(/[^\d]/g, ''), 10);
+    const enemyMoney = parseInt(screen.getByTestId('enemy-money').textContent.replace(/[^\d]/g, ''), 10);
+    expect(playerMoney).toBe(100);
+    expect(enemyMoney).toBe(80);
+
+    const playerDebt = parseInt(screen.getByTestId('player-debt').textContent.replace(/[^\d]/g, ''), 10);
+    const targetGdp = parseInt(screen.getByTestId('target-gdp').textContent.replace(/[^\d]/g, ''), 10);
+    expect(playerDebt).toBe(120);
+    expect(targetGdp).toBe(400);
+  });
 });

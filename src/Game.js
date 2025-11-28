@@ -61,6 +61,8 @@ const IDEOLOGIES = {
 };
 const ALL_CARDS = [
   { id: 1, name: 'テストカード', name_en: 'Test Card', cost: 10, type: 'PRODUCTION', description: 'desc', description_en: 'desc', effect: (me) => me, combosWith: [] },
+  { id: 2, name: '資源開発', name_en: 'Resource Development', cost: 8, type: 'PRODUCTION', description: 'desc', description_en: 'desc', effect: (me) => me, combosWith: [] },
+  { id: 3, name: '教育投資', name_en: 'Education Investment', cost: 12, type: 'POLICY', description: 'desc', description_en: 'desc', effect: (me) => me, combosWith: [] },
 ];
 const CARD_TYPES = {
   PRODUCTION: { label: 'PROD', baseStyle: '', headerStyle: '', icon: <IconZap/> },
@@ -69,7 +71,10 @@ const CARD_TYPES = {
 };
 const DIFFICULTY_SETTINGS = {
   NORMAL: { id: 'NORMAL', label: 'Normal', label_en: 'Normal', description: 'desc', description_en: 'desc', targetGdp: 300, initialMoney: 100, initialDebt: 0 },
+  HARD: { id: 'HARD', label: 'Hard', label_en: 'Hard', description: 'desc', description_en: 'desc', targetGdp: 400, initialMoney: 80, initialDebt: 120 },
 };
+
+const getDifficultyById = (id) => DIFFICULTY_SETTINGS[id] || DIFFICULTY_SETTINGS.NORMAL;
 const RATING_TIERS = [
   { label: 'AAA', threshold: 0, interestMultiplier: 1 },
   { label: 'BBB', threshold: 150, interestMultiplier: 1.25 },
@@ -100,6 +105,7 @@ const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => (
         <h3>{isEnemy ? t('rivalCountry', lang) : t('myCountry', lang)}</h3>
         <div>GDP: <NumberCounter value={data.gdp} /></div>
         <div className="font-mono" data-testid={isEnemy ? 'enemy-money' : 'player-money'}>¥<NumberCounter value={data.money} /></div>
+        <div className="font-mono" data-testid={isEnemy ? 'enemy-debt' : 'player-debt'}>Debt: <NumberCounter value={data.debt} /></div>
     </div>
 );
 
@@ -125,28 +131,41 @@ function EconomicCardGame() {
     const [selectedIdeology, setSelectedIdeology] = useState(IDEOLOGIES.KEYNESIAN.id);
     const [gameDeck, setGameDeck] = useState([]);
     const [discardPile, setDiscardPile] = useState([]);
-    const [player, setPlayer] = useState({ money: 100, gdp: 0, inflation: 0, support: 70, debt: 0, rating: 'AAA', income: 10 });
-    const [enemy, setEnemy] = useState({ money: 100, gdp: 0, inflation: 0, support: 70, debt: 0, rating: 'AAA', income: 10 });
+    const buildInitialPlayerState = (difficulty, ideology) => {
+        const baseMoney = ideology.initialStats.money ?? DIFFICULTY_SETTINGS.NORMAL.initialMoney;
+        const adjustedMoney = baseMoney + ((difficulty.initialMoney ?? DIFFICULTY_SETTINGS.NORMAL.initialMoney) - DIFFICULTY_SETTINGS.NORMAL.initialMoney);
+        const initialDebt = difficulty.initialDebt ?? 0;
+        return {
+            money: adjustedMoney,
+            gdp: 0,
+            inflation: 0,
+            support: ideology.initialStats.support || 70,
+            debt: initialDebt,
+            rating: getRatingByDebt(initialDebt),
+            income: 20,
+        };
+    };
+    const [player, setPlayer] = useState(() => buildInitialPlayerState(currentDifficulty, IDEOLOGIES[selectedIdeology]));
+    const [enemy, setEnemy] = useState(() => ({ money: currentDifficulty.initialMoney, gdp: 0, inflation: 0, support: 70, debt: currentDifficulty.initialDebt, rating: getRatingByDebt(currentDifficulty.initialDebt), income: 20 }));
     const [playerHand, setPlayerHand] = useState([]);
 
     const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
     const addLog = (msg) => setLogs(prev => [msg, ...prev]);
 
     const startGame = () => {
-        const difficulty = DIFFICULTY_SETTINGS[selectedDifficulty];
+        const difficulty = getDifficultyById(selectedDifficulty);
         const ideology = IDEOLOGIES[selectedIdeology];
         const baseDeck = shuffleArray(ALL_CARDS);
-        const initialPlayerState = {
-            money: (ideology.initialStats.money || 100) + (difficulty.initialMoney - DIFFICULTY_SETTINGS.NORMAL.initialMoney),
-            income: 20, gdp: 0, inflation: 0, support: ideology.initialStats.support || 70, debt: 0, rating: 'AAA',
-        };
+        const initialPlayerState = buildInitialPlayerState(difficulty, ideology);
+        const initialDebt = difficulty.initialDebt ?? 0;
         setPlayerHand([]);
         setDiscardPile([]);
         setGameDeck(baseDeck);
         setLogs([]);
         setActiveEvent(null);
+        setCurrentDifficulty(difficulty);
         setPlayer(initialPlayerState);
-        setEnemy({ money: difficulty.initialMoney, income: 20, gdp: 0, inflation: 0, support: 70, debt: 0, rating: 'AAA' });
+        setEnemy({ money: difficulty.initialMoney, income: 20, gdp: 0, inflation: 0, support: 70, debt: initialDebt, rating: getRatingByDebt(initialDebt) });
         setGameState('PLAYING');
         drawCards(3, baseDeck, []);
     };
@@ -260,11 +279,27 @@ function EconomicCardGame() {
             </div>
             {gameState === 'START' && (
                 <div>
+                    <label>
+                        Difficulty:
+                        <select
+                            value={selectedDifficulty}
+                            onChange={(e) => setSelectedDifficulty(e.target.value)}
+                            data-testid="difficulty-select"
+                        >
+                            {Object.values(DIFFICULTY_SETTINGS).map(diff => (
+                                <option key={diff.id} value={diff.id}>{diff.label}</option>
+                            ))}
+                        </select>
+                    </label>
                     <button onClick={startGame}>{t('startGame', lang)}</button>
                 </div>
             )}
             {gameState === 'PLAYING' && (
                 <div>
+                    <div>
+                        <span data-testid="current-difficulty">Difficulty: {currentDifficulty.label}</span>
+                        <span data-testid="target-gdp">Target GDP: <NumberCounter value={currentDifficulty.targetGdp} /></span>
+                    </div>
                     <StatusPanel data={enemy} isEnemy={true} lang={lang} />
                     <StatusPanel data={player} isEnemy={false} lang={lang} />
                     <div>
