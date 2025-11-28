@@ -32,8 +32,20 @@ const IconGlobe = ({ size = 24, className = "" }) => <svg/>;
 
 // --- Helper Functions and Constants ---
 const UI_TEXT = {
-  ja: { startGame: "ゲーム開始", yourHand: "Your Hand", endTurn: "ターン終了", myCountry: "自国 (あなた)" },
-  en: { startGame: "START GAME", yourHand: "Your Hand", endTurn: "End Turn", myCountry: "My Country (YOU)" },
+  ja: {
+    startGame: "ゲーム開始",
+    yourHand: "Your Hand",
+    endTurn: "ターン終了",
+    myCountry: "自国 (あなた)",
+    rivalCountry: "敵国",
+  },
+  en: {
+    startGame: "START GAME",
+    yourHand: "Your Hand",
+    endTurn: "End Turn",
+    myCountry: "My Country (YOU)",
+    rivalCountry: "Rival Country",
+  },
 };
 const t = (key, lang) => UI_TEXT[lang][key] || key;
 const getLoc = (obj, key, lang) => {
