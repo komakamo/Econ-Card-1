@@ -1714,7 +1714,9 @@
         function EconomicCardGame() {
             const [turn, setTurn] = useState(1);
             const [era, setEra] = useState(ERAS.GROWTH);
-            const [gameState, setGameState] = useState('START'); // START, PLAYING, WON, LOST
+            const [gameState, setGameState] = useState('TITLE'); // TITLE, SETUP, PLAYING, WON, LOST
+            const [skipTurnSummary, setSkipTurnSummary] = useState(false);
+            const [autoProceed, setAutoProceed] = useState(false);
             const [logs, setLogs] = useState([]);
             const [activeEvent, setActiveEvent] = useState(null);
             const [lastTags, setLastTags] = useState([]);
@@ -1750,6 +1752,13 @@
                 else if (fontSizeLevel === 'large') root.style.fontSize = '18px';
                 else root.style.fontSize = '16px';
             }, [fontSizeLevel]);
+
+            useEffect(() => {
+                if (autoProceed) {
+                    setAutoProceed(false);
+                    proceedToNextTurn();
+                }
+            }, [autoProceed]);
 
             useEffect(() => {
                 try {
@@ -2626,7 +2635,11 @@
                 };
 
                 setTurnSummaryData(summary);
-                setShowTurnSummary(true);
+                if (skipTurnSummary) {
+                    setAutoProceed(true);
+                } else {
+                    setShowTurnSummary(true);
+                }
             };
 
             const proceedToNextTurn = () => {
@@ -3160,8 +3173,40 @@
                             {/* Combo Guide */}
                             <ComboGuidePanel lang={lang} />
 
-                            {/* START SCREEN / OVERLAY */}
-                            {gameState === 'START' && (
+                            {/* TITLE SCREEN */}
+                            {gameState === 'TITLE' && (
+                                <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center p-4">
+                                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                                    <div className="z-10 text-center space-y-8 animate-fade-in">
+                                        <div className="mb-4">
+                                            <div className="inline-block p-6 rounded-3xl bg-gradient-to-br from-cyan-500 to-blue-600 shadow-[0_0_50px_rgba(6,182,212,0.4)] mb-6">
+                                                <IconTrendingUp size={64} className="text-white" />
+                                            </div>
+                                            <h1 className="text-6xl md:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-cyan-200 to-blue-200 tracking-tighter drop-shadow-lg mb-4">
+                                                {t('title', lang)}
+                                            </h1>
+                                            <p className="text-xl md:text-2xl text-slate-400 font-bold tracking-widest uppercase">
+                                                {t('subtitle', lang)}
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            onClick={() => setGameState('SETUP')}
+                                            className="group relative px-12 py-6 bg-slate-800 hover:bg-cyan-950 border-2 border-slate-700 hover:border-cyan-500 rounded-2xl transition-all duration-300 hover:scale-105 active:scale-95 shadow-2xl"
+                                        >
+                                            <div className="absolute inset-0 bg-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                                            <span className="text-2xl font-black text-white tracking-widest group-hover:text-cyan-400 flex items-center gap-3">
+                                                <IconZap className="animate-pulse" /> {t('start', lang).toUpperCase()}
+                                            </span>
+                                        </button>
+
+                                        <div className="text-slate-600 text-sm font-mono">Ver 1.0.0</div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* SETUP SCREEN (Old Start Screen) */}
+                            {gameState === 'SETUP' && (
                                 <div className="fixed inset-0 z-[100] bg-slate-900/90 backdrop-blur-xl flex items-center justify-center p-4">
                                     <div className="bg-slate-800/80 border border-slate-700/50 p-8 rounded-3xl shadow-2xl max-w-lg w-full text-center relative overflow-hidden backdrop-blur-md">
                                         <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-cyan-500 via-purple-500 to-rose-500"></div>
@@ -3316,6 +3361,20 @@
                                             </div>
                                         </div>
 
+                                        <div className="mb-4 flex items-center justify-center gap-3">
+                                            <button
+                                                onClick={() => setSkipTurnSummary(!skipTurnSummary)}
+                                                className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${skipTurnSummary ? 'bg-cyan-900/30 border-cyan-500 text-cyan-400' : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600'}`}
+                                            >
+                                                <div className={`w-5 h-5 rounded border flex items-center justify-center ${skipTurnSummary ? 'bg-cyan-500 border-cyan-500' : 'border-slate-600'}`}>
+                                                    {skipTurnSummary && <IconZap size={12} className="text-white" />}
+                                                </div>
+                                                <span className="text-xs font-bold">
+                                                    {lang === 'en' ? 'Skip Turn Summary' : 'ターン終了時のまとめをスキップ'}
+                                                </span>
+                                            </button>
+                                        </div>
+
                                         <button
                                             onClick={startGame}
                                              className="w-full py-4 bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 text-white rounded-xl font-black text-xl shadow-lg shadow-cyan-500/30 hover:shadow-cyan-500/50 hover:scale-[1.02] transition-all active:scale-95 relative overflow-hidden group"
@@ -3325,6 +3384,15 @@
                                                  <IconZap size={24} className="animate-pulse" /> {t('startGame', lang)}
                                              </span>
                                         </button>
+
+                                        <div className="mt-4">
+                                            <button
+                                                onClick={() => setGameState('TITLE')}
+                                                className="text-slate-500 hover:text-white text-xs font-bold underline decoration-slate-600 hover:decoration-white transition-all"
+                                            >
+                                                {lang === 'en' ? 'Back to Title' : 'タイトルに戻る'}
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             )}
