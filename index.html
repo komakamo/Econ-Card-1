@@ -1502,7 +1502,9 @@
                                                      <span className="text-2xl font-black text-slate-700">?</span>
                                                      <span className="text-[10px] text-slate-600 mt-2 font-bold">{t('unknown', lang)}</span>
                                                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                                                         <span className="text-[10px] text-white font-bold px-2 text-center">{t('playToUnlock', lang)}</span>
+                                                         <span className="text-[10px] text-white font-bold px-2 text-center">
+                                                            {getLoc(card, 'unlockHint', lang) || t('playToUnlock', lang)}
+                                                         </span>
                                                      </div>
                                                  </div>
                                              );
