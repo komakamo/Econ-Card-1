@@ -195,6 +195,16 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         const baseDeck = shuffleArray((initialDeck || ALL_CARDS).map(withDefaultEffect));
         const initialPlayerState = buildInitialPlayerState(difficulty, ideology);
         const initialDebt = difficulty.initialDebt ?? 0;
+        setTurn(1);
+        setLastTags([]);
+        setFloatingTexts([]);
+        setEvaluation(null);
+        setShowTurnOverlay(false);
+        setCrisisAlert(null);
+        setHoveredCard(null);
+        setShake({ player: false, enemy: false });
+        setLastPlayedCard(null);
+        clearErrorMessage();
         setPlayerHand([]);
         setDiscardPile([]);
         setGameDeck(baseDeck);
