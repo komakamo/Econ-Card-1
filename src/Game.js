@@ -108,7 +108,14 @@ const getRatingByDebt = (debt = 0) => {
   return found?.label ?? 'AAA';
 };
 const getRatingInfo = (rating = 'AAA') => RATING_TIERS.find(tier => tier.label === rating) ?? RATING_TIERS[0];
-const calculateInflatedCost = (cost) => cost;
+
+const INFLATION_MIN = -5;
+const INFLATION_MAX = 15;
+const clampInflation = (value) => Math.min(INFLATION_MAX, Math.max(INFLATION_MIN, Number(value.toFixed(1))));
+
+const calculateInflatedCost = (baseCost, inflationRate = 0) => {
+    return Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
+};
 const calculateSuccessRate = () => 100;
 const evaluateGame = ({ player, enemy, difficulty, turn }) => {
     if (!player || !enemy || !difficulty) return { status: 'ONGOING' };
@@ -165,8 +172,17 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
 
     return { status: 'ONGOING' };
 };
-const applyInflationChange = (state) => state;
-const applyInflationDrift = (val) => val;
+const applyInflationChange = (state, delta = 0) => {
+    if (!delta) return state;
+    const nextInflation = clampInflation((state.inflation ?? 0) + delta);
+    return { ...state, inflation: nextInflation };
+};
+const applyInflationDrift = (value, target = 0) => {
+    const diff = target - value;
+    const step = 0.3;
+    if (Math.abs(diff) < step) return target;
+    return clampInflation(value + (diff > 0 ? step : -step));
+};
 
 // --- Visual Components ---
 const NumberCounter = ({ value }) => <span>{value}</span>;
@@ -194,14 +210,20 @@ const CrisisOverlay = ({ event, onResolve, lang }) => {
 const Confetti = () => null;
 const CardInfoPanel = () => <div />;
 const ComboGuidePanel = () => <div />;
-const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => (
-    <div>
-        <h3>{isEnemy ? t('rivalCountry', lang) : t('myCountry', lang)}</h3>
-        <div>GDP: <NumberCounter value={data.gdp} /></div>
-        <div className="font-mono" data-testid={isEnemy ? 'enemy-money' : 'player-money'}>¥<NumberCounter value={data.money} /></div>
-        <div className="font-mono" data-testid={isEnemy ? 'enemy-debt' : 'player-debt'}>Debt: <NumberCounter value={data.debt} /></div>
-    </div>
-);
+const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => {
+    const inflationDisplay = Number.isFinite(data?.inflation) ? data.inflation.toFixed(1) : '0.0';
+    const inflationTestId = isEnemy ? 'enemy-inflation' : 'player-inflation';
+
+    return (
+        <div>
+            <h3>{isEnemy ? t('rivalCountry', lang) : t('myCountry', lang)}</h3>
+            <div>GDP: <NumberCounter value={data.gdp} /></div>
+            <div className="font-mono" data-testid={isEnemy ? 'enemy-money' : 'player-money'}>¥<NumberCounter value={data.money} /></div>
+            <div className="font-mono" data-testid={isEnemy ? 'enemy-debt' : 'player-debt'}>Debt: <NumberCounter value={data.debt} /></div>
+            <div className="font-mono" data-testid={inflationTestId}>Inflation: {inflationDisplay}%</div>
+        </div>
+    );
+};
 
 // --- Main Game Component ---
 function EconomicCardGame({ initialDeck = ALL_CARDS }) {
@@ -324,7 +346,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
 
     const playCard = (card, e) => {
         if (gameState !== 'PLAYING') return;
-        const cost = calculateAdjustedCost(card.cost, player.inflation);
+        const cost = calculateInflatedCost(card.cost, player.inflation);
         if (player.money < cost) {
             showErrorMessage(t('insufficientFunds', lang));
             return;
@@ -338,6 +360,14 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         let nextPlayerState = { ...player, money: player.money - cost };
         const cardEffect = typeof card?.effect === 'function' ? card.effect : DEFAULT_CARD_EFFECT;
         nextPlayerState = cardEffect(nextPlayerState, enemy);
+
+        const playerInflationDelta = card.inflationChange || 0;
+        const playerInflationBefore = nextPlayerState.inflation ?? 0;
+        nextPlayerState = applyInflationChange(nextPlayerState, playerInflationDelta);
+        if (nextPlayerState.inflation !== playerInflationBefore) {
+            addLog(`Inflation adjusted to ${nextPlayerState.inflation.toFixed(1)}%.`);
+        }
+
         const updatedRating = getRatingByDebt(nextPlayerState.debt);
         setPlayer({ ...nextPlayerState, rating: updatedRating });
 
@@ -346,6 +376,14 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         if (typeof card?.targetEffect === 'function') {
             nextEnemyState = card.targetEffect(nextEnemyState, nextPlayerState);
             enemyWasTargeted = true;
+        }
+
+        if (typeof card?.targetInflationChange === 'number') {
+            const enemyInflationBefore = nextEnemyState.inflation ?? 0;
+            nextEnemyState = applyInflationChange(nextEnemyState, card.targetInflationChange);
+            if (nextEnemyState.inflation !== enemyInflationBefore) {
+                addLog(`Enemy inflation adjusted to ${nextEnemyState.inflation.toFixed(1)}%.`);
+            }
         }
 
         if (typeof card?.targetSupportChange === 'number') {
@@ -370,10 +408,6 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         addLog(`${getLoc(card, 'name', lang)} played.`);
     };
 
-    const calculateAdjustedCost = (baseCost, inflationRate = 0) => {
-        return Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
-    };
-
     const getInterestForTurn = (state = player) => {
         const ratingInfo = getRatingInfo(state.rating);
         const baseInterest = state.interestDue ?? Math.round((state.debt ?? 0) * 0.02);
@@ -386,7 +420,11 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         clearErrorMessage();
 
         setPlayer(prev => {
-            const afterIncome = { ...prev, money: prev.money + (prev.income || 0) };
+            const driftedInflation = applyInflationDrift(prev.inflation ?? 0, 0);
+            if (driftedInflation !== (prev.inflation ?? 0)) {
+                addLog(`Inflation drift: ${(prev.inflation ?? 0).toFixed(1)}% → ${driftedInflation.toFixed(1)}%.`);
+            }
+            const afterIncome = { ...prev, money: prev.money + (prev.income || 0), inflation: driftedInflation };
             const interest = getInterestForTurn(afterIncome);
             const afterInterest = { ...afterIncome, money: Math.max(0, afterIncome.money - interest) };
             if (interest > 0) {
@@ -397,7 +435,11 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         });
 
         setEnemy(prev => {
-            const next = { ...prev, money: prev.money + (prev.income || 0) };
+            const driftedInflation = applyInflationDrift(prev.inflation ?? 0, 0);
+            if (driftedInflation !== (prev.inflation ?? 0)) {
+                addLog(`Enemy inflation drift: ${(prev.inflation ?? 0).toFixed(1)}% → ${driftedInflation.toFixed(1)}%.`);
+            }
+            const next = { ...prev, money: prev.money + (prev.income || 0), inflation: driftedInflation };
             addLog('Enemy acted.');
             return next;
         });
