@@ -247,11 +247,31 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         nextPlayerState = cardEffect(nextPlayerState, enemy);
         setPlayer(nextPlayerState);
 
+        let nextEnemyState = enemy;
+        let enemyWasTargeted = false;
+        if (typeof card?.targetEffect === 'function') {
+            nextEnemyState = card.targetEffect(nextEnemyState, nextPlayerState);
+            enemyWasTargeted = true;
+        }
+
+        if (typeof card?.targetSupportChange === 'number') {
+            const updatedSupport = Math.max(0, Math.min(100, (nextEnemyState.support ?? 0) + card.targetSupportChange));
+            nextEnemyState = { ...nextEnemyState, support: updatedSupport };
+            enemyWasTargeted = true;
+        }
+
+        if (enemyWasTargeted || nextEnemyState !== enemy) {
+            setEnemy({ ...nextEnemyState });
+            addLog(`${getLoc(card, 'name', lang)} impacted the enemy.`);
+        }
+
         const providedTags = getCardProvidedTags(card);
         if (providedTags.length > 0) {
             setLastTags(providedTags);
         }
 
+        const { uniqueId: _, ...discardedCard } = card;
+        setDiscardPile(prev => [...prev, discardedCard]);
         setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
         addLog(`${getLoc(card, 'name', lang)} played.`);
     };
