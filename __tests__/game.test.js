@@ -201,6 +201,44 @@ describe('EconomicCardGame', () => {
     expect(cardSoundSpy).not.toHaveBeenCalled();
   });
 
+  test('updates rating and interest after debt-changing card is played', async () => {
+    const debtCard = {
+      id: 'debt-builder',
+      name: 'Debt Builder',
+      name_en: 'Debt Builder',
+      cost: 0,
+      type: 'POLICY',
+      description: 'desc',
+      description_en: 'desc',
+      effect: (state) => ({
+        ...state,
+        debt: (state.debt || 0) + 200,
+      }),
+    };
+
+    render(<EconomicCardGame initialDeck={[debtCard]} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(/START GAME/i));
+    });
+
+    const cardButton = await screen.findByTestId('card-Debt Builder');
+
+    await act(async () => {
+      fireEvent.click(cardButton);
+    });
+
+    const updatedDebt = parseInt(screen.getByTestId('player-debt').textContent.replace(/[^\d]/g, ''), 10);
+    expect(updatedDebt).toBe(200);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(/End Turn/i));
+    });
+
+    const moneyAfterInterest = parseInt(screen.getByTestId('player-money').textContent.replace(/[^\d]/g, ''), 10);
+    expect(moneyAfterInterest).toBe(135);
+  });
+
   test('event playback respects mute state', async () => {
     render(<EconomicCardGame />);
 
