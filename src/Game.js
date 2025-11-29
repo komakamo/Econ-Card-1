@@ -439,9 +439,31 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
             if (driftedInflation !== (prev.inflation ?? 0)) {
                 addLog(`Enemy inflation drift: ${(prev.inflation ?? 0).toFixed(1)}% → ${driftedInflation.toFixed(1)}%.`);
             }
-            const next = { ...prev, money: prev.money + (prev.income || 0), inflation: driftedInflation };
-            addLog('Enemy acted.');
-            return next;
+
+            const incomeGain = prev.income || 0;
+            const afterIncome = { ...prev, money: prev.money + incomeGain, inflation: driftedInflation };
+            if (incomeGain > 0) {
+                addLog(`Enemy collected income: +${incomeGain} money.`);
+            }
+
+            const interest = getInterestForTurn(afterIncome);
+            const afterInterest = { ...afterIncome, money: Math.max(0, afterIncome.money - interest) };
+            if (interest > 0) {
+                addLog(`Enemy interest payment: -${interest} money.`);
+            }
+
+            const turnsRemaining = Math.max(1, (currentDifficulty.maxTurns ?? 40) - turn + 1);
+            const targetGdp = currentDifficulty.targetGdp ?? 0;
+            const requiredGrowth = Math.max(0, targetGdp - (afterInterest.gdp ?? 0));
+            const neededPerTurn = Math.ceil(requiredGrowth / turnsRemaining);
+            const incomeDrivenGrowth = Math.max(5, Math.round(incomeGain * 0.5));
+            const gdpGain = Math.max(incomeDrivenGrowth, neededPerTurn);
+            const nextGdp = (afterInterest.gdp ?? 0) + gdpGain;
+
+            addLog(`Enemy invested for growth: +${gdpGain} GDP (total ${nextGdp}).`);
+            addLog('Enemy completed its turn.');
+
+            return { ...afterInterest, gdp: nextGdp };
         });
 
         drawCards(1);
