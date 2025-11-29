@@ -100,7 +100,61 @@ const getRatingByDebt = (debt = 0) => {
 const getRatingInfo = (rating = 'AAA') => RATING_TIERS.find(tier => tier.label === rating) ?? RATING_TIERS[0];
 const calculateInflatedCost = (cost) => cost;
 const calculateSuccessRate = () => 100;
-const evaluateGame = () => ({});
+const evaluateGame = ({ player, enemy, difficulty, turn }) => {
+    if (!player || !enemy || !difficulty) return { status: 'ONGOING' };
+
+    const targetGdp = difficulty.targetGdp ?? Infinity;
+    const maxTurns = difficulty.maxTurns ?? 40;
+    const debtLimit = difficulty.debtLimit ?? 600;
+    const minimumSupport = difficulty.minimumSupport ?? 1;
+
+    if ((player.gdp ?? 0) >= targetGdp) {
+        return {
+            status: 'WIN',
+            reason: 'ターゲットGDPを達成しました',
+            detail: `GDP: ${player.gdp} / ${targetGdp}`,
+            turn,
+        };
+    }
+
+    if ((enemy.gdp ?? 0) >= targetGdp) {
+        return {
+            status: 'LOSE',
+            reason: '敵国が先にターゲットGDPに到達しました',
+            detail: `Enemy GDP: ${enemy.gdp} / ${targetGdp}`,
+            turn,
+        };
+    }
+
+    if ((player.debt ?? 0) >= debtLimit) {
+        return {
+            status: 'LOSE',
+            reason: '国家債務が限界を超えました',
+            detail: `Debt: ${player.debt} / ${debtLimit}`,
+            turn,
+        };
+    }
+
+    if ((player.support ?? 100) < minimumSupport) {
+        return {
+            status: 'LOSE',
+            reason: '支持率が底をつきました',
+            detail: `Support: ${player.support}%`,
+            turn,
+        };
+    }
+
+    if (turn > maxTurns) {
+        return {
+            status: 'LOSE',
+            reason: 'ターン制限に到達しました',
+            detail: `Turn: ${turn} / ${maxTurns}`,
+            turn,
+        };
+    }
+
+    return { status: 'ONGOING' };
+};
 const applyInflationChange = (state) => state;
 const applyInflationDrift = (val) => val;
 
@@ -357,6 +411,18 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
     }, [activeEvent]);
 
     useEffect(() => {
+        if (gameState !== 'PLAYING') return;
+        const result = evaluateGame({ player, enemy, difficulty: currentDifficulty, turn });
+        if (result.status && result.status !== 'ONGOING') {
+            setEvaluation(result);
+            setGameState('END');
+            if (!SoundManager.isMuted && typeof SoundManager.playGameEnd === 'function') {
+                SoundManager.playGameEnd();
+            }
+        }
+    }, [player, enemy, turn, currentDifficulty, gameState]);
+
+    useEffect(() => {
         return () => clearErrorMessage();
     }, []);
 
@@ -416,6 +482,17 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
                             Trigger Event
                         </button>
                     </div>
+                </div>
+            )}
+            {gameState === 'END' && (
+                <div data-testid="game-result">
+                    <h2>Game End</h2>
+                    <div>Result: {evaluation?.status || 'N/A'}</div>
+                    <div>Reason: {evaluation?.reason || 'No evaluation'}</div>
+                    {evaluation?.detail && <div>Detail: {evaluation.detail}</div>}
+                    <div>Turns: {evaluation?.turn ?? turn}</div>
+                    <button onClick={() => setGameState('START')}>Back to Start</button>
+                    <button onClick={startGame}>Play Again</button>
                 </div>
             )}
         </div>
