@@ -2353,8 +2353,8 @@
                 return applyEventMultiplier(prev, next);
             });
 
-            const calculateAdjustedCost = (baseCost, inflationRate = 0) => {
-                const inflated = calculateInflatedCost(baseCost, inflationRate);
+            const calculateInflatedCost = (baseCost, inflationRate = 0) => {
+                const inflated = Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
                 let multiplier = activeEvent?.effect?.costMultiplier || 1;
 
                 // Era Effect: Stagnation increases costs
@@ -2388,7 +2388,7 @@
             const playCard = (card, e) => {
                 if (gameState !== 'PLAYING') return;
 
-                const adjustedCost = calculateAdjustedCost(card.cost, player.inflation);
+                const adjustedCost = calculateInflatedCost(card.cost, player.inflation);
                 const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
                 const providedTags = getCardProvidedTags(card);
                 const cardName = getLoc(card, 'name', lang);
@@ -2863,7 +2863,7 @@
                 const ratedEnemy = applyRatingUpdate(afterIncome, 'ライバル');
                 const unrestAdjusted = applyUnrestPenalty(ratedEnemy, 'ライバル');
 
-                const potentialActions = ALL_CARDS.filter(c => c.id < MAX_STANDARD_CARD_ID && calculateAdjustedCost(c.cost, unrestAdjusted.inflation) <= unrestAdjusted.money);
+                const potentialActions = ALL_CARDS.filter(c => c.id < MAX_STANDARD_CARD_ID && calculateInflatedCost(c.cost, unrestAdjusted.inflation) <= unrestAdjusted.money);
 
                 if (potentialActions.length === 0) {
                     addLog(lang === 'en' ? `RIVAL: Saving funds.` : `ライバル: 資金不足のため資金を温存。`);
@@ -2872,7 +2872,7 @@
                 }
 
                 const aiCard = potentialActions[Math.floor(Math.random() * potentialActions.length)];
-                const inflatedCost = calculateAdjustedCost(aiCard.cost, unrestAdjusted.inflation);
+                const inflatedCost = calculateInflatedCost(aiCard.cost, unrestAdjusted.inflation);
                 let afterPayment = { ...unrestAdjusted, money: unrestAdjusted.money - inflatedCost };
                 const aiCardName = getLoc(aiCard, 'name', lang); // Use localized name for AI logs
 
@@ -3188,7 +3188,7 @@
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                     {playerHand.map((card) => {
                                         const typeInfo = CARD_TYPES[card.type];
-                                        const inflatedCost = calculateAdjustedCost(card.cost, player.inflation);
+                                        const inflatedCost = calculateInflatedCost(card.cost, player.inflation);
                                         const canAfford = player.money >= inflatedCost;
                                         const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
                                         const providesTags = getCardProvidedTags(card);

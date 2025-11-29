@@ -36,12 +36,12 @@ const ALL_CARDS = [
 const MAX_STANDARD_CARD_ID = 100;
 
 // Mock Helper functions
-const calculateAdjustedCost = (cost, inflation) => cost;
+const calculateInflatedCost = (cost, inflation) => cost;
 
 // --- The AI Turn Logic Under Test ---
 // This function mimics the corrected logic in index.html
 const getPotentialActions = (money, inflation) => {
-    return ALL_CARDS.filter(c => c.id < MAX_STANDARD_CARD_ID && calculateAdjustedCost(c.cost, inflation) <= money);
+    return ALL_CARDS.filter(c => c.id < MAX_STANDARD_CARD_ID && calculateInflatedCost(c.cost, inflation) <= money);
 };
 
 // --- Jest Test Suite ---
