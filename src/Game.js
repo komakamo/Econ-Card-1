@@ -62,7 +62,17 @@ const getLoc = (obj, key, lang) => {
 
     return (obj && (obj[primaryKey] || obj[fallbackKey])) || '';
 };
-const EVENTS = [{ id: 1, name: 'Test Event', name_en: 'Test Event', description: 'Test', description_en: 'Test', effect: {} }];
+const EVENTS = [{
+    id: 1,
+    name: '財政刺激策',
+    name_en: 'Fiscal Stimulus',
+    description: '短期的に資金を注入するが、債務が増加する。',
+    description_en: 'Injects short-term funds while adding new debt.',
+    effect: ({ player }) => ({
+        player: { money: (player.money || 0) + 40, debt: (player.debt || 0) + 30 },
+        logMessages: 'Fiscal stimulus applied: +40 money, +30 debt.',
+    }),
+}];
 const ERAS = { GROWTH: { id: 'GROWTH', name: 'Growth', name_en: 'Growth', bgClass: '' }, STAGNATION: { id: 'STAGNATION' }, IT_REV: { id: 'IT_REV' } };
 const IDEOLOGIES = {
   KEYNESIAN: { id: 'KEYNESIAN', name: 'Keynesian', name_en: 'Keynesian', label: 'Keynesian', label_en: 'Keynesian', description: 'desc', description_en: 'desc', features: [], features_en: [], initialStats: { support: 70, debt: 50, money: 120 }, deckWeights: {1: 1}, rankCriteria: {} },
@@ -161,7 +171,26 @@ const applyInflationDrift = (val) => val;
 // --- Visual Components ---
 const NumberCounter = ({ value }) => <span>{value}</span>;
 const TurnOverlay = () => null;
-const CrisisOverlay = () => null;
+const CrisisOverlay = ({ event, onResolve, lang }) => {
+    if (!event) return null;
+
+    return (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 z-50" role="dialog" aria-modal="true">
+            <div className="bg-white text-black p-6 rounded shadow-lg max-w-md w-full">
+                <h2 className="text-xl font-bold mb-2">{getLoc(event, 'name', lang)}</h2>
+                <p className="mb-4">{getLoc(event, 'description', lang)}</p>
+                <div className="flex justify-end gap-2">
+                    <button onClick={onResolve} className="px-3 py-1 border rounded" data-testid="event-close">
+                        Close
+                    </button>
+                    <button onClick={onResolve} className="px-3 py-1 bg-blue-600 text-white rounded" data-testid="event-confirm">
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
 const Confetti = () => null;
 const CardInfoPanel = () => <div />;
 const ComboGuidePanel = () => <div />;
@@ -411,6 +440,43 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
     }, [activeEvent]);
 
     useEffect(() => {
+        if (!activeEvent) return;
+
+        const effectFn = typeof activeEvent.effect === 'function' ? activeEvent.effect : null;
+        const result = effectFn ? effectFn({ player, enemy }) : {};
+        const { player: playerChanges, enemy: enemyChanges, logMessages } = result || {};
+
+        if (playerChanges) {
+            setPlayer(prev => {
+                const next = { ...prev, ...playerChanges };
+                const rating = getRatingByDebt(next.debt ?? prev.debt);
+                return { ...next, rating };
+            });
+        }
+
+        if (enemyChanges) {
+            setEnemy(prev => ({ ...prev, ...enemyChanges }));
+        }
+
+        const eventName = getLoc(activeEvent, 'name', lang);
+        const eventLogs = [`Event triggered: ${eventName}`];
+        if (playerChanges) {
+            eventLogs.push('Player state updated by event.');
+        }
+        if (enemyChanges) {
+            eventLogs.push('Enemy state updated by event.');
+        }
+
+        if (Array.isArray(logMessages)) {
+            eventLogs.push(...logMessages.filter(Boolean));
+        } else if (logMessages) {
+            eventLogs.push(logMessages);
+        }
+
+        eventLogs.forEach(addLog);
+    }, [activeEvent]);
+
+    useEffect(() => {
         if (gameState !== 'PLAYING') return;
         const result = evaluateGame({ player, enemy, difficulty: currentDifficulty, turn });
         if (result.status && result.status !== 'ONGOING') {
@@ -495,6 +561,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
                     <button onClick={startGame}>Play Again</button>
                 </div>
             )}
+            <CrisisOverlay event={activeEvent} onResolve={() => setActiveEvent(null)} lang={lang} />
         </div>
     );
 }
