@@ -187,7 +187,7 @@ const applyInflationDrift = (value, target = 0) => {
 // --- Visual Components ---
 const NumberCounter = ({ value }) => <span>{value}</span>;
 const TurnOverlay = () => null;
-const CrisisOverlay = ({ event, onResolve, lang }) => {
+const CrisisOverlay = ({ event, onClose, onConfirm, lang }) => {
     if (!event) return null;
 
     return (
@@ -196,10 +196,10 @@ const CrisisOverlay = ({ event, onResolve, lang }) => {
                 <h2 className="text-xl font-bold mb-2">{getLoc(event, 'name', lang)}</h2>
                 <p className="mb-4">{getLoc(event, 'description', lang)}</p>
                 <div className="flex justify-end gap-2">
-                    <button onClick={onResolve} className="px-3 py-1 border rounded" data-testid="event-close">
+                    <button onClick={onClose} className="px-3 py-1 border rounded" data-testid="event-close">
                         Close
                     </button>
-                    <button onClick={onResolve} className="px-3 py-1 bg-blue-600 text-white rounded" data-testid="event-confirm">
+                    <button onClick={onConfirm} className="px-3 py-1 bg-blue-600 text-white rounded" data-testid="event-confirm">
                         Confirm
                     </button>
                 </div>
@@ -481,7 +481,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         }
     }, [activeEvent]);
 
-    useEffect(() => {
+    const resolveActiveEvent = () => {
         if (!activeEvent) return;
 
         const effectFn = typeof activeEvent.effect === 'function' ? activeEvent.effect : null;
@@ -516,7 +516,8 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         }
 
         eventLogs.forEach(addLog);
-    }, [activeEvent]);
+        setActiveEvent(null);
+    };
 
     useEffect(() => {
         if (gameState !== 'PLAYING') return;
@@ -603,7 +604,12 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
                     <button onClick={startGame}>Play Again</button>
                 </div>
             )}
-            <CrisisOverlay event={activeEvent} onResolve={() => setActiveEvent(null)} lang={lang} />
+            <CrisisOverlay
+                event={activeEvent}
+                onClose={() => setActiveEvent(null)}
+                onConfirm={resolveActiveEvent}
+                lang={lang}
+            />
         </div>
     );
 }
