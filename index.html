@@ -105,6 +105,11 @@
             animation: pulseGlow 2s infinite;
         }
 
+        @keyframes scrollGrid {
+            0% { background-position: 50% 0, 0 0, 0 0; }
+            100% { background-position: 50% 0, 40px 40px, 40px 40px; }
+        }
+
         body {
             background-color: #0f172a;
             background-image:
@@ -112,6 +117,8 @@
                 linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
             background-size: 100% 100%, 40px 40px, 40px 40px;
+            background-attachment: fixed, scroll, scroll;
+            animation: scrollGrid 20s linear infinite;
             color: #e2e8f0;
             min-height: 100vh;
         }
@@ -343,6 +350,24 @@
 
             return (
                 <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                    {/* Ambient Light Blobs */}
+                    <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-cyan-500/10 rounded-full blur-[100px] animate-pulse-slow mix-blend-screen"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-500/10 rounded-full blur-[100px] animate-pulse-slow mix-blend-screen" style={{ animationDelay: '3s' }}></div>
+                    <div className="absolute top-[40%] left-[20%] w-[30vw] h-[30vw] bg-blue-500/5 rounded-full blur-[80px] animate-pulse-slow mix-blend-screen" style={{ animationDelay: '1.5s' }}></div>
+
+                    {/* Chart Line Decoration */}
+                    <div className="absolute bottom-0 left-0 w-full h-[40vh] opacity-20">
+                         <svg className="w-full h-full" viewBox="0 0 1000 200" preserveAspectRatio="none">
+                             <path d="M0,150 Q100,120 200,160 T400,100 T600,140 T800,60 T1000,120 V200 H0 Z" fill="url(#gradChart)" />
+                             <defs>
+                                 <linearGradient id="gradChart" x1="0%" y1="0%" x2="0%" y2="100%">
+                                     <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.2" />
+                                     <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
+                                 </linearGradient>
+                             </defs>
+                         </svg>
+                    </div>
+
                     {particles.map(p => (
                         <div
                             key={p.id}
@@ -364,6 +389,13 @@
                         @keyframes floatUpBackground {
                             0% { transform: translateY(0) rotate(0deg); }
                             100% { transform: translateY(-110vh) rotate(360deg); }
+                        }
+                        @keyframes pulseSlow {
+                            0%, 100% { transform: scale(1); opacity: 0.5; }
+                            50% { transform: scale(1.1); opacity: 0.8; }
+                        }
+                        .animate-pulse-slow {
+                            animation: pulseSlow 8s ease-in-out infinite;
                         }
                     `}</style>
                 </div>
