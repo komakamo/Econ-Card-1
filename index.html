@@ -143,6 +143,11 @@
         const SoundManager = {
             ctx: null,
             isMuted: false,
+            masterVolume: 0.5,
+
+            setVolume(vol) {
+                this.masterVolume = Math.max(0, Math.min(1, vol));
+            },
 
             init() {
                 if (!this.ctx) {
@@ -161,7 +166,9 @@
                     const gain = this.ctx.createGain();
                     osc.type = type;
                     osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+
+                    const finalVol = vol * this.masterVolume;
+                    gain.gain.setValueAtTime(finalVol, this.ctx.currentTime);
                     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + duration);
                     osc.connect(gain);
                     gain.connect(this.ctx.destination);
@@ -313,6 +320,10 @@
 
         const IconX = ({ size = 24, className = "" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        );
+
+        const IconSettings = ({ size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
         );
 
         const IconGlobe = ({ size = 24, className = "" }) => (
@@ -1601,6 +1612,117 @@
             );
         };
 
+        const SettingsModal = ({ isOpen, onClose, settings, onChange, lang }) => {
+            if (!isOpen) return null;
+
+            return (
+                <div className="fixed inset-0 z-[130] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-slate-800 border border-slate-700 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden relative" onClick={e => e.stopPropagation()}>
+                        <div className="bg-slate-900/50 p-4 border-b border-slate-700 flex justify-between items-center">
+                             <div className="flex items-center gap-2">
+                                 <IconSettings size={20} className="text-slate-400" />
+                                 <h2 className="text-lg font-bold text-white">{lang === 'en' ? 'Settings' : '設定'}</h2>
+                             </div>
+                             <button onClick={onClose} className="p-2 hover:bg-slate-700 rounded-full text-slate-400 hover:text-white transition-colors">
+                                 <IconX size={20} />
+                             </button>
+                        </div>
+
+                        <div className="p-6 space-y-6">
+                            {/* Volume */}
+                            <div className="space-y-3">
+                                <label className="text-sm font-bold text-slate-400 uppercase tracking-wider block">
+                                    {lang === 'en' ? 'Sound Volume' : '音量設定'}
+                                </label>
+                                <div className="flex items-center gap-4">
+                                    <button onClick={() => onChange('isMuted', !settings.isMuted)} className="text-slate-400 hover:text-white">
+                                        {settings.isMuted ? <IconVolumeX /> : <IconVolume2 />}
+                                    </button>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        value={settings.volume}
+                                        onChange={(e) => onChange('volume', parseInt(e.target.value))}
+                                        className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                                        disabled={settings.isMuted}
+                                    />
+                                    <span className="text-sm font-mono text-slate-300 w-8 text-right">{settings.volume}%</span>
+                                </div>
+                            </div>
+
+                            <div className="h-px bg-slate-700/50"></div>
+
+                            {/* Language */}
+                            <div className="flex items-center justify-between">
+                                 <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+                                    {lang === 'en' ? 'Language' : '言語 (Language)'}
+                                </label>
+                                <div className="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
+                                    <button
+                                        onClick={() => onChange('lang', 'ja')}
+                                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${settings.lang === 'ja' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                    >
+                                        日本語
+                                    </button>
+                                    <button
+                                        onClick={() => onChange('lang', 'en')}
+                                        className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${settings.lang === 'en' ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                    >
+                                        English
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Text Size */}
+                            <div className="flex items-center justify-between">
+                                 <label className="text-sm font-bold text-slate-400 uppercase tracking-wider">
+                                    {lang === 'en' ? 'Text Size' : '文字サイズ'}
+                                </label>
+                                <div className="flex bg-slate-900 rounded-lg p-1 border border-slate-700">
+                                    {['small', 'medium', 'large'].map(size => (
+                                        <button
+                                            key={size}
+                                            onClick={() => onChange('fontSizeLevel', size)}
+                                            className={`px-3 py-1 rounded-md text-xs font-bold transition-all capitalize ${settings.fontSizeLevel === size ? 'bg-cyan-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                        >
+                                            {size === 'small' ? 'S' : size === 'large' ? 'L' : 'M'}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                             <div className="h-px bg-slate-700/50"></div>
+
+                            {/* Gameplay */}
+                            <div className="flex items-center justify-between">
+                                <div>
+                                     <label className="text-sm font-bold text-slate-400 uppercase tracking-wider block">
+                                        {lang === 'en' ? 'Skip Summary' : 'サマリースキップ'}
+                                    </label>
+                                    <p className="text-[10px] text-slate-500">
+                                        {lang === 'en' ? 'Auto-proceed after turn ends' : 'ターン終了時の演出を短縮'}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => onChange('skipTurnSummary', !settings.skipTurnSummary)}
+                                    className={`w-12 h-6 rounded-full transition-colors relative ${settings.skipTurnSummary ? 'bg-cyan-600' : 'bg-slate-700'}`}
+                                >
+                                    <div className={`absolute top-1 left-1 bg-white w-4 h-4 rounded-full transition-transform ${settings.skipTurnSummary ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                                </button>
+                            </div>
+
+                        </div>
+                         <div className="bg-slate-900/50 p-4 border-t border-slate-700">
+                            <button onClick={onClose} className="w-full py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors">
+                                {lang === 'en' ? 'Close' : '閉じる'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => {
             if (!data) return <div className="p-4 border rounded text-red-500">Error: No Data</div>;
 
@@ -1745,6 +1867,40 @@
                 total_inflation_combos: 0,
             });
             const [fontSizeLevel, setFontSizeLevel] = useState('medium'); // small, medium, large
+            const [masterVolume, setMasterVolume] = useState(50);
+            const [showSettings, setShowSettings] = useState(false);
+
+            // Settings Management
+            useEffect(() => {
+                try {
+                    const savedSettings = localStorage.getItem('economics_master_settings');
+                    if (savedSettings) {
+                        const parsed = JSON.parse(savedSettings);
+                        if (parsed.lang) setLang(parsed.lang);
+                        if (parsed.fontSizeLevel) setFontSizeLevel(parsed.fontSizeLevel);
+                        if (parsed.skipTurnSummary !== undefined) setSkipTurnSummary(parsed.skipTurnSummary);
+                        if (parsed.isMuted !== undefined) setIsMuted(parsed.isMuted);
+                        if (parsed.masterVolume !== undefined) setMasterVolume(parsed.masterVolume);
+                    }
+                } catch (e) { console.error(e); }
+            }, []);
+
+            useEffect(() => {
+                const settings = { lang, fontSizeLevel, skipTurnSummary, isMuted, masterVolume };
+                localStorage.setItem('economics_master_settings', JSON.stringify(settings));
+            }, [lang, fontSizeLevel, skipTurnSummary, isMuted, masterVolume]);
+
+            useEffect(() => {
+                SoundManager.setVolume(masterVolume / 100);
+            }, [masterVolume]);
+
+            const handleSettingsChange = (key, value) => {
+                if (key === 'lang') setLang(value);
+                if (key === 'fontSizeLevel') setFontSizeLevel(value);
+                if (key === 'skipTurnSummary') setSkipTurnSummary(value);
+                if (key === 'isMuted') setIsMuted(value);
+                if (key === 'volume') setMasterVolume(value);
+            };
 
             useEffect(() => {
                 const root = document.documentElement;
@@ -2846,6 +3002,13 @@
                     {gameState === 'WON' && <Confetti />}
                     {showTurnSummary && <TurnSummaryPanel data={turnSummaryData} onContinue={proceedToNextTurn} lang={lang} />}
                     {showEncyclopedia && <CardEncyclopediaPanel onClose={() => setShowEncyclopedia(false)} lang={lang} discoveredCards={discoveredCards} />}
+                    <SettingsModal
+                        isOpen={showSettings}
+                        onClose={() => setShowSettings(false)}
+                        settings={{ lang, fontSizeLevel, skipTurnSummary, isMuted, volume: masterVolume }}
+                        onChange={handleSettingsChange}
+                        lang={lang}
+                    />
                     <ComboOverlay message={comboMessage} show={!!comboMessage} />
                     <TurnOverlay turn={turn} show={showTurnOverlay} />
                     <CrisisOverlay message={crisisAlert?.message} show={!!crisisAlert} type={crisisAlert?.type} />
@@ -2894,21 +3057,11 @@
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button
-                                        onClick={() => setFontSizeLevel(prev => prev === 'medium' ? 'large' : prev === 'large' ? 'small' : 'medium')}
-                                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors active:scale-95 flex items-center gap-1"
-                                        title={lang === 'en' ? "Adjust Text Size" : "文字サイズ変更"}
+                                        onClick={() => setShowSettings(true)}
+                                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors active:scale-95"
+                                        title={lang === 'en' ? "Settings" : "設定"}
                                     >
-                                        <IconType size={18} />
-                                        <span className="text-xs font-bold w-4 text-center">
-                                            {fontSizeLevel === 'small' ? 'S' : fontSizeLevel === 'large' ? 'L' : 'M'}
-                                        </span>
-                                    </button>
-                                    <button
-                                        onClick={() => setLang(l => l === 'ja' ? 'en' : 'ja')}
-                                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors active:scale-95 flex items-center gap-1"
-                                    >
-                                        <IconGlobe size={18} />
-                                        <span className="text-xs font-bold">{lang === 'ja' ? 'EN' : 'JA'}</span>
+                                        <IconSettings size={18} />
                                     </button>
                                     <button
                                         onClick={() => setIsMuted(!isMuted)}
@@ -3201,6 +3354,13 @@
                                         </button>
 
                                         <div className="text-slate-600 text-sm font-mono">Ver 1.0.0</div>
+
+                                        <button
+                                            onClick={() => setShowSettings(true)}
+                                            className="absolute top-4 right-4 p-3 text-slate-500 hover:text-white hover:bg-slate-800 rounded-full transition-colors"
+                                        >
+                                            <IconSettings size={24} />
+                                        </button>
                                     </div>
                                 </div>
                             )}
