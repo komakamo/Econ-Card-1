@@ -255,7 +255,8 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         let nextPlayerState = { ...player, money: player.money - cost };
         const cardEffect = typeof card?.effect === 'function' ? card.effect : DEFAULT_CARD_EFFECT;
         nextPlayerState = cardEffect(nextPlayerState, enemy);
-        setPlayer(nextPlayerState);
+        const updatedRating = getRatingByDebt(nextPlayerState.debt);
+        setPlayer({ ...nextPlayerState, rating: updatedRating });
 
         let nextEnemyState = enemy;
         let enemyWasTargeted = false;
