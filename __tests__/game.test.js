@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import EconomicCardGame, { SoundManagerInstance as SoundManager } from '../src/Game';
+import EconomicCardGame, { SoundManagerInstance as SoundManager, evaluateGame } from '../src/Game';
 
 // Mocking requestAnimationFrame for Jest
 global.requestAnimationFrame = (callback) => {
@@ -12,6 +12,29 @@ global.cancelAnimationFrame = (id) => {
 };
 
 describe('EconomicCardGame', () => {
+  describe('evaluateGame turn limit', () => {
+    const baseDifficulty = {
+      targetGdp: 500,
+      maxTurns: 3,
+      debtLimit: 999,
+      minimumSupport: 0,
+    };
+
+    const basePlayer = { gdp: 0, debt: 0, support: 50 };
+    const baseEnemy = { gdp: 0, debt: 0, support: 50 };
+
+    test('continues before reaching max turns', () => {
+      const result = evaluateGame({ player: basePlayer, enemy: baseEnemy, difficulty: baseDifficulty, turn: 2 });
+      expect(result.status).toBe('ONGOING');
+    });
+
+    test('ends the game when hitting the maximum turn', () => {
+      const result = evaluateGame({ player: basePlayer, enemy: baseEnemy, difficulty: baseDifficulty, turn: 3 });
+      expect(result.status).toBe('LOSE');
+      expect(result.detail).toBe('Turn: 3 / 3');
+    });
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
   });
