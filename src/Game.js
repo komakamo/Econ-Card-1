@@ -40,7 +40,7 @@ const IconGlobe = ({ size = 24, className = "" }) => <svg/>;
 const UI_TEXT = {
     ja: {
         startGame: "ゲーム開始",
-        yourHand: "Your Hand",
+        yourHand: "手札",
         endTurn: "ターン終了",
         myCountry: "自国 (あなた)",
         rivalCountry: "敵国",
