@@ -361,6 +361,9 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         const cardEffect = typeof card?.effect === 'function' ? card.effect : DEFAULT_CARD_EFFECT;
         nextPlayerState = cardEffect(nextPlayerState, enemy);
 
+        const clampedSupport = Math.max(0, Math.min(100, nextPlayerState.support ?? 0));
+        nextPlayerState = { ...nextPlayerState, support: clampedSupport };
+
         const playerInflationDelta = card.inflationChange || 0;
         const playerInflationBefore = nextPlayerState.inflation ?? 0;
         nextPlayerState = applyInflationChange(nextPlayerState, playerInflationDelta);
