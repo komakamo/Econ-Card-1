@@ -393,7 +393,8 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         }
 
         if (enemyWasTargeted || nextEnemyState !== enemy) {
-            setEnemy({ ...nextEnemyState });
+            const enemyRating = getRatingByDebt(nextEnemyState.debt);
+            setEnemy({ ...nextEnemyState, rating: enemyRating });
             addLog(`${getLoc(card, 'name', lang)} impacted the enemy.`);
         }
 
@@ -519,7 +520,11 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         }
 
         if (enemyChanges) {
-            setEnemy(prev => ({ ...prev, ...enemyChanges }));
+            setEnemy(prev => {
+                const next = { ...prev, ...enemyChanges };
+                const rating = getRatingByDebt(next.debt ?? prev.debt);
+                return { ...next, rating };
+            });
         }
 
         const eventName = getLoc(activeEvent, 'name', lang);
