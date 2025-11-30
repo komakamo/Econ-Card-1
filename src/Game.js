@@ -125,24 +125,6 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
     const debtLimit = difficulty.debtLimit ?? 600;
     const minimumSupport = difficulty.minimumSupport ?? 1;
 
-    if ((player.gdp ?? 0) >= targetGdp) {
-        return {
-            status: 'WIN',
-            reason: 'ターゲットGDPを達成しました',
-            detail: `GDP: ${player.gdp} / ${targetGdp}`,
-            turn,
-        };
-    }
-
-    if ((enemy.gdp ?? 0) >= targetGdp) {
-        return {
-            status: 'LOSE',
-            reason: '敵国が先にターゲットGDPに到達しました',
-            detail: `Enemy GDP: ${enemy.gdp} / ${targetGdp}`,
-            turn,
-        };
-    }
-
     if ((player.debt ?? 0) >= debtLimit) {
         return {
             status: 'LOSE',
@@ -166,6 +148,24 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
             status: 'LOSE',
             reason: 'ターン制限に到達しました',
             detail: `Turn: ${turn} / ${maxTurns}`,
+            turn,
+        };
+    }
+
+    if ((enemy.gdp ?? 0) >= targetGdp) {
+        return {
+            status: 'LOSE',
+            reason: '敵国が先にターゲットGDPに到達しました',
+            detail: `Enemy GDP: ${enemy.gdp} / ${targetGdp}`,
+            turn,
+        };
+    }
+
+    if ((player.gdp ?? 0) >= targetGdp) {
+        return {
+            status: 'WIN',
+            reason: 'ターゲットGDPを達成しました',
+            detail: `GDP: ${player.gdp} / ${targetGdp}`,
             turn,
         };
     }
