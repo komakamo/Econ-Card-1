@@ -226,7 +226,32 @@ const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => {
 };
 
 // --- Main Game Component ---
-function EconomicCardGame({ initialDeck = ALL_CARDS }) {
+const resolveBondRisk = ({ amount, defaultRisk, randomFn = Math.random, state }) => {
+    const rng = typeof randomFn === 'function' ? randomFn : Math.random;
+    let riskLog = '';
+    let riskImpact = {};
+
+    if (rng() < defaultRisk) {
+        const riskRoll = rng();
+        if (riskRoll < 0.34) {
+            const penaltyDebt = Math.max(5, Math.round(amount * 0.2));
+            riskImpact = { debt: (state?.debt || 0) + penaltyDebt };
+            riskLog = ` Default triggered! Debt surged by ${penaltyDebt}.`;
+        } else if (riskRoll < 0.67) {
+            const interestSpike = Math.max(3, Math.round((state?.debt || 0) * 0.01));
+            riskImpact = { interestDue: (state?.interestDue || 0) + interestSpike };
+            riskLog = ` Default scare raised interest costs by ${interestSpike} per turn.`;
+        } else {
+            const supportHit = Math.max(3, Math.round((state?.support ?? 100) * 0.05));
+            riskImpact = { support: Math.max(0, (state?.support ?? 100) - supportHit) };
+            riskLog = ` Investor panic eroded support by ${supportHit}%.`;
+        }
+    }
+
+    return { riskImpact, riskLog };
+};
+
+function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
     const [turn, setTurn] = useState(1);
     const [era, setEra] = useState(ERAS.GROWTH);
     const [gameState, setGameState] = useState('START');
@@ -515,24 +540,12 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
                 interestDue: (prev.interestDue || 0) + interestDelta,
             };
 
-            let riskLog = '';
-            let riskImpact = {};
-            if (Math.random() < defaultRisk) {
-                const riskRoll = Math.random();
-                if (riskRoll < 0.34) {
-                    const penaltyDebt = Math.max(5, Math.round(amount * 0.2));
-                    riskImpact = { debt: (updated.debt || 0) + penaltyDebt };
-                    riskLog = ` Default triggered! Debt surged by ${penaltyDebt}.`;
-                } else if (riskRoll < 0.67) {
-                    const interestSpike = Math.max(3, Math.round(updated.debt * 0.01));
-                    riskImpact = { interestDue: (updated.interestDue || 0) + interestSpike };
-                    riskLog = ` Default scare raised interest costs by ${interestSpike} per turn.`;
-                } else {
-                    const supportHit = Math.max(3, Math.round((prev.support ?? 100) * 0.05));
-                    riskImpact = { support: Math.max(0, (prev.support ?? 100) - supportHit) };
-                    riskLog = ` Investor panic eroded support by ${supportHit}%.`;
-                }
-            }
+            const { riskImpact, riskLog } = resolveBondRisk({
+                amount,
+                defaultRisk,
+                randomFn,
+                state: { debt: updated.debt, interestDue: updated.interestDue, support: prev.support },
+            });
 
             const nextState = { ...updated, ...riskImpact };
             const nextRating = getRatingByDebt(nextState.debt);
@@ -701,4 +714,4 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
 }
 
 export default EconomicCardGame;
-export { SoundManager as SoundManagerInstance, evaluateGame };
+export { SoundManager as SoundManagerInstance, evaluateGame, resolveBondRisk };
