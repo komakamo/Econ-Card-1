@@ -40,6 +40,26 @@ describe('EconomicCardGame', () => {
     });
   });
 
+  describe('evaluateGame priority handling', () => {
+    const difficulty = {
+      targetGdp: 300,
+      maxTurns: 10,
+      debtLimit: 200,
+      minimumSupport: 0,
+    };
+
+    const enemy = { gdp: 0, debt: 0, support: 100 };
+
+    test('applies loss conditions before GDP victory when simultaneous', () => {
+      const player = { gdp: 320, debt: 220, support: 100 };
+      const result = evaluateGame({ player, enemy, difficulty, turn: 5 });
+
+      expect(result.status).toBe('LOSE');
+      expect(result.reason).toBe('国家債務が限界を超えました');
+      expect(result.detail).toBe('Debt: 220 / 200');
+    });
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
   });
