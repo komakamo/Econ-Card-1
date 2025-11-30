@@ -133,8 +133,34 @@ describe('EconomicCardGame', () => {
 
     const playerDebt = parseInt(screen.getByTestId('player-debt').textContent.replace(/[^\d]/g, ''), 10);
     const targetGdp = parseInt(screen.getByTestId('target-gdp').textContent.replace(/[^\d]/g, ''), 10);
-    expect(playerDebt).toBe(120);
+    expect(playerDebt).toBe(170);
     expect(targetGdp).toBe(400);
+  });
+
+  test('applies ideology debt on top of difficulty debt at game start', async () => {
+    render(<EconomicCardGame />);
+
+    const difficultySelect = screen.getByTestId('difficulty-select');
+
+    await act(async () => {
+      fireEvent.change(difficultySelect, { target: { value: 'HARD' } });
+      fireEvent.click(screen.getByText(/START GAME/i));
+    });
+
+    await screen.findByText(/Your Hand/i);
+
+    const playerDebt = parseInt(screen.getByTestId('player-debt').textContent.replace(/[^\d]/g, ''), 10);
+    expect(playerDebt).toBe(170);
+
+    const playerMoneyBeforeTurnEnd = parseInt(screen.getByTestId('player-money').textContent.replace(/[^\d]/g, ''), 10);
+    expect(playerMoneyBeforeTurnEnd).toBe(100);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(/End Turn/i));
+    });
+
+    const playerMoneyAfterTurn = parseInt(screen.getByTestId('player-money').textContent.replace(/[^\d]/g, ''), 10);
+    expect(playerMoneyAfterTurn).toBe(116);
   });
 
   test('shows turn indicator using the difficulty max turn setting', async () => {
@@ -304,14 +330,14 @@ describe('EconomicCardGame', () => {
     });
 
     const updatedDebt = parseInt(screen.getByTestId('player-debt').textContent.replace(/[^\d]/g, ''), 10);
-    expect(updatedDebt).toBe(200);
+    expect(updatedDebt).toBe(250);
 
     await act(async () => {
       fireEvent.click(screen.getByText(/End Turn/i));
     });
 
     const moneyAfterInterest = parseInt(screen.getByTestId('player-money').textContent.replace(/[^\d]/g, ''), 10);
-    expect(moneyAfterInterest).toBe(135);
+    expect(moneyAfterInterest).toBe(132);
   });
 
   test('event playback respects mute state', async () => {

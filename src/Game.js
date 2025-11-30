@@ -256,14 +256,16 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
     const buildInitialPlayerState = (difficulty, ideology) => {
         const baseMoney = ideology.initialStats.money ?? DIFFICULTY_SETTINGS.NORMAL.initialMoney;
         const adjustedMoney = baseMoney + ((difficulty.initialMoney ?? DIFFICULTY_SETTINGS.NORMAL.initialMoney) - DIFFICULTY_SETTINGS.NORMAL.initialMoney);
-        const initialDebt = difficulty.initialDebt ?? 0;
+        const ideologyDebt = ideology.initialStats.debt ?? 0;
+        const difficultyDebt = difficulty.initialDebt ?? 0;
+        const combinedDebt = ideologyDebt + difficultyDebt;
         return {
             money: adjustedMoney,
             gdp: 0,
             inflation: 0,
             support: ideology.initialStats.support || 70,
-            debt: initialDebt,
-            rating: getRatingByDebt(initialDebt),
+            debt: combinedDebt,
+            rating: getRatingByDebt(combinedDebt),
             income: 20,
         };
     };
