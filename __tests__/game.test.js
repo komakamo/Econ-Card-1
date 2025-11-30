@@ -180,7 +180,7 @@ describe('EconomicCardGame', () => {
 
     const turnIndicator = await screen.findByTestId('turn-indicator');
     expect(turnIndicator).toHaveTextContent('Turn: 1 / 35');
-    expect(turnIndicator).toHaveTextContent('(Remaining: 34)');
+    expect(turnIndicator).toHaveTextContent('(Remaining: 35)');
   });
 
   test('playing a card without an effect does not crash the game', async () => {
