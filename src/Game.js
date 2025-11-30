@@ -460,14 +460,33 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
             const targetGdp = currentDifficulty.targetGdp ?? 0;
             const requiredGrowth = Math.max(0, targetGdp - (afterInterest.gdp ?? 0));
             const neededPerTurn = Math.ceil(requiredGrowth / turnsRemaining);
-            const incomeDrivenGrowth = Math.max(5, Math.round(incomeGain * 0.5));
-            const gdpGain = Math.max(incomeDrivenGrowth, neededPerTurn);
+            const spendableFunds = afterInterest.money ?? 0;
+            const investmentEfficiency = 0.6;
+            const growthCapacityFromFunds = Math.round(Math.max(0, spendableFunds) * investmentEfficiency);
+            const incomeSupport = Math.round(incomeGain * 0.25);
+            let gdpGain = Math.min(Math.max(growthCapacityFromFunds + incomeSupport, 0), neededPerTurn);
+            let investmentSpent = 0;
+
+            if (gdpGain > 0) {
+                investmentSpent = Math.min(spendableFunds, Math.ceil(gdpGain / investmentEfficiency));
+            } else if (spendableFunds <= 0) {
+                const contraction = requiredGrowth > 0 ? -Math.max(2, Math.round(neededPerTurn * 0.5)) : 0;
+                gdpGain = incomeGain > 0 ? 0 : contraction;
+            }
+
+            const remainingMoney = Math.max(0, spendableFunds - investmentSpent);
             const nextGdp = (afterInterest.gdp ?? 0) + gdpGain;
 
-            addLog(`Enemy invested for growth: +${gdpGain} GDP (total ${nextGdp}).`);
+            if (gdpGain > 0) {
+                addLog(`Enemy invested ${investmentSpent} money for +${gdpGain} GDP (total ${nextGdp}).`);
+            } else if (gdpGain === 0) {
+                addLog('Enemy lacked spendable funds for growth this turn.');
+            } else {
+                addLog(`Enemy economy contracted: ${gdpGain} GDP (total ${nextGdp}).`);
+            }
             addLog('Enemy completed its turn.');
 
-            return { ...afterInterest, gdp: nextGdp };
+            return { ...afterInterest, money: remainingMoney, gdp: nextGdp };
         });
 
         drawCards(1);
@@ -484,9 +503,30 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
                 debt: (prev.debt || 0) + amount,
                 interestDue: (prev.interestDue || 0) + interestDelta,
             };
-            const nextRating = getRatingByDebt(updated.debt);
-            addLog(`Issued bonds: +${amount} money, +${interestDelta}/turn interest, default risk ${Math.round(defaultRisk * 100)}%`);
-            return { ...updated, rating: nextRating };
+
+            let riskLog = '';
+            let riskImpact = {};
+            if (Math.random() < defaultRisk) {
+                const riskRoll = Math.random();
+                if (riskRoll < 0.34) {
+                    const penaltyDebt = Math.max(5, Math.round(amount * 0.2));
+                    riskImpact = { debt: (updated.debt || 0) + penaltyDebt };
+                    riskLog = ` Default triggered! Debt surged by ${penaltyDebt}.`;
+                } else if (riskRoll < 0.67) {
+                    const interestSpike = Math.max(3, Math.round(updated.debt * 0.01));
+                    riskImpact = { interestDue: (updated.interestDue || 0) + interestSpike };
+                    riskLog = ` Default scare raised interest costs by ${interestSpike} per turn.`;
+                } else {
+                    const supportHit = Math.max(3, Math.round((prev.support ?? 100) * 0.05));
+                    riskImpact = { support: Math.max(0, (prev.support ?? 100) - supportHit) };
+                    riskLog = ` Investor panic eroded support by ${supportHit}%.`;
+                }
+            }
+
+            const nextState = { ...updated, ...riskImpact };
+            const nextRating = getRatingByDebt(nextState.debt);
+            addLog(`Issued bonds: +${amount} money, +${interestDelta}/turn interest, default risk ${Math.round(defaultRisk * 100)}%${riskLog}`);
+            return { ...nextState, rating: nextRating };
         });
     };
 
