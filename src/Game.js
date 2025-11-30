@@ -611,7 +611,8 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
     }, []);
 
     const maxTurns = currentDifficulty.maxTurns ?? 40;
-    const turnsRemaining = Math.max(0, maxTurns - turn);
+    const calculateRemainingTurns = (turnNumber) => Math.max(0, maxTurns - turnNumber + 1);
+    const turnsRemaining = calculateRemainingTurns(turn);
 
     return (
         <div className={`min-h-screen ${era.bgClass}`}>
@@ -678,7 +679,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
                     <div>Result: {evaluation?.status || 'N/A'}</div>
                     <div>Reason: {evaluation?.reason || 'No evaluation'}</div>
                     {evaluation?.detail && <div>Detail: {evaluation.detail}</div>}
-                    <div data-testid="turn-summary">Turns: {evaluation?.turn ?? turn} / {maxTurns} (Remaining: {Math.max(0, maxTurns - (evaluation?.turn ?? turn))})</div>
+                    <div data-testid="turn-summary">Turns: {evaluation?.turn ?? turn} / {maxTurns} (Remaining: {calculateRemainingTurns(evaluation?.turn ?? turn)})</div>
                     <button onClick={() => setGameState('START')}>Back to Start</button>
                     <button onClick={startGame}>Play Again</button>
                 </div>
