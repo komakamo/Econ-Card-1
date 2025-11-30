@@ -152,6 +152,24 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
         };
     }
 
+    if ((enemy.debt ?? 0) >= debtLimit) {
+        return {
+            status: 'WIN',
+            reason: '敵国の債務が限界を超えました',
+            detail: `Debt: ${enemy.debt} / ${debtLimit}`,
+            turn,
+        };
+    }
+
+    if ((enemy.support ?? 100) < minimumSupport) {
+        return {
+            status: 'WIN',
+            reason: '敵国の支持率が底をつきました',
+            detail: `Support: ${enemy.support}%`,
+            turn,
+        };
+    }
+
     if ((enemy.gdp ?? 0) >= targetGdp) {
         return {
             status: 'LOSE',
