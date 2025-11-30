@@ -28,10 +28,15 @@ describe('EconomicCardGame', () => {
       expect(result.status).toBe('ONGOING');
     });
 
-    test('ends the game when hitting the maximum turn', () => {
+    test('keeps the game active on the final allowed turn', () => {
       const result = evaluateGame({ player: basePlayer, enemy: baseEnemy, difficulty: baseDifficulty, turn: 3 });
+      expect(result.status).toBe('ONGOING');
+    });
+
+    test('ends the game only after exceeding the maximum turn', () => {
+      const result = evaluateGame({ player: basePlayer, enemy: baseEnemy, difficulty: baseDifficulty, turn: 4 });
       expect(result.status).toBe('LOSE');
-      expect(result.detail).toBe('Turn: 3 / 3');
+      expect(result.detail).toBe('Turn: 4 / 3');
     });
   });
 

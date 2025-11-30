@@ -161,7 +161,7 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
         };
     }
 
-    if (turn >= maxTurns) {
+    if (turn > maxTurns) {
         return {
             status: 'LOSE',
             reason: 'ターン制限に到達しました',
@@ -272,6 +272,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
     const [player, setPlayer] = useState(() => buildInitialPlayerState(currentDifficulty, IDEOLOGIES[selectedIdeology]));
     const [enemy, setEnemy] = useState(() => ({ money: currentDifficulty.initialMoney, gdp: 0, inflation: 0, support: 70, debt: currentDifficulty.initialDebt, rating: getRatingByDebt(currentDifficulty.initialDebt), income: 20 }));
     const [playerHand, setPlayerHand] = useState([]);
+    const [isResolvingTurn, setIsResolvingTurn] = useState(false);
 
     const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
     const addLog = (msg) => setLogs(prev => [msg, ...prev]);
@@ -424,6 +425,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         if (gameState !== 'PLAYING') return;
 
         clearErrorMessage();
+        setIsResolvingTurn(true);
 
         setPlayer(prev => {
             const driftedInflation = applyInflationDrift(prev.inflation ?? 0, 0);
@@ -493,6 +495,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
 
         drawCards(1);
         setTurn(prev => prev + 1);
+        setIsResolvingTurn(false);
     };
 
     const issueBonds = (amount = 50, interestRate = 0.1, defaultRisk = 0.02) => {
@@ -592,7 +595,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
     };
 
     useEffect(() => {
-        if (gameState !== 'PLAYING') return;
+        if (gameState !== 'PLAYING' || isResolvingTurn) return;
         const result = evaluateGame({ player, enemy, difficulty: currentDifficulty, turn });
         if (result.status && result.status !== 'ONGOING') {
             setEvaluation(result);
@@ -601,7 +604,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
                 SoundManager.playGameEnd();
             }
         }
-    }, [player, enemy, turn, currentDifficulty, gameState]);
+    }, [player, enemy, turn, currentDifficulty, gameState, isResolvingTurn]);
 
     useEffect(() => {
         return () => clearErrorMessage();
