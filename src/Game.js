@@ -91,8 +91,8 @@ const CARD_TYPES = {
   ATTACK: { label: 'DIPLO', baseStyle: '', headerStyle: '', icon: <IconShield/> },
 };
 const DIFFICULTY_SETTINGS = {
-  NORMAL: { id: 'NORMAL', label: 'Normal', label_en: 'Normal', description: 'desc', description_en: 'desc', targetGdp: 300, initialMoney: 100, initialDebt: 0 },
-  HARD: { id: 'HARD', label: 'Hard', label_en: 'Hard', description: 'desc', description_en: 'desc', targetGdp: 400, initialMoney: 80, initialDebt: 120 },
+  NORMAL: { id: 'NORMAL', label: 'Normal', label_en: 'Normal', description: 'desc', description_en: 'desc', targetGdp: 300, initialMoney: 100, initialDebt: 0, maxTurns: 40 },
+  HARD: { id: 'HARD', label: 'Hard', label_en: 'Hard', description: 'desc', description_en: 'desc', targetGdp: 400, initialMoney: 80, initialDebt: 120, maxTurns: 35 },
 };
 
 const getDifficultyById = (id) => DIFFICULTY_SETTINGS[id] || DIFFICULTY_SETTINGS.NORMAL;
@@ -605,6 +605,9 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
         return () => clearErrorMessage();
     }, []);
 
+    const maxTurns = currentDifficulty.maxTurns ?? 40;
+    const turnsRemaining = Math.max(0, maxTurns - turn);
+
     return (
         <div className={`min-h-screen ${era.bgClass}`}>
             <div>
@@ -636,6 +639,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
                     <div>
                         <span data-testid="current-difficulty">Difficulty: {currentDifficulty.label}</span>
                         <span data-testid="target-gdp">Target GDP: <NumberCounter value={currentDifficulty.targetGdp} /></span>
+                        <span data-testid="turn-indicator">Turn: {turn} / {maxTurns} (Remaining: {turnsRemaining})</span>
                     </div>
                     <StatusPanel data={enemy} isEnemy={true} lang={lang} />
                     <StatusPanel data={player} isEnemy={false} lang={lang} />
@@ -669,7 +673,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
                     <div>Result: {evaluation?.status || 'N/A'}</div>
                     <div>Reason: {evaluation?.reason || 'No evaluation'}</div>
                     {evaluation?.detail && <div>Detail: {evaluation.detail}</div>}
-                    <div>Turns: {evaluation?.turn ?? turn}</div>
+                    <div data-testid="turn-summary">Turns: {evaluation?.turn ?? turn} / {maxTurns} (Remaining: {Math.max(0, maxTurns - (evaluation?.turn ?? turn))})</div>
                     <button onClick={() => setGameState('START')}>Back to Start</button>
                     <button onClick={startGame}>Play Again</button>
                 </div>

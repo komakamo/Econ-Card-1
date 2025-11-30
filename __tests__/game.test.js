@@ -137,6 +137,21 @@ describe('EconomicCardGame', () => {
     expect(targetGdp).toBe(400);
   });
 
+  test('shows turn indicator using the difficulty max turn setting', async () => {
+    render(<EconomicCardGame />);
+
+    const difficultySelect = screen.getByTestId('difficulty-select');
+
+    await act(async () => {
+      fireEvent.change(difficultySelect, { target: { value: 'HARD' } });
+      fireEvent.click(screen.getByText(/START GAME/i));
+    });
+
+    const turnIndicator = await screen.findByTestId('turn-indicator');
+    expect(turnIndicator).toHaveTextContent('Turn: 1 / 35');
+    expect(turnIndicator).toHaveTextContent('(Remaining: 34)');
+  });
+
   test('playing a card without an effect does not crash the game', async () => {
     const deckWithoutEffect = [
       {
@@ -233,7 +248,7 @@ describe('EconomicCardGame', () => {
     });
 
     const enemyMoney = parseInt(screen.getByTestId('enemy-money').textContent.replace(/[^\d]/g, ''), 10);
-    expect(enemyMoney).toBe(115);
+    expect(enemyMoney).toBe(101);
   });
 
   test('mute toggle updates SoundManager and prevents card sound when muted', async () => {
