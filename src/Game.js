@@ -495,8 +495,14 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
 
         drawCards(1);
         setTurn(prev => prev + 1);
-        setIsResolvingTurn(false);
     };
+
+    useEffect(() => {
+        if (!isResolvingTurn) return;
+        // Ensure turn resolution completes (player + enemy updates and turn increment)
+        // before allowing win/lose evaluation to run.
+        setIsResolvingTurn(false);
+    }, [player, enemy, turn, isResolvingTurn]);
 
     const issueBonds = (amount = 50, interestRate = 0.1, defaultRisk = 0.02) => {
         if (gameState !== 'PLAYING') return;
