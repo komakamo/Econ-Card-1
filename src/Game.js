@@ -161,7 +161,7 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
         };
     }
 
-    if (turn > maxTurns) {
+    if (turn >= maxTurns) {
         return {
             status: 'LOSE',
             reason: 'ターン制限に到達しました',
@@ -642,4 +642,4 @@ function EconomicCardGame({ initialDeck = ALL_CARDS }) {
 }
 
 export default EconomicCardGame;
-export { SoundManager as SoundManagerInstance };
+export { SoundManager as SoundManagerInstance, evaluateGame };
