@@ -60,6 +60,35 @@ describe('EconomicCardGame', () => {
     });
   });
 
+  describe('evaluateGame enemy loss conditions', () => {
+    const difficulty = {
+      targetGdp: 400,
+      maxTurns: 15,
+      debtLimit: 250,
+      minimumSupport: 25,
+    };
+
+    const player = { gdp: 0, debt: 0, support: 50 };
+
+    test('declares win when enemy debt exceeds limit', () => {
+      const enemy = { gdp: 0, debt: 260, support: 70 };
+      const result = evaluateGame({ player, enemy, difficulty, turn: 7 });
+
+      expect(result.status).toBe('WIN');
+      expect(result.reason).toBe('敵国の債務が限界を超えました');
+      expect(result.detail).toBe('Debt: 260 / 250');
+    });
+
+    test('declares win when enemy support falls below threshold', () => {
+      const enemy = { gdp: 0, debt: 100, support: 20 };
+      const result = evaluateGame({ player, enemy, difficulty, turn: 8 });
+
+      expect(result.status).toBe('WIN');
+      expect(result.reason).toBe('敵国の支持率が底をつきました');
+      expect(result.detail).toBe('Support: 20%');
+    });
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
   });
