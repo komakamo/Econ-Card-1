@@ -176,6 +176,43 @@ describe('EconomicCardGame', () => {
     expect(screen.getByTestId('enemy-money')).toBeInTheDocument();
   });
 
+  test('enemy debt changes update rating and interest calculation', async () => {
+    const debtBomb = {
+      id: 'debt-bomb',
+      name: '負債爆弾',
+      name_en: 'Debt Bomb',
+      cost: 0,
+      type: 'ATTACK',
+      targetEffect: (opp) => ({
+        ...opp,
+        debt: (opp.debt || 0) + 200,
+      }),
+      description: '敵国の債務を急増させる。',
+      description_en: 'Rapidly increases enemy debt.',
+    };
+
+    render(<EconomicCardGame initialDeck={[debtBomb]} />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(/START GAME/i));
+    });
+
+    const cardButton = await screen.findByTestId('card-Debt Bomb');
+
+    await act(async () => {
+      fireEvent.click(cardButton);
+    });
+
+    const endTurnButton = screen.getByText(/End Turn/i);
+
+    await act(async () => {
+      fireEvent.click(endTurnButton);
+    });
+
+    const enemyMoney = parseInt(screen.getByTestId('enemy-money').textContent.replace(/[^\d]/g, ''), 10);
+    expect(enemyMoney).toBe(115);
+  });
+
   test('mute toggle updates SoundManager and prevents card sound when muted', async () => {
     render(<EconomicCardGame />);
 
