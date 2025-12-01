@@ -112,13 +112,6 @@
 
         body {
             background-color: #0f172a;
-            background-image:
-                radial-gradient(circle at 50% 0%, #1e293b 0%, transparent 70%),
-                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
-            background-size: 100% 100%, 40px 40px, 40px 40px;
-            background-attachment: fixed, scroll, scroll;
-            animation: scrollGrid 20s linear infinite;
             color: #e2e8f0;
             min-height: 100vh;
         }
@@ -332,63 +325,146 @@
         // --- Visual Effects ---
         const BackgroundEffects = () => {
             const [particles, setParticles] = useState([]);
+            const [tickers, setTickers] = useState([]);
 
             useEffect(() => {
-                // Initialize particles
-                const symbols = ['¥', '$', '€', '£', '%', '📈', '📉', '▲', '▼'];
-                const initialParticles = Array.from({ length: 25 }).map((_, i) => ({
+                // Initialize particles (Currency & Charts)
+                const symbols = ['¥', '$', '€', '£', '%', 'BTC', '📈', '📉', '▲', '▼'];
+                const colors = ['text-slate-500', 'text-cyan-500', 'text-emerald-500', 'text-amber-500', 'text-rose-500'];
+
+                const initialParticles = Array.from({ length: 40 }).map((_, i) => ({
                     id: i,
                     symbol: symbols[Math.floor(Math.random() * symbols.length)],
                     left: Math.random() * 100, // %
-                    duration: 20 + Math.random() * 30, // s (very slow)
-                    delay: -Math.random() * 50, // s (start immediately at random progress)
-                    size: 14 + Math.random() * 24, // px
-                    opacity: 0.03 + Math.random() * 0.05, // Very subtle
+                    duration: 15 + Math.random() * 20, // s
+                    delay: -Math.random() * 40, // s
+                    size: 10 + Math.random() * 30, // px
+                    opacity: 0.1 + Math.random() * 0.3,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    xOffset: (Math.random() - 0.5) * 50 // Drift
                 }));
                 setParticles(initialParticles);
+
+                // Initialize Ticker Lines (Matrix-like numbers)
+                const tickerCount = 6;
+                const newTickers = Array.from({ length: tickerCount }).map((_, i) => ({
+                    id: i,
+                    left: 10 + (i * (80 / tickerCount)) + (Math.random() * 5),
+                    speed: 10 + Math.random() * 15,
+                    delay: -Math.random() * 20,
+                    opacity: 0.1 + Math.random() * 0.1
+                }));
+                setTickers(newTickers);
+
             }, []);
 
             return (
-                <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-                    {/* Ambient Light Blobs */}
-                    <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] bg-cyan-500/10 rounded-full blur-[100px] animate-pulse-slow mix-blend-screen"></div>
-                    <div className="absolute bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] bg-purple-500/10 rounded-full blur-[100px] animate-pulse-slow mix-blend-screen" style={{ animationDelay: '3s' }}></div>
-                    <div className="absolute top-[40%] left-[20%] w-[30vw] h-[30vw] bg-blue-500/5 rounded-full blur-[80px] animate-pulse-slow mix-blend-screen" style={{ animationDelay: '1.5s' }}></div>
+                <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden bg-slate-900">
+                    {/* 1. Dynamic Gradient Background */}
+                    <div className="absolute inset-0 opacity-40 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-900 to-black"></div>
+                    <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 via-slate-900/50 to-purple-900/20 animate-pulse-slow"></div>
 
-                    {/* Chart Line Decoration */}
-                    <div className="absolute bottom-0 left-0 w-full h-[40vh] opacity-20">
+                    {/* 2. 3D Grid Floor (Retro/Cyber Style) */}
+                    <div className="absolute bottom-[-20%] left-[-50%] w-[200%] h-[80vh] opacity-30"
+                         style={{ transform: 'perspective(500px) rotateX(60deg)' }}>
+                         <div className="w-full h-full bg-[linear-gradient(to_right,rgba(6,182,212,0.3)_1px,transparent_1px),linear-gradient(to_bottom,rgba(6,182,212,0.3)_1px,transparent_1px)] bg-[size:40px_40px] animate-grid-scroll"></div>
+                    </div>
+
+                    {/* 3. Ambient Light Blobs (Enhanced) */}
+                    <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-cyan-500/10 rounded-full blur-[120px] animate-blob mix-blend-screen"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] bg-purple-500/10 rounded-full blur-[120px] animate-blob animation-delay-2000 mix-blend-screen"></div>
+                    <div className="absolute top-[30%] left-[40%] w-[40vw] h-[40vw] bg-blue-500/10 rounded-full blur-[100px] animate-blob animation-delay-4000 mix-blend-screen"></div>
+
+                    {/* 4. Falling Tickers (Matrix-ish) */}
+                    {tickers.map(t => (
+                        <div
+                            key={t.id}
+                            className="absolute top-0 w-8 text-[10px] font-mono leading-none text-cyan-400 break-words text-center opacity-10"
+                            style={{
+                                left: `${t.left}%`,
+                                opacity: t.opacity,
+                                animation: `fall ${t.speed}s linear infinite`,
+                                animationDelay: `${t.delay}s`,
+                                textShadow: '0 0 5px rgba(6,182,212,0.5)'
+                            }}
+                        >
+                            {Array.from({length: 50}).map(() => Math.floor(Math.random()*10)).join('\n')}
+                        </div>
+                    ))}
+
+                    {/* 5. Chart Line Decoration (Animated) */}
+                    <div className="absolute bottom-0 left-0 w-full h-[50vh] opacity-30">
                          <svg className="w-full h-full" viewBox="0 0 1000 200" preserveAspectRatio="none">
-                             <path d="M0,150 Q100,120 200,160 T400,100 T600,140 T800,60 T1000,120 V200 H0 Z" fill="url(#gradChart)" />
                              <defs>
                                  <linearGradient id="gradChart" x1="0%" y1="0%" x2="0%" y2="100%">
-                                     <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.2" />
+                                     <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.4" />
                                      <stop offset="100%" stopColor="#06b6d4" stopOpacity="0" />
                                  </linearGradient>
+                                 <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                                    <feMerge>
+                                        <feMergeNode in="coloredBlur"/>
+                                        <feMergeNode in="SourceGraphic"/>
+                                    </feMerge>
+                                </filter>
                              </defs>
+                             <path d="M0,150 Q100,100 200,140 T400,80 T600,120 T800,40 T1000,100 V200 H0 Z" fill="url(#gradChart)" className="animate-pulse-slow" />
+                             <path d="M0,150 Q100,100 200,140 T400,80 T600,120 T800,40 T1000,100" fill="none" stroke="#22d3ee" strokeWidth="2" filter="url(#glow)" className="animate-dash" strokeDasharray="2000" strokeDashoffset="2000" />
                          </svg>
                     </div>
 
+                    {/* 6. Floating Particles (Symbols) */}
                     {particles.map(p => (
                         <div
                             key={p.id}
-                            className="absolute text-slate-400 select-none font-mono"
+                            className={`absolute select-none font-bold ${p.color}`}
                             style={{
                                 left: `${p.left}%`,
                                 bottom: '-50px',
                                 fontSize: `${p.size}px`,
                                 opacity: p.opacity,
-                                animation: `floatUpBackground ${p.duration}s linear infinite`,
+                                animation: `floatUpComplex ${p.duration}s linear infinite`,
                                 animationDelay: `${p.delay}s`,
-                                transform: 'translateZ(0)', // Hardware accel hint
+                                textShadow: '0 0 10px currentColor',
+                                transform: 'translateZ(0)',
                             }}
                         >
                             {p.symbol}
                         </div>
                     ))}
+
                     <style>{`
-                        @keyframes floatUpBackground {
-                            0% { transform: translateY(0) rotate(0deg); }
-                            100% { transform: translateY(-110vh) rotate(360deg); }
+                        @keyframes floatUpComplex {
+                            0% { transform: translateY(0) rotate(0deg) scale(0.8); opacity: 0; }
+                            10% { opacity: var(--opacity); }
+                            90% { opacity: var(--opacity); }
+                            100% { transform: translateY(-120vh) rotate(360deg) scale(1.2); opacity: 0; }
+                        }
+                        @keyframes gridScroll {
+                            0% { background-position: 0 0; }
+                            100% { background-position: 0 40px; }
+                        }
+                        @keyframes blob {
+                            0% { transform: translate(0px, 0px) scale(1); }
+                            33% { transform: translate(30px, -50px) scale(1.1); }
+                            66% { transform: translate(-20px, 20px) scale(0.9); }
+                            100% { transform: translate(0px, 0px) scale(1); }
+                        }
+                        .animate-blob {
+                            animation: blob 10s infinite;
+                        }
+                        .animate-grid-scroll {
+                            animation: gridScroll 2s linear infinite;
+                        }
+                        @keyframes dash {
+                            to { stroke-dashoffset: 0; }
+                        }
+                        .animate-dash {
+                            animation: dash 5s ease-out forwards infinite;
+                        }
+                        @keyframes fall {
+                            0% { transform: translateY(-10%); }
+                            100% { transform: translateY(110%); }
                         }
                         @keyframes pulseSlow {
                             0%, 100% { transform: scale(1); opacity: 0.5; }
