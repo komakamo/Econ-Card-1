@@ -16,6 +16,7 @@ const SoundManager = {
   playTone: () => {},
   playClick: () => {},
   playError: () => {},
+  playCoin: () => {},
   playSuccess: () => {},
   playCard: () => {},
   playGameEnd: () => {},
@@ -572,6 +573,35 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         });
     };
 
+    const repayDebt = (e) => {
+        if (gameState !== 'PLAYING') return;
+        if (player.money < 50) {
+             SoundManager.playError();
+             addLog(lang === 'en' ? 'Not enough funds to repay debt (Need 50T)' : '国債償還の資金が足りません (必要: 50兆)');
+             return;
+        }
+        if ((player.debt || 0) <= 0) {
+            addLog(lang === 'en' ? 'No debt to repay.' : '償還すべき債務がありません。');
+            return;
+        }
+
+        if (!SoundManager.isMuted) {
+             SoundManager.playCoin();
+        }
+
+        setPlayer(prev => {
+             const updated = {
+                 ...prev,
+                 money: prev.money - 50,
+                 debt: (prev.debt || 0) - 50,
+                 interestDue: Math.max(0, (prev.interestDue || 0) - 5),
+             };
+             const rated = { ...updated, rating: getRatingByDebt(updated.debt) };
+             addLog(lang === 'en' ? 'Repaid Debt: -50 Money, -50 Debt' : '国債償還！資金-50兆 / 債務-50兆');
+             return rated;
+        });
+    };
+
     const getCardProvidedTags = (card) => {
         const tags = [];
         if (Array.isArray(card?.providesTags)) {
@@ -700,6 +730,9 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
                                 {errorMessage}
                             </div>
                         )}
+                        <button onClick={repayDebt} disabled={gameState !== 'PLAYING' || player.money < 50 || (player.debt || 0) <= 0}>
+                            {lang === 'en' ? 'Repay' : '償還'}
+                        </button>
                         <button onClick={endTurn}>{t('endTurn', lang)}</button>
                         <button
                             onClick={() => setActiveEvent({ ...EVENTS[0], instanceId: Math.random() })}
