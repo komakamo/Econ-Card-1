@@ -2458,6 +2458,40 @@
                 });
             };
 
+            const repayDebt = (e) => {
+                if (gameState !== 'PLAYING') return;
+                if (player.money < 50) {
+                     SoundManager.playError();
+                     addLog(lang === 'en' ? 'Not enough funds to repay debt (Need 50T)' : '国債償還の資金が足りません (必要: 50兆)');
+                     return;
+                }
+                if ((player.debt || 0) <= 0) {
+                    addLog(lang === 'en' ? 'No debt to repay.' : '償還すべき債務がありません。');
+                    return;
+                }
+
+                SoundManager.playTone(1200, 'sine', 0.1, 0.1);
+
+                if (e) {
+                    addFloatingText(e.clientX, e.clientY, "-50", "cost");
+                }
+
+                setPlayer(prev => {
+                    const updated = {
+                        ...prev,
+                        money: prev.money - 50,
+                        debt: Math.max(0, (prev.debt ?? 0) - 50),
+                        interestDue: Math.max(0, (prev.interestDue ?? 0) - 5),
+                    };
+                    const rated = applyRatingUpdate(updated, 'あなた');
+                    const msg = lang === 'en'
+                        ? 'YOU: Repaid Debt. -50 Money, -50 Debt.'
+                        : 'あなた: 国債を償還しました。資金-50兆 / 債務-50兆';
+                    addLog(msg);
+                    return rated;
+                });
+            };
+
             const applyEventMultiplier = (prevState, nextState) => {
                 // 1. Event Multiplier (from card events like Technology Boom)
                 const evtMultiplier = activeEvent?.effect?.effectMultiplier || 1;
@@ -3331,6 +3365,14 @@
                                         >
                                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                                             {t('bond', lang)}
+                                        </button>
+                                        <button
+                                            onClick={(e) => repayDebt(e)}
+                                            disabled={gameState !== 'PLAYING' || player.money < 50 || (player.debt || 0) <= 0}
+                                            className="bg-emerald-700/20 text-emerald-500 border border-emerald-900/50 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-700/40 transition-all disabled:opacity-50 flex items-center gap-1.5 active:scale-95"
+                                        >
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            {lang === 'en' ? 'Repay' : '償還'}
                                         </button>
                                         <button
                                             onClick={endTurn}
