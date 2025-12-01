@@ -2198,12 +2198,16 @@
                 if (gameState !== 'PLAYING') return;
 
                 if (player.inflation >= 12) {
+                     const msg = lang === 'en' ? "CRISIS: RIOTS!\n(Inflation > 12%)" : "暴動の危機！\n(インフレ12%突破)";
+
                      // Only trigger if we aren't already showing one?
                      if (!crisisAlert) {
                          SoundManager.playCrisis();
-                         const msg = lang === 'en' ? "CRISIS: RIOTS!\n(Inflation > 12%)" : "暴動の危機！\n(インフレ12%突破)";
                          setCrisisAlert({ message: msg, type: 'danger' });
                          setTimeout(() => setCrisisAlert(null), 3000);
+                     } else if (crisisAlert.message !== msg) {
+                         // Update message if language changed while alert is active
+                         setCrisisAlert(prev => ({ ...prev, message: msg }));
                      }
                 }
             }, [player.inflation, gameState, lang]);
