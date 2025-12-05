@@ -113,6 +113,7 @@ const getRatingInfo = (rating = 'AAA') => RATING_TIERS.find(tier => tier.label =
 const INFLATION_MIN = -5;
 const INFLATION_MAX = 15;
 const clampInflation = (value) => Math.min(INFLATION_MAX, Math.max(INFLATION_MIN, Number(value.toFixed(1))));
+const clampSupport = (value = 0) => Math.max(0, Math.min(100, value));
 
 const calculateInflatedCost = (baseCost, inflationRate = 0) => {
     return Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
@@ -619,6 +620,26 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         }
     }, [activeEvent]);
 
+    const normalizeEventUpdate = (prevState, changes = {}) => {
+        if (!changes) return prevState;
+
+        const { inflationChange, inflation, support, ...rest } = changes;
+        let nextState = { ...prevState, ...rest };
+
+        if (typeof inflationChange === 'number') {
+            nextState = applyInflationChange(nextState, inflationChange);
+        } else if (typeof inflation === 'number') {
+            nextState = { ...nextState, inflation: clampInflation(inflation) };
+        }
+
+        if (typeof support === 'number') {
+            nextState = { ...nextState, support: clampSupport(support) };
+        }
+
+        const rating = getRatingByDebt(nextState.debt ?? prevState.debt);
+        return { ...nextState, rating };
+    };
+
     const resolveActiveEvent = () => {
         if (!activeEvent) return;
 
@@ -627,19 +648,11 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         const { player: playerChanges, enemy: enemyChanges, logMessages } = result || {};
 
         if (playerChanges) {
-            setPlayer(prev => {
-                const next = { ...prev, ...playerChanges };
-                const rating = getRatingByDebt(next.debt ?? prev.debt);
-                return { ...next, rating };
-            });
+            setPlayer(prev => normalizeEventUpdate(prev, playerChanges));
         }
 
         if (enemyChanges) {
-            setEnemy(prev => {
-                const next = { ...prev, ...enemyChanges };
-                const rating = getRatingByDebt(next.debt ?? prev.debt);
-                return { ...next, rating };
-            });
+            setEnemy(prev => normalizeEventUpdate(prev, enemyChanges));
         }
 
         const eventName = getLoc(activeEvent, 'name', lang);
