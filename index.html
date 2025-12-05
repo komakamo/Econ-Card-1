@@ -3427,33 +3427,33 @@
 
                                                 {/* Header */}
                                                 <div className={`px-3 py-2 flex justify-between items-center ${typeInfo.headerStyle}`}>
-                                                    <span className="text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                                                    <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
                                                         {typeInfo.icon} {typeInfo.label}
                                                     </span>
-                                                    <span className="font-mono text-base font-black tracking-tighter">¥{inflatedCost}</span>
+                                                    <span className="font-mono text-lg font-black tracking-tighter">¥{inflatedCost}</span>
                                                 </div>
 
                                                 {/* Body */}
                                                 <div className="p-3 flex flex-col flex-grow bg-slate-900/40 backdrop-blur-sm">
-                                                    <h4 className="font-bold text-slate-200 text-xs mb-1.5 min-h-[2.5em] flex items-center leading-snug">
+                                                    <h4 className="font-bold text-slate-200 text-sm mb-1.5 min-h-[2.5em] flex items-center leading-snug">
                                                         {getLoc(card, 'name', lang)}
                                                     </h4>
 
-                                                    <p className="text-[10px] text-slate-400 mb-3 flex-grow leading-relaxed line-clamp-3">
+                                                    <p className="text-xs text-slate-400 mb-3 flex-grow leading-relaxed line-clamp-3">
                                                         {getLoc(card, 'description', lang)}
                                                     </p>
 
                                                     <div className="space-y-1">
                                                          {/* Cost Info */}
                                                         {inflatedCost !== card.cost && (
-                                                            <div className="text-[9px] text-amber-500 bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-900/50 flex items-center gap-1 w-max">
+                                                            <div className="text-[10px] text-amber-500 bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-900/50 flex items-center gap-1 w-max">
                                                                 <IconAlertCircle size={8} />
                                                                 {t('cost', lang)}: {card.cost}→{inflatedCost}
                                                             </div>
                                                         )}
 
                                                         {/* Success Rate Info (Only if risky or varied) */}
-                                                        <div className={`text-[9px] px-1.5 py-0.5 rounded border flex items-center gap-1 w-max ${
+                                                        <div className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 w-max ${
                                                             isRisky
                                                                 ? successRate < 70 ? 'text-red-400 bg-red-950/30 border-red-900/50' : 'text-orange-400 bg-orange-950/30 border-orange-900/50'
                                                                 : 'text-emerald-400 bg-emerald-950/30 border-emerald-900/50'
@@ -3466,12 +3466,12 @@
                                                         {(comboReadyTags.length > 0 || providesTags.length > 0) && (
                                                             <div className="flex flex-wrap gap-1 mt-auto pt-2">
                                                                 {comboReadyTags.map(tag => (
-                                                                     <span key={tag} className="bg-gradient-to-r from-amber-500/20 to-rose-500/20 text-amber-200 border border-amber-500/50 px-2 py-0.5 rounded-full text-[9px] font-black tracking-wide shadow-[0_0_10px_rgba(245,158,11,0.2)] animate-pulse">
+                                                                     <span key={tag} className="bg-gradient-to-r from-amber-500/20 to-rose-500/20 text-amber-200 border border-amber-500/50 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide shadow-[0_0_10px_rgba(245,158,11,0.2)] animate-pulse">
                                                                         ★ COMBO: {tag}
                                                                      </span>
                                                                 ))}
                                                                 {providesTags.map(tag => (
-                                                                     <span key={tag} className="bg-slate-800/80 text-cyan-200/80 border border-cyan-800/50 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide">
+                                                                     <span key={tag} className="bg-slate-800/80 text-cyan-200/80 border border-cyan-800/50 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide">
                                                                         #{tag}
                                                                      </span>
                                                                 ))}
