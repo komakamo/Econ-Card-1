@@ -3381,12 +3381,23 @@
                                         <button
                                             onClick={endTurn}
                                             disabled={gameState !== 'PLAYING'}
-                                            className="bg-cyan-600 text-white px-5 py-1.5 rounded-lg text-xs font-bold hover:bg-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20 transition-all disabled:opacity-50 flex items-center gap-2 active:scale-95"
+                                        className="hidden md:flex bg-cyan-600 text-white px-5 py-1.5 rounded-lg text-xs font-bold hover:bg-cyan-500 hover:shadow-lg hover:shadow-cyan-500/20 transition-all disabled:opacity-50 items-center gap-2 active:scale-95"
                                         >
                                             {t('endTurn', lang)} <IconArrowRight size={14} />
                                         </button>
                                     </div>
                                 </div>
+
+                            {/* Mobile Floating End Turn Button */}
+                            <div className="md:hidden fixed bottom-6 right-6 z-[90]">
+                                <button
+                                    onClick={endTurn}
+                                    disabled={gameState !== 'PLAYING'}
+                                    className="bg-cyan-600 text-white px-6 py-4 rounded-full shadow-lg shadow-cyan-500/30 flex items-center gap-2 font-bold text-sm hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
+                                >
+                                    {t('endTurn', lang)} <IconArrowRight size={16} />
+                                </button>
+                            </div>
 
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                                     {playerHand.map((card) => {
