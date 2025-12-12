@@ -576,14 +576,18 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
 
     const repayDebt = (e) => {
         if (gameState !== 'PLAYING') return;
-        if (player.money < 50) {
-             SoundManager.playError();
-             addLog(lang === 'en' ? 'Not enough funds to repay debt (Need 50T)' : '国債償還の資金が足りません (必要: 50兆)');
-             return;
-        }
-        if ((player.debt || 0) <= 0) {
+
+        const currentDebt = player.debt || 0;
+        if (currentDebt <= 0) {
             addLog(lang === 'en' ? 'No debt to repay.' : '償還すべき債務がありません。');
             return;
+        }
+
+        const repaymentAmount = Math.min(currentDebt, 50);
+        if (player.money < repaymentAmount) {
+             SoundManager.playError();
+             addLog(lang === 'en' ? `Not enough funds to repay debt (Need ${repaymentAmount}T)` : `国債償還の資金が足りません (必要: ${repaymentAmount}兆)`);
+             return;
         }
 
         if (!SoundManager.isMuted) {
@@ -591,14 +595,17 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         }
 
         setPlayer(prev => {
+             const adjustedRepayment = Math.min(prev.debt || 0, 50);
+             const interestReduction = (5 * adjustedRepayment) / 50;
+             const updatedDebt = Math.max(0, (prev.debt || 0) - adjustedRepayment);
              const updated = {
                  ...prev,
-                 money: prev.money - 50,
-                 debt: (prev.debt || 0) - 50,
-                 interestDue: Math.max(0, (prev.interestDue || 0) - 5),
+                 money: prev.money - adjustedRepayment,
+                 debt: updatedDebt,
+                 interestDue: Math.max(0, (prev.interestDue || 0) - interestReduction),
              };
              const rated = { ...updated, rating: getRatingByDebt(updated.debt) };
-             addLog(lang === 'en' ? 'Repaid Debt: -50 Money, -50 Debt' : '国債償還！資金-50兆 / 債務-50兆');
+             addLog(lang === 'en' ? `Repaid Debt: -${adjustedRepayment} Money, -${adjustedRepayment} Debt` : `国債償還！資金-${adjustedRepayment}兆 / 債務-${adjustedRepayment}兆`);
              return rated;
         });
     };
@@ -743,7 +750,10 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
                                 {errorMessage}
                             </div>
                         )}
-                        <button onClick={repayDebt} disabled={gameState !== 'PLAYING' || player.money < 50 || (player.debt || 0) <= 0}>
+                        <button
+                            onClick={repayDebt}
+                            disabled={gameState !== 'PLAYING' || Math.min(player.debt || 0, 50) <= 0 || player.money < Math.min(player.debt || 0, 50)}
+                        >
                             {lang === 'en' ? 'Repay' : '償還'}
                         </button>
                         <button onClick={endTurn}>{t('endTurn', lang)}</button>
