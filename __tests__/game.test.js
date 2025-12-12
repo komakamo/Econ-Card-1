@@ -33,6 +33,15 @@ describe('EconomicCardGame', () => {
       expect(result.status).toBe('ONGOING');
     });
 
+    test('awards victory when reaching target GDP on the last allowed turn', () => {
+      const player = { ...basePlayer, gdp: 520 };
+      const result = evaluateGame({ player, enemy: baseEnemy, difficulty: baseDifficulty, turn: 3 });
+
+      expect(result.status).toBe('WIN');
+      expect(result.reason).toBe('ターゲットGDPを達成しました');
+      expect(result.detail).toBe('GDP: 520 / 500');
+    });
+
     test('ends the game only after exceeding the maximum turn', () => {
       const result = evaluateGame({ player: basePlayer, enemy: baseEnemy, difficulty: baseDifficulty, turn: 4 });
       expect(result.status).toBe('LOSE');
