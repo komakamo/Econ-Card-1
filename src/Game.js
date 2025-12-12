@@ -358,7 +358,6 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         setShake({ player: false, enemy: false });
         setLastPlayedCard(null);
         clearErrorMessage();
-        setPlayerHand([]);
         setDiscardPile([]);
         setGameDeck(baseDeck);
         setLogs([]);
@@ -367,10 +366,11 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         setPlayer(initialPlayerState);
         setEnemy({ money: difficulty.initialMoney, income: 20, gdp: 0, inflation: 0, support: 70, debt: initialDebt, rating: getRatingByDebt(initialDebt) });
         setGameState('PLAYING');
-        drawCards(3, baseDeck, []);
+        drawCards(3, baseDeck, [], { replaceHand: true });
     };
 
-    const drawCards = (count, sourceDeck = null, sourceDiscard = null) => {
+    const drawCards = (count, sourceDeck = null, sourceDiscard = null, options = {}) => {
+        const { replaceHand = false } = options;
         let deck = sourceDeck ? [...sourceDeck] : [...gameDeck];
         let discarded = sourceDiscard ? [...sourceDiscard] : [...discardPile];
         const drawnCards = [];
@@ -385,7 +385,9 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
                 drawnCards.push({ ...card, uniqueId: Math.random() });
             }
         }
-        if (drawnCards.length > 0) {
+        if (replaceHand) {
+            setPlayerHand(drawnCards);
+        } else if (drawnCards.length > 0) {
             setPlayerHand(prev => [...prev, ...drawnCards]);
         }
         setGameDeck(deck);
@@ -585,13 +587,15 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
 
         const repaymentAmount = Math.min(currentDebt, 50);
         if (player.money < repaymentAmount) {
-             SoundManager.playError();
-             addLog(lang === 'en' ? `Not enough funds to repay debt (Need ${repaymentAmount}T)` : `国債償還の資金が足りません (必要: ${repaymentAmount}兆)`);
-             return;
+            if (!SoundManager.isMuted && typeof SoundManager.playError === 'function') {
+                SoundManager.playError();
+            }
+            addLog(lang === 'en' ? `Not enough funds to repay debt (Need ${repaymentAmount}T)` : `国債償還の資金が足りません (必要: ${repaymentAmount}兆)`);
+            return;
         }
 
         if (!SoundManager.isMuted) {
-             SoundManager.playCoin();
+            SoundManager.playCoin();
         }
 
         setPlayer(prev => {

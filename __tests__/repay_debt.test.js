@@ -14,16 +14,15 @@ global.cancelAnimationFrame = (id) => {
 // Mock SoundManager
 jest.mock('../src/Game', () => {
     const originalModule = jest.requireActual('../src/Game');
+    const soundManager = originalModule.SoundManagerInstance;
+    soundManager.playClick = jest.fn();
+    soundManager.playError = jest.fn();
+    soundManager.playCoin = jest.fn();
+    soundManager.playCard = jest.fn();
     return {
         __esModule: true,
         ...originalModule,
-        SoundManagerInstance: {
-            playClick: jest.fn(),
-            playError: jest.fn(),
-            playCoin: jest.fn(),
-            playCard: jest.fn(),
-            isMuted: false,
-        },
+        SoundManagerInstance: soundManager,
     };
 });
 
@@ -110,5 +109,34 @@ describe('EconomicCardGame Repay Debt', () => {
 
         // Button should now be disabled because debt is 0.
         expect(repayButton).toBeDisabled();
+    });
+
+    test('Muted players do not hear error sound when repayment fails', async () => {
+        SoundManager.playError.mockClear();
+
+        render(<EconomicCardGame />);
+
+        await act(async () => {
+            fireEvent.click(screen.getByTestId('mute-toggle'));
+            fireEvent.change(screen.getByTestId('difficulty-select'), { target: { value: 'HARD' } });
+            fireEvent.click(screen.getByText(/START GAME/i));
+        });
+
+        const repayButton = await screen.findByText(/Repay|償還/i);
+
+        await act(async () => {
+            fireEvent.click(repayButton);
+        });
+
+        await act(async () => {
+            fireEvent.click(repayButton);
+        });
+
+        await act(async () => {
+            repayButton.disabled = false;
+            fireEvent.click(repayButton);
+        });
+
+        expect(SoundManager.playError).not.toHaveBeenCalled();
     });
 });
