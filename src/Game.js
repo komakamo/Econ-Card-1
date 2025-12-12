@@ -680,7 +680,14 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
     const [playerHand, setPlayerHand] = useState([]);
     const [isResolvingTurn, setIsResolvingTurn] = useState(false);
 
-    const shuffleArray = (arr) => [...arr].sort(() => Math.random() - 0.5);
+    const shuffleArray = (arr) => {
+        const result = [...arr];
+        for (let i = result.length - 1; i > 0; i--) {
+            const j = Math.floor(randomFn() * (i + 1));
+            [result[i], result[j]] = [result[j], result[i]];
+        }
+        return result;
+    };
     const addLog = (msg) => setLogs(prev => [msg, ...prev]);
 
     const clearErrorMessage = () => {
