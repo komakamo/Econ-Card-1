@@ -264,6 +264,78 @@ const EVENTS = [{
         player: { money: (player.money || 0) + 40, debt: (player.debt || 0) + 30 },
         logMessages: 'Fiscal stimulus applied: +40 money, +30 debt.',
     }),
+}, {
+    id: 2,
+    name: '景気後退',
+    name_en: 'Recession',
+    description: '需要減退で成長が鈍化し、支持率が下落する。',
+    description_en: 'Demand collapses, dragging growth and public support.',
+    effect: ({ player, enemy }) => {
+        const playerGdpLoss = Math.max(5, Math.round((player.gdp || 0) * 0.15));
+        const enemyGdpLoss = Math.max(5, Math.round((enemy.gdp || 0) * 0.12));
+        return {
+            player: { gdp: Math.max(0, (player.gdp || 0) - playerGdpLoss), support: (player.support || 0) - 6 },
+            enemy: { gdp: Math.max(0, (enemy.gdp || 0) - enemyGdpLoss), support: (enemy.support || 0) - 4 },
+            logMessages: [
+                `Recession hit: Player GDP -${playerGdpLoss}, support -6%.`,
+                `Enemy GDP -${enemyGdpLoss}, support -4%.`,
+            ],
+        };
+    },
+}, {
+    id: 3,
+    name: '資源ブーム',
+    name_en: 'Commodity Boom',
+    description: '資源価格の高騰で税収が増え、インフレ圧力も高まる。',
+    description_en: 'Soaring commodity prices boost revenue but fuel inflation.',
+    effect: ({ player, enemy }) => {
+        const playerWindfall = 35;
+        const enemyWindfall = 20;
+        return {
+            player: { money: (player.money || 0) + playerWindfall, inflationChange: 0.6 },
+            enemy: { money: (enemy.money || 0) + enemyWindfall, inflationChange: 0.4 },
+            logMessages: [
+                `Commodity boom delivered +${playerWindfall} money and lifted inflation for you.`,
+                `Rival gained +${enemyWindfall} money amid rising prices.`,
+            ],
+        };
+    },
+}, {
+    id: 4,
+    name: '政局不安',
+    name_en: 'Political Crisis',
+    description: '政府の混乱で支持率が急落し、借入コストも跳ね上がる。',
+    description_en: 'Government turmoil sinks approval and spikes borrowing costs.',
+    effect: ({ player, enemy }) => {
+        const supportHit = 10;
+        const debtShock = Math.max(8, Math.round((player.debt || 0) * 0.08));
+        return {
+            player: { support: (player.support || 0) - supportHit, debt: (player.debt || 0) + debtShock, interestDue: (player.interestDue || 0) + 3 },
+            enemy: { support: (enemy.support || 0) + 2 },
+            logMessages: [
+                `Political crisis: -${supportHit}% support, +${debtShock} debt, interest costs rise.`,
+                'Rival capitalizes on your chaos with a small support bump.',
+            ],
+        };
+    },
+}, {
+    id: 5,
+    name: '技術革新',
+    name_en: 'Tech Breakthrough',
+    description: '生産性が向上し、経済に新たな追い風が吹く。',
+    description_en: 'Productivity leaps forward, invigorating the economy.',
+    effect: ({ player, enemy }) => {
+        const playerGrowth = 18;
+        const enemyGrowth = 12;
+        return {
+            player: { gdp: (player.gdp || 0) + playerGrowth, support: (player.support || 0) + 5, inflationChange: 0.2 },
+            enemy: { gdp: (enemy.gdp || 0) + enemyGrowth },
+            logMessages: [
+                `Tech breakthrough: +${playerGrowth} GDP, +5% support, slight inflation uptick.`,
+                `Rival economy follows with +${enemyGrowth} GDP.`,
+            ],
+        };
+    },
 }];
 const ERAS = { GROWTH: { id: 'GROWTH', name: 'Growth', name_en: 'Growth', bgClass: '' }, STAGNATION: { id: 'STAGNATION' }, IT_REV: { id: 'IT_REV' } };
 const IDEOLOGIES = {
@@ -553,6 +625,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
     const [gameState, setGameState] = useState('START');
     const [logs, setLogs] = useState([]);
     const [activeEvent, setActiveEvent] = useState(null);
+    const [eventQueue, setEventQueue] = useState([]);
     const [lastTags, setLastTags] = useState([]);
     const [isMuted, setIsMuted] = useState(false);
     const [lastPlayedCard, setLastPlayedCard] = useState(null);
@@ -638,6 +711,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         setGameDeck(baseDeck);
         setLogs([]);
         setActiveEvent(null);
+        setEventQueue([]);
         setCurrentDifficulty(difficulty);
         setPlayer(initialPlayerState);
         setEnemy({ money: difficulty.initialMoney, income: 20, gdp: 0, inflation: 0, support: 70, debt: initialDebt, rating: getRatingByDebt(initialDebt) });
@@ -838,6 +912,20 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
 
         drawCards(1);
         setTurn(prev => prev + 1);
+
+        if (randomFn() < 0.35) {
+            const randomIndex = Math.floor(randomFn() * EVENTS.length);
+            enqueueEvent(EVENTS[randomIndex]);
+        }
+    };
+
+    const triggerRandomEvent = () => {
+        const randomIndex = Math.floor(randomFn() * EVENTS.length);
+        const instance = enqueueEvent(EVENTS[randomIndex]);
+        if (activeEvent && !isMuted && typeof SoundManager.playCrisis === 'function') {
+            SoundManager.playCrisis();
+            addLog(`Event alert: ${getLoc(instance, 'name', lang)} queued.`);
+        }
     };
 
     useEffect(() => {
@@ -926,6 +1014,21 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
             SoundManager.playCrisis();
         }
     }, [activeEvent]);
+
+    const enqueueEvent = (eventTemplate) => {
+        const instance = eventTemplate?.instanceId ? eventTemplate : { ...eventTemplate, instanceId: Math.random() };
+        setEventQueue(prev => [...prev, instance]);
+        return instance;
+    };
+
+    useEffect(() => {
+        if (!activeEvent && eventQueue.length > 0) {
+            const [nextEvent, ...rest] = eventQueue;
+            setEventQueue(rest);
+            setActiveEvent(nextEvent);
+            addLog(`New event queued: ${getLoc(nextEvent, 'name', lang)}`);
+        }
+    }, [activeEvent, eventQueue, lang]);
 
     const normalizeEventUpdate = (prevState, changes = {}) => {
         if (!changes) return prevState;
@@ -1058,7 +1161,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
                         </button>
                         <button onClick={endTurn}>{t('endTurn', lang)}</button>
                         <button
-                            onClick={() => setActiveEvent({ ...EVENTS[0], instanceId: Math.random() })}
+                            onClick={triggerRandomEvent}
                             data-testid="trigger-event"
                         >
                             Trigger Event
