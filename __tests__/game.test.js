@@ -110,7 +110,7 @@ describe('EconomicCardGame', () => {
     expect(yourHand).toBeInTheDocument();
 
     // Check that there is at least one card in the hand
-    const card = await screen.findByTestId('card-Test Card');
+    const card = await screen.findByTestId('card-Infrastructure Stimulus');
     expect(card).toBeInTheDocument();
   });
 
@@ -130,7 +130,7 @@ describe('EconomicCardGame', () => {
     const initialMoney = parseInt(initialMoneyElement.textContent.replace('¥', ''));
 
     // Find the first card and play it
-    const cardButton = await screen.findByTestId('card-Test Card');
+    const cardButton = await screen.findByTestId('card-Infrastructure Stimulus');
 
     await act(async () => {
       fireEvent.click(cardButton);
@@ -153,7 +153,7 @@ describe('EconomicCardGame', () => {
       fireEvent.click(screen.getByText(/START GAME/i));
     });
 
-    const englishCard = await screen.findByTestId('card-Test Card');
+    const englishCard = await screen.findByTestId('card-Infrastructure Stimulus');
     expect(englishCard).toBeInTheDocument();
 
     // Switch to Japanese and ensure localized text is used
@@ -161,8 +161,57 @@ describe('EconomicCardGame', () => {
       fireEvent.click(screen.getByTestId('lang-ja'));
     });
 
-    const japaneseCard = await screen.findByTestId('card-テストカード');
+    const japaneseCard = await screen.findByTestId('card-社会資本投資');
     expect(japaneseCard).toBeInTheDocument();
+  });
+
+  test('playing Infrastructure Stimulus updates GDP/debt and logs the change', async () => {
+    render(<EconomicCardGame />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(/START GAME/i));
+    });
+
+    const cardButton = await screen.findByTestId('card-Infrastructure Stimulus');
+
+    await act(async () => {
+      fireEvent.click(cardButton);
+    });
+
+    const playerGdp = parseInt(screen.getByTestId('player-gdp').textContent.replace(/[^\d]/g, ''), 10);
+    const playerDebt = parseInt(screen.getByTestId('player-debt').textContent.replace(/[^\d]/g, ''), 10);
+    const support = parseInt(screen.getByTestId('player-support').textContent.replace(/[^\d]/g, ''), 10);
+
+    expect(playerGdp).toBe(25);
+    expect(playerDebt).toBe(65);
+    expect(support).toBe(73);
+
+    const logPanel = screen.getByTestId('log-panel');
+    expect(logPanel).toHaveTextContent(/Infrastructure Stimulus executed/i);
+  });
+
+  test('Cyber Sanctions impacts enemy economy and support', async () => {
+    render(<EconomicCardGame />);
+
+    await act(async () => {
+      fireEvent.click(screen.getByText(/START GAME/i));
+    });
+
+    const cardButton = await screen.findByTestId('card-Cyber Sanctions');
+
+    await act(async () => {
+      fireEvent.click(cardButton);
+    });
+
+    const enemyMoney = parseInt(screen.getByTestId('enemy-money').textContent.replace(/[^\d]/g, ''), 10);
+    const enemyGdp = parseInt(screen.getByTestId('enemy-gdp').textContent.replace(/[^\d]/g, ''), 10);
+    const enemySupport = parseInt(screen.getByTestId('enemy-support').textContent.replace(/[^\d]/g, ''), 10);
+    const playerSupport = parseInt(screen.getByTestId('player-support').textContent.replace(/[^\d]/g, ''), 10);
+
+    expect(enemyMoney).toBe(90);
+    expect(enemyGdp).toBe(0);
+    expect(enemySupport).toBe(62);
+    expect(playerSupport).toBe(72);
   });
 
   test('recalculates deck and finances when changing difficulty', async () => {
@@ -347,7 +396,7 @@ describe('EconomicCardGame', () => {
 
     expect(SoundManager.isMuted).toBe(true);
 
-    const cardButton = await screen.findByTestId('card-Test Card');
+    const cardButton = await screen.findByTestId('card-Infrastructure Stimulus');
 
     await act(async () => {
       fireEvent.click(cardButton);
