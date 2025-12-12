@@ -512,6 +512,7 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
 
     const playerReachedTarget = (player.gdp ?? 0) >= targetGdp;
     const enemyReachedTarget = (enemy.gdp ?? 0) >= targetGdp;
+    const hasExceededTurnLimit = turn > maxTurns;
 
     if (playerReachedTarget && enemyReachedTarget) {
         return {
@@ -540,7 +541,7 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
         };
     }
 
-    if (turn > maxTurns) {
+    if (hasExceededTurnLimit) {
         return {
             status: 'LOSE',
             reason: '最大ターン数に到達しました',

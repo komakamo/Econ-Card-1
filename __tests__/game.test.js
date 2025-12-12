@@ -42,6 +42,14 @@ describe('EconomicCardGame', () => {
       expect(result.detail).toBe('GDP: 520 / 500');
     });
 
+    test('still awards GDP victory before applying the turn-limit loss', () => {
+      const player = { ...basePlayer, gdp: 520 };
+      const result = evaluateGame({ player, enemy: baseEnemy, difficulty: baseDifficulty, turn: 4 });
+
+      expect(result.status).toBe('WIN');
+      expect(result.reason).toBe('ターゲットGDPを達成しました');
+    });
+
     test('ends the game only after exceeding the maximum turn', () => {
       const result = evaluateGame({ player: basePlayer, enemy: baseEnemy, difficulty: baseDifficulty, turn: 4 });
       expect(result.status).toBe('LOSE');
