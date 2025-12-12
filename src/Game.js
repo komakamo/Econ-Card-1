@@ -492,15 +492,6 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
         };
     }
 
-    if (turn >= maxTurns) {
-        return {
-            status: 'LOSE',
-            reason: '最大ターン数に到達しました',
-            detail: `Turn: ${turn} / ${maxTurns}`,
-            turn,
-        };
-    }
-
     if ((enemy.debt ?? 0) >= debtLimit) {
         return {
             status: 'WIN',
@@ -545,6 +536,15 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
             status: 'WIN',
             reason: 'ターゲットGDPを達成しました',
             detail: `GDP: ${player.gdp} / ${targetGdp}`,
+            turn,
+        };
+    }
+
+    if (turn > maxTurns) {
+        return {
+            status: 'LOSE',
+            reason: '最大ターン数に到達しました',
+            detail: `Turn: ${turn} / ${maxTurns}`,
             turn,
         };
     }
