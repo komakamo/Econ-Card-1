@@ -540,7 +540,9 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
         };
     }
 
-    if (turn > maxTurns) {
+    const exceededTurnLimit = Number.isFinite(turn) && turn > maxTurns;
+
+    if (exceededTurnLimit) {
         return {
             status: 'LOSE',
             reason: '最大ターン数に到達しました',

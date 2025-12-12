@@ -30,7 +30,7 @@ describe('EconomicCardGame', () => {
 
     test('keeps the game active on the final allowed turn', () => {
       const result = evaluateGame({ player: basePlayer, enemy: baseEnemy, difficulty: baseDifficulty, turn: 3 });
-      expect(result.status).toBe('ONGOING');
+      expect(result).toEqual({ status: 'ONGOING' });
     });
 
     test('awards victory when reaching target GDP on the last allowed turn', () => {
