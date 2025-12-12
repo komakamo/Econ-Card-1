@@ -270,12 +270,96 @@ const IDEOLOGIES = {
   KEYNESIAN: { id: 'KEYNESIAN', name: 'Keynesian', name_en: 'Keynesian', label: 'Keynesian', label_en: 'Keynesian', description: 'desc', description_en: 'desc', features: [], features_en: [], initialStats: { support: 70, debt: 50, money: 120 }, deckWeights: {1: 1}, rankCriteria: {} },
 };
 const DEFAULT_CARD_EFFECT = (state) => state;
+const applyStateChange = (prevState, changes = {}) => {
+  const { inflationChange, inflation, support, ...rest } = changes || {};
+  let nextState = { ...prevState, ...rest };
+
+  if (typeof inflationChange === 'number') {
+    nextState = applyInflationChange(nextState, inflationChange);
+  } else if (typeof inflation === 'number') {
+    nextState = { ...nextState, inflation: clampInflation(inflation) };
+  }
+
+  if (typeof support === 'number') {
+    nextState = { ...nextState, support: clampSupport(support) };
+  }
+
+  return nextState;
+};
 const withDefaultEffect = (card) => ({ ...card, effect: typeof card?.effect === 'function' ? card.effect : DEFAULT_CARD_EFFECT });
 
 const ALL_CARDS = [
-  { id: 1, name: 'テストカード', name_en: 'Test Card', cost: 10, type: 'PRODUCTION', description: 'desc', description_en: 'desc', combosWith: [] },
-  { id: 2, name: '資源開発', name_en: 'Resource Development', cost: 8, type: 'PRODUCTION', description: 'desc', description_en: 'desc', combosWith: [] },
-  { id: 3, name: '教育投資', name_en: 'Education Investment', cost: 12, type: 'POLICY', description: 'desc', description_en: 'desc', combosWith: [] },
+  {
+    id: 1,
+    name: '社会資本投資',
+    name_en: 'Infrastructure Stimulus',
+    cost: 10,
+    type: 'PRODUCTION',
+    description: '公共事業でGDPを押し上げるが、国債発行が増える。',
+    description_en: 'Public works lift GDP but require new bond issuance.',
+    effect: (state) => {
+      const gdpGain = 25;
+      const debtRise = 15;
+      const supportGain = 3;
+      return {
+        player: {
+          gdp: (state.gdp || 0) + gdpGain,
+          debt: (state.debt || 0) + debtRise,
+          support: (state.support || 0) + supportGain,
+        },
+        logMessages: `Infrastructure Stimulus executed: +${gdpGain} GDP, +${supportGain}% support, +${debtRise} debt.`,
+      };
+    },
+    combosWith: [],
+  },
+  {
+    id: 2,
+    name: '緊縮財政',
+    name_en: 'Austerity Drive',
+    cost: 8,
+    type: 'POLICY',
+    description: '歳出削減で債務を抑えるが、支持率が低下し景気も冷え込む。',
+    description_en: 'Cut spending to slow debt growth at the cost of popularity and momentum.',
+    effect: (state) => {
+      const debtCut = Math.min(25, state.debt || 0);
+      const supportHit = 8;
+      const gdpDrag = 5;
+      return {
+        player: {
+          debt: Math.max(0, (state.debt || 0) - debtCut),
+          support: (state.support || 0) - supportHit,
+          gdp: Math.max(0, (state.gdp || 0) - gdpDrag),
+          inflationChange: -0.5,
+        },
+        logMessages: `Austerity tightened the budget: -${debtCut} debt, -${supportHit}% support, -${gdpDrag} GDP, inflation cooled slightly.`,
+      };
+    },
+    combosWith: [],
+  },
+  {
+    id: 3,
+    name: 'サイバー制裁',
+    name_en: 'Cyber Sanctions',
+    cost: 9,
+    type: 'ATTACK',
+    description: '敵国の金融網を狙い、資金と支持を削ぐ。',
+    description_en: 'Disrupt rival financial networks to sap funds and morale.',
+    effect: (state, opponent) => {
+      const enemyGdpHit = 15;
+      const enemyMoneyHit = 10;
+      const enemySupportHit = 8;
+      return {
+        player: { support: (state.support || 0) + 2 },
+        enemy: {
+          gdp: Math.max(0, (opponent?.gdp || 0) - enemyGdpHit),
+          money: Math.max(0, (opponent?.money || 0) - enemyMoneyHit),
+          support: clampSupport((opponent?.support || 0) - enemySupportHit),
+        },
+        logMessages: `Cyber Sanctions drained enemy resources: -${enemyMoneyHit} money, -${enemyGdpHit} GDP, -${enemySupportHit}% support.`,
+      };
+    },
+    combosWith: [],
+  },
 ].map(withDefaultEffect);
 const CARD_TYPES = {
   PRODUCTION: { label: 'PROD', baseStyle: '', headerStyle: '', icon: <IconZap/> },
@@ -428,10 +512,11 @@ const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => {
     return (
         <div>
             <h3>{isEnemy ? t('rivalCountry', lang) : t('myCountry', lang)}</h3>
-            <div>GDP: <NumberCounter value={data.gdp} /></div>
+            <div data-testid={isEnemy ? 'enemy-gdp' : 'player-gdp'}>GDP: <NumberCounter value={data.gdp} /></div>
             <div className="font-mono" data-testid={isEnemy ? 'enemy-money' : 'player-money'}>¥<NumberCounter value={data.money} /></div>
             <div className="font-mono" data-testid={isEnemy ? 'enemy-debt' : 'player-debt'}>Debt: <NumberCounter value={data.debt} /></div>
             <div className="font-mono" data-testid={inflationTestId}>Inflation: {inflationDisplay}%</div>
+            <div className="font-mono" data-testid={isEnemy ? 'enemy-support' : 'player-support'}>Support: <NumberCounter value={data.support} />%</div>
         </div>
     );
 };
@@ -600,7 +685,28 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         clearErrorMessage();
         let nextPlayerState = { ...player, money: player.money - cost };
         const cardEffect = typeof card?.effect === 'function' ? card.effect : DEFAULT_CARD_EFFECT;
-        nextPlayerState = cardEffect(nextPlayerState, enemy);
+        const effectResult = cardEffect(nextPlayerState, enemy);
+        let logMessages = [];
+        let nextEnemyState = enemy;
+        let enemyWasTargeted = false;
+
+        if (effectResult && (effectResult.player || effectResult.enemy || effectResult.logMessages)) {
+            const { player: playerChanges, enemy: enemyChanges, logMessages: effectLogs } = effectResult;
+            if (playerChanges) {
+                nextPlayerState = applyStateChange(nextPlayerState, playerChanges);
+            }
+            if (enemyChanges) {
+                nextEnemyState = applyStateChange(nextEnemyState, enemyChanges);
+                enemyWasTargeted = true;
+            }
+            if (Array.isArray(effectLogs)) {
+                logMessages = effectLogs.filter(Boolean);
+            } else if (effectLogs) {
+                logMessages = [effectLogs];
+            }
+        } else if (effectResult) {
+            nextPlayerState = effectResult;
+        }
 
         const clampedSupport = Math.max(0, Math.min(100, nextPlayerState.support ?? 0));
         nextPlayerState = { ...nextPlayerState, support: clampedSupport };
@@ -615,8 +721,6 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         const updatedRating = getRatingByDebt(nextPlayerState.debt);
         setPlayer({ ...nextPlayerState, rating: updatedRating });
 
-        let nextEnemyState = enemy;
-        let enemyWasTargeted = false;
         if (typeof card?.targetEffect === 'function') {
             nextEnemyState = card.targetEffect(nextEnemyState, nextPlayerState);
             enemyWasTargeted = true;
@@ -650,6 +754,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         const { uniqueId: _, ...discardedCard } = card;
         setDiscardPile(prev => [...prev, discardedCard]);
         setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
+        logMessages.forEach(addLog);
         addLog(`${getLoc(card, 'name', lang)} played.`);
     };
 
@@ -958,6 +1063,14 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
                         >
                             Trigger Event
                         </button>
+                    </div>
+                    <div data-testid="log-panel">
+                        <h4>Activity Log</h4>
+                        <ul>
+                            {logs.map((entry, index) => (
+                                <li key={`${entry}-${index}`}>{entry}</li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
             )}
