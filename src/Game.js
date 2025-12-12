@@ -519,7 +519,19 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
         };
     }
 
-    if ((enemy.gdp ?? 0) >= targetGdp) {
+    const playerReachedTarget = (player.gdp ?? 0) >= targetGdp;
+    const enemyReachedTarget = (enemy.gdp ?? 0) >= targetGdp;
+
+    if (playerReachedTarget && enemyReachedTarget) {
+        return {
+            status: 'DRAW',
+            reason: '双方が同時にターゲットGDPに到達しました',
+            detail: `Player GDP: ${player.gdp} / ${targetGdp}, Enemy GDP: ${enemy.gdp} / ${targetGdp}`,
+            turn,
+        };
+    }
+
+    if (enemyReachedTarget) {
         return {
             status: 'LOSE',
             reason: '敵国が先にターゲットGDPに到達しました',
@@ -528,7 +540,7 @@ const evaluateGame = ({ player, enemy, difficulty, turn }) => {
         };
     }
 
-    if ((player.gdp ?? 0) >= targetGdp) {
+    if (playerReachedTarget) {
         return {
             status: 'WIN',
             reason: 'ターゲットGDPを達成しました',
