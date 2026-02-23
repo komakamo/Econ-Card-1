@@ -637,7 +637,6 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
     const [logs, setLogs] = useState([]);
     const [activeEvent, setActiveEvent] = useState(null);
     const [eventQueue, setEventQueue] = useState([]);
-    const [lastTags, setLastTags] = useState([]);
     const [isMuted, setIsMuted] = useState(false);
     const [lastPlayedCard, setLastPlayedCard] = useState(null);
     const [evaluation, setEvaluation] = useState(null);
@@ -711,7 +710,6 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         const initialPlayerState = buildInitialPlayerState(difficulty, ideology);
         const initialDebt = difficulty.initialDebt ?? 0;
         setTurn(1);
-        setLastTags([]);
         setEvaluation(null);
         setLastPlayedCard(null);
         clearErrorMessage();
@@ -826,11 +824,6 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
             const enemyRating = getRatingByDebt(nextEnemyState.debt);
             setEnemy({ ...nextEnemyState, rating: enemyRating });
             addLog(`${getLoc(card, 'name', lang)} impacted the enemy.`);
-        }
-
-        const providedTags = getCardProvidedTags(card);
-        if (providedTags.length > 0) {
-            setLastTags(providedTags);
         }
 
         const { uniqueId: _, ...discardedCard } = card;
@@ -1004,17 +997,6 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
              addLog(lang === 'en' ? `Repaid Debt: -${adjustedRepayment} Money, -${adjustedRepayment} Debt` : `国債償還！資金-${adjustedRepayment}兆 / 債務-${adjustedRepayment}兆`);
              return rated;
         });
-    };
-
-    const getCardProvidedTags = (card) => {
-        const tags = [];
-        if (Array.isArray(card?.providesTags)) {
-            tags.push(...card.providesTags);
-        }
-        if (card?.providesTag) {
-            tags.push(card.providesTag);
-        }
-        return tags;
     };
 
     useEffect(() => {
