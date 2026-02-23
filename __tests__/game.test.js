@@ -98,6 +98,49 @@ describe('EconomicCardGame', () => {
     });
   });
 
+  describe('evaluateGame player support loss conditions', () => {
+    const difficulty = {
+      targetGdp: 400,
+      maxTurns: 15,
+      debtLimit: 250,
+      minimumSupport: 25,
+    };
+
+    const enemy = { gdp: 0, debt: 0, support: 50 };
+
+    test('declares lose when player support falls below threshold', () => {
+      const player = { gdp: 0, debt: 100, support: 20 };
+      const result = evaluateGame({ player, enemy, difficulty, turn: 8 });
+
+      expect(result.status).toBe('LOSE');
+      expect(result.reason).toBe('支持率が底をつきました');
+      expect(result.detail).toBe('Support: 20%');
+    });
+
+    test('does not declare lose when player support is exactly at threshold', () => {
+      const player = { gdp: 0, debt: 100, support: 25 };
+      const result = evaluateGame({ player, enemy, difficulty, turn: 8 });
+
+      expect(result.status).toBe('ONGOING');
+    });
+
+    test('defaults minimumSupport to 1 when not specified', () => {
+      const diffWithoutSupport = { targetGdp: 400, maxTurns: 15, debtLimit: 250 };
+      const player = { gdp: 0, debt: 100, support: 0 };
+      const result = evaluateGame({ player, enemy, difficulty: diffWithoutSupport, turn: 8 });
+
+      expect(result.status).toBe('LOSE');
+      expect(result.reason).toBe('支持率が底をつきました');
+    });
+
+    test('defaults player support to 100 when undefined', () => {
+      const player = { gdp: 0, debt: 100 };
+      const result = evaluateGame({ player, enemy, difficulty, turn: 8 });
+
+      expect(result.status).toBe('ONGOING');
+    });
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
   });
