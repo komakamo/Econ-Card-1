@@ -933,31 +933,6 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         setIsResolvingTurn(false);
     }, [player, enemy, turn, isResolvingTurn]);
 
-    const issueBonds = (amount = 50, interestRate = 0.1, defaultRisk = 0.02) => {
-        if (gameState !== 'PLAYING') return;
-        const interestDelta = Math.round(amount * interestRate);
-        setPlayer(prev => {
-            const updated = {
-                ...prev,
-                money: prev.money + amount,
-                debt: (prev.debt || 0) + amount,
-                interestDue: (prev.interestDue || 0) + interestDelta,
-            };
-
-            const { riskImpact, riskLog } = resolveBondRisk({
-                amount,
-                defaultRisk,
-                randomFn,
-                state: { debt: updated.debt, interestDue: updated.interestDue, support: prev.support },
-            });
-
-            const nextState = { ...updated, ...riskImpact };
-            const nextRating = getRatingByDebt(nextState.debt);
-            addLog(`Issued bonds: +${amount} money, +${interestDelta}/turn interest, default risk ${Math.round(defaultRisk * 100)}%${riskLog}`);
-            return { ...nextState, rating: nextRating };
-        });
-    };
-
     const repayDebt = (e) => {
         if (gameState !== 'PLAYING') return;
 
