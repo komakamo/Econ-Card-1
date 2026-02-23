@@ -588,9 +588,6 @@ const CrisisOverlay = ({ event, onClose, onConfirm, lang }) => {
         </div>
     );
 };
-const Confetti = () => null;
-const CardInfoPanel = () => <div />;
-const ComboGuidePanel = () => <div />;
 const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => {
     const inflationDisplay = Number.isFinite(data?.inflation) ? data.inflation.toFixed(1) : '0.0';
     const inflationTestId = isEnemy ? 'enemy-inflation' : 'player-inflation';
