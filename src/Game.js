@@ -1210,4 +1210,4 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
 }
 
 export default EconomicCardGame;
-export { SoundManager as SoundManagerInstance, evaluateGame, resolveBondRisk, clampInflation, INFLATION_MIN, INFLATION_MAX };
+export { SoundManager as SoundManagerInstance, evaluateGame, resolveBondRisk, clampInflation, INFLATION_MIN, INFLATION_MAX, CrisisOverlay };
