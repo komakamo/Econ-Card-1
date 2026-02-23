@@ -465,7 +465,6 @@ const clampSupport = (value = 0) => Math.max(0, Math.min(100, value));
 const calculateInflatedCost = (baseCost, inflationRate = 0) => {
     return Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
 };
-const calculateSuccessRate = () => 100;
 const evaluateGame = ({ player, enemy, difficulty, turn }) => {
     if (!player || !enemy || !difficulty) return { status: 'ONGOING' };
 
