@@ -567,7 +567,6 @@ const applyInflationDrift = (value, target = 0) => {
 
 // --- Visual Components ---
 const NumberCounter = ({ value }) => <span>{value}</span>;
-const TurnOverlay = () => null;
 const CrisisOverlay = ({ event, onClose, onConfirm, lang }) => {
     if (!event) return null;
 
