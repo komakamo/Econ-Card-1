@@ -49,6 +49,25 @@ describe('EconomicCardGame', () => {
     });
   });
 
+  describe('evaluateGame draw conditions', () => {
+    const difficulty = {
+      targetGdp: 500,
+      maxTurns: 10,
+      debtLimit: 999,
+      minimumSupport: 0,
+    };
+
+    test('declares draw when both player and enemy reach target GDP simultaneously', () => {
+      const player = { gdp: 500, debt: 0, support: 50 };
+      const enemy = { gdp: 500, debt: 0, support: 50 };
+      const result = evaluateGame({ player, enemy, difficulty, turn: 5 });
+
+      expect(result.status).toBe('DRAW');
+      expect(result.reason).toBe('双方が同時にターゲットGDPに到達しました');
+      expect(result.detail).toBe('Player GDP: 500 / 500, Enemy GDP: 500 / 500');
+    });
+  });
+
   describe('evaluateGame priority handling', () => {
     const difficulty = {
       targetGdp: 300,
