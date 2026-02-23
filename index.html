@@ -521,9 +521,9 @@
                 nextGoal: "Next Goal",
                 comboGuide: "Combo Guide (コンボ図鑑)",
                 comboHint: "★ ヒント",
-                comboHintDesc: "直前にプレイしたカードのタグと噛み合うと<br/>効果が1.3倍になります！",
+                comboHintDesc: "直前にプレイしたカードのタグと噛み合うと\n効果が1.3倍になります！",
                 cardInfo: "カード解説",
-                cardInfoDesc: "カードにカーソルを合わせると<br/>詳しい解説が表示されます",
+                cardInfoDesc: "カードにカーソルを合わせると\n詳しい解説が表示されます",
                 memo: "経済メモ",
                 detail: "効果詳細",
                 myCountry: "自国 (あなた)",
@@ -590,9 +590,9 @@
                 nextGoal: "Next Goal",
                 comboGuide: "Combo Guide",
                 comboHint: "★ Hint",
-                comboHintDesc: "Match tags with the last played card<br/>for a 1.3x Effect Bonus!",
+                comboHintDesc: "Match tags with the last played card\nfor a 1.3x Effect Bonus!",
                 cardInfo: "Card Info",
-                cardInfoDesc: "Hover over a card to see<br/>detailed information.",
+                cardInfoDesc: "Hover over a card to see\ndetailed information.",
                 memo: "Econ Memo",
                 detail: "Effect Details",
                 myCountry: "My Country (YOU)",
@@ -1473,7 +1473,7 @@
                             <IconBookOpen size={24} className="text-slate-400" />
                         </div>
                         <h3 className="text-sm font-bold text-slate-500 mb-1">{t('cardInfo', lang)}</h3>
-                        <p className="text-xs text-slate-600" dangerouslySetInnerHTML={{ __html: t('cardInfoDesc', lang)}}></p>
+                        <p className="text-xs text-slate-600 whitespace-pre-wrap">{t('cardInfoDesc', lang)}</p>
                      </div>
                 );
             }
@@ -1571,7 +1571,7 @@
                         ))}
                          <div className="mt-2 pt-2 border-t border-slate-800/50 text-[10px] text-slate-500 text-center leading-tight">
                             <span className="text-amber-400 font-bold">{t('comboHint', lang)}</span><br/>
-                            <span dangerouslySetInnerHTML={{ __html: t('comboHintDesc', lang) }}></span>
+                            <span className="whitespace-pre-wrap">{t('comboHintDesc', lang)}</span>
                         </div>
                     </div>
                 </div>
