@@ -643,11 +643,6 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
     const [lastTags, setLastTags] = useState([]);
     const [isMuted, setIsMuted] = useState(false);
     const [lastPlayedCard, setLastPlayedCard] = useState(null);
-    const [floatingTexts, setFloatingTexts] = useState([]);
-    const [showTurnOverlay, setShowTurnOverlay] = useState(false);
-    const [shake, setShake] = useState({ player: false, enemy: false });
-    const [hoveredCard, setHoveredCard] = useState(null);
-    const [crisisAlert, setCrisisAlert] = useState(null);
     const [evaluation, setEvaluation] = useState(null);
     const [lang, setLang] = useState('en');
     const [selectedDifficulty, setSelectedDifficulty] = useState(DIFFICULTY_SETTINGS.NORMAL.id);
@@ -720,12 +715,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         const initialDebt = difficulty.initialDebt ?? 0;
         setTurn(1);
         setLastTags([]);
-        setFloatingTexts([]);
         setEvaluation(null);
-        setShowTurnOverlay(false);
-        setCrisisAlert(null);
-        setHoveredCard(null);
-        setShake({ player: false, enemy: false });
         setLastPlayedCard(null);
         clearErrorMessage();
         setDiscardPile([]);
