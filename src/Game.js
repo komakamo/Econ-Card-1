@@ -690,7 +690,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         }
         return result;
     };
-    const addLog = (msg) => setLogs(prev => [msg, ...prev]);
+    const addLog = (msg) => setLogs(prev => [msg, ...prev].slice(0, 50));
 
     const clearErrorMessage = () => {
         if (errorTimeoutRef.current) {
