@@ -841,22 +841,34 @@
             // Future achievements can be added here
         };
 
+        const CARD_DATA = {
+            UNIVERSAL_HEALTH_CARE: {
+                ID: 201,
+                COST: 50,
+                SUPPORT_CHANGE: 15,
+                INCOME_PENALTY: 10,
+                DURATION: 5,
+                GDP_BOOST: 10,
+                SUPPORT_BOOST: 1
+            }
+        };
+
         const ALL_CARDS = [
             {
-                id: 201,
+                id: CARD_DATA.UNIVERSAL_HEALTH_CARE.ID,
                 name: '国民皆保険制度',
                 name_en: 'Universal Health Care',
-                cost: 50,
+                cost: CARD_DATA.UNIVERSAL_HEALTH_CARE.COST,
                 type: 'POLICY',
-                supportChange: 15,
+                supportChange: CARD_DATA.UNIVERSAL_HEALTH_CARE.SUPPORT_CHANGE,
                 effect: (me, opp) => ({
                     ...me,
-                    income: Math.max(0, me.income - 10),
+                    income: Math.max(0, me.income - CARD_DATA.UNIVERSAL_HEALTH_CARE.INCOME_PENALTY),
                     activeEffects: [...(me.activeEffects || []), {
                         name: '健康増進',
                         name_en: 'Health Boost',
-                        turnsLeft: 5,
-                        effect: (s) => ({ ...s, gdp: s.gdp + 10, support: s.support + 1 })
+                        turnsLeft: CARD_DATA.UNIVERSAL_HEALTH_CARE.DURATION,
+                        effect: (s) => ({ ...s, gdp: s.gdp + CARD_DATA.UNIVERSAL_HEALTH_CARE.GDP_BOOST, support: s.support + CARD_DATA.UNIVERSAL_HEALTH_CARE.SUPPORT_BOOST })
                     }]
                 }),
                 description: '全国民に医療保険を提供します。財政負担は大きいですが、長期的に見て国民の幸福度と生産性を高めます。',
