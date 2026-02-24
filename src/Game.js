@@ -611,8 +611,26 @@ const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => {
 };
 
 // --- Main Game Component ---
-const resolveBondRisk = ({ amount, defaultRisk, randomFn = Math.random, state }) => {
-    const rng = typeof randomFn === 'function' ? randomFn : Math.random;
+/**
+ * Generates a cryptographically secure random number between 0 (inclusive) and 1 (exclusive).
+ * Falls back to Math.random() if crypto is unavailable.
+ */
+const secureRandom = () => {
+    const cryptoObj = (typeof window !== 'undefined' && (window.crypto || window.msCrypto)) ||
+                      (typeof global !== 'undefined' && global.crypto);
+
+    if (cryptoObj && cryptoObj.getRandomValues) {
+        const array = new Uint32Array(1);
+        cryptoObj.getRandomValues(array);
+        // Divide by 2^32 to get a value between 0 and 1
+        return array[0] / 4294967296;
+    }
+
+    return Math.random();
+};
+
+const resolveBondRisk = ({ amount, defaultRisk, randomFn = secureRandom, state }) => {
+    const rng = typeof randomFn === 'function' ? randomFn : secureRandom;
     let riskLog = '';
     let riskImpact = {};
 
@@ -636,7 +654,7 @@ const resolveBondRisk = ({ amount, defaultRisk, randomFn = Math.random, state })
     return { riskImpact, riskLog };
 };
 
-function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
+function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = secureRandom }) {
     const [turn, setTurn] = useState(1);
     const [era, setEra] = useState(ERAS.GROWTH);
     const [gameState, setGameState] = useState('START');
@@ -742,7 +760,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
             }
             if (deck.length > 0) {
                 const [card] = deck.splice(-1, 1);
-                drawnCards.push({ ...card, uniqueId: Math.random() });
+                drawnCards.push({ ...card, uniqueId: secureRandom() });
             }
         }
         if (replaceHand) {
@@ -985,7 +1003,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
     }, [activeEvent]);
 
     const enqueueEvent = (eventTemplate) => {
-        const instance = eventTemplate?.instanceId ? eventTemplate : { ...eventTemplate, instanceId: Math.random() };
+        const instance = eventTemplate?.instanceId ? eventTemplate : { ...eventTemplate, instanceId: secureRandom() };
         setEventQueue(prev => [...prev, instance]);
         return instance;
     };
@@ -1166,4 +1184,4 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
 }
 
 export default EconomicCardGame;
-export { SoundManager as SoundManagerInstance, evaluateGame, resolveBondRisk, clampInflation, INFLATION_MIN, INFLATION_MAX, CrisisOverlay, applyInflationDrift };
+export { SoundManager as SoundManagerInstance, evaluateGame, resolveBondRisk, clampInflation, INFLATION_MIN, INFLATION_MAX, CrisisOverlay, applyInflationDrift, secureRandom };
