@@ -450,9 +450,10 @@ const RATING_TIERS = [
   { label: 'CCC', threshold: 250, interestMultiplier: 1.6 },
   { label: 'D', threshold: 400, interestMultiplier: 2 },
 ];
+const RATING_TIERS_DESC = [...RATING_TIERS].sort((a, b) => b.threshold - a.threshold);
+
 const getRatingByDebt = (debt = 0) => {
-  const sorted = [...RATING_TIERS].sort((a, b) => b.threshold - a.threshold);
-  const found = sorted.find(tier => debt >= tier.threshold);
+  const found = RATING_TIERS_DESC.find(tier => debt >= tier.threshold);
   return found?.label ?? 'AAA';
 };
 const getRatingInfo = (rating = 'AAA') => RATING_TIERS.find(tier => tier.label === rating) ?? RATING_TIERS[0];
