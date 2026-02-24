@@ -254,6 +254,14 @@ const getLoc = (obj, key, lang) => {
 
     return (obj && (obj[primaryKey] || obj[fallbackKey])) || '';
 };
+const shuffleArray = (arr, randomFn = Math.random) => {
+    const result = [...arr];
+    for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(randomFn() * (i + 1));
+        [result[i], result[j]] = [result[j], result[i]];
+    }
+    return result;
+};
 const EVENTS = [{
     id: 1,
     name: '財政刺激策',
@@ -696,14 +704,6 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = secureRandom }) 
     const [playerHand, setPlayerHand] = useState([]);
     const [isResolvingTurn, setIsResolvingTurn] = useState(false);
 
-    const shuffleArray = (arr) => {
-        const result = [...arr];
-        for (let i = result.length - 1; i > 0; i--) {
-            const j = Math.floor(randomFn() * (i + 1));
-            [result[i], result[j]] = [result[j], result[i]];
-        }
-        return result;
-    };
     const addLog = useCallback((msg) => setLogs(prev => [msg, ...prev].slice(0, 50)), []);
 
     const clearErrorMessage = useCallback(() => {
@@ -729,7 +729,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = secureRandom }) 
     const startGame = () => {
         const difficulty = getDifficultyById(selectedDifficulty);
         const ideology = IDEOLOGIES[selectedIdeology];
-        const baseDeck = shuffleArray((initialDeck || ALL_CARDS).map(withDefaultEffect));
+        const baseDeck = shuffleArray((initialDeck || ALL_CARDS).map(withDefaultEffect), randomFn);
         const initialPlayerState = buildInitialPlayerState(difficulty, ideology);
         const initialDebt = difficulty.initialDebt ?? 0;
         setTurn(1);
@@ -754,7 +754,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = secureRandom }) 
         const drawnCards = [];
         for (let i = 0; i < count; i++) {
             if (deck.length === 0 && discarded.length > 0) {
-                deck = shuffleArray(discarded);
+                deck = shuffleArray(discarded, randomFn);
                 discarded = [];
                 addLog('Discard pile reshuffled into deck.');
             }
