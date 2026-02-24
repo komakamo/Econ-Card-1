@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 
 // This file is a self-contained module for testing the EconomicCardGame component.
 // It includes all necessary sub-components, constants, and helper functions.
@@ -566,6 +566,13 @@ const applyInflationDrift = (value, target = 0) => {
 
 // --- Visual Components ---
 const NumberCounter = ({ value }) => <span>{value}</span>;
+
+const CardButton = memo(({ card, onPlay, lang }) => (
+    <button onClick={() => onPlay(card)} data-testid={`card-${getLoc(card, 'name', lang)}`}>
+        <h4>{getLoc(card, 'name', lang)}</h4>
+    </button>
+));
+
 const CrisisOverlay = ({ event, onClose, onConfirm, lang }) => {
     if (!event) return null;
 
@@ -678,17 +685,17 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         }
         return result;
     };
-    const addLog = (msg) => setLogs(prev => [msg, ...prev].slice(0, 50));
+    const addLog = useCallback((msg) => setLogs(prev => [msg, ...prev].slice(0, 50)), []);
 
-    const clearErrorMessage = () => {
+    const clearErrorMessage = useCallback(() => {
         if (errorTimeoutRef.current) {
             clearTimeout(errorTimeoutRef.current);
             errorTimeoutRef.current = null;
         }
         setErrorMessage('');
-    };
+    }, []);
 
-    const showErrorMessage = (message) => {
+    const showErrorMessage = useCallback((message) => {
         clearErrorMessage();
         setErrorMessage(message);
         errorTimeoutRef.current = setTimeout(() => {
@@ -698,7 +705,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         if (!SoundManager.isMuted && typeof SoundManager.playError === 'function') {
             SoundManager.playError();
         }
-    };
+    }, [clearErrorMessage]);
 
     const startGame = () => {
         const difficulty = getDifficultyById(selectedDifficulty);
@@ -746,7 +753,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         setDiscardPile(discarded);
     };
 
-    const playCard = (card, e) => {
+    const playCard = useCallback((card, e) => {
         if (gameState !== 'PLAYING') return;
         const cost = calculateInflatedCost(card.cost, player.inflation);
         if (player.money < cost) {
@@ -827,7 +834,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
         setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
         logMessages.forEach(addLog);
         addLog(`${getLoc(card, 'name', lang)} played.`);
-    };
+    }, [gameState, player, enemy, lang, addLog, showErrorMessage, clearErrorMessage]);
 
     const getInterestForTurn = (state = player) => {
         const ratingInfo = getRatingInfo(state.rating);
@@ -1104,9 +1111,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = Math.random }) {
                         <h3>{t('yourHand', lang)}</h3>
                         <div>
                             {playerHand.map(card => (
-                                <button key={card.uniqueId} onClick={() => playCard(card)} data-testid={`card-${getLoc(card, 'name', lang)}`}>
-                                    <h4>{getLoc(card, 'name', lang)}</h4>
-                                </button>
+                                <CardButton key={card.uniqueId} card={card} onPlay={playCard} lang={lang} />
                             ))}
                         </div>
                         {errorMessage && (
