@@ -6,8 +6,10 @@ import {
   UI_TEXT, EVENTS, ERAS, IDEOLOGIES, ACHIEVEMENTS, ALL_CARDS, MISSIONS,
   CARD_TYPES, DIFFICULTY_SETTINGS, INFLATION_MIN, INFLATION_MAX, RATING_TIERS, RATING_TIERS_DESC,
   getLoc, t, getRatingByDebt, getRatingInfo, clampInflation, MAX_STANDARD_CARD_ID,
-  applyInflationDrift, calculateInflatedCost, getCardProvidedTags
-} from './gameData';
+  applyInflationDrift, calculateInflatedCost, getCardProvidedTags,
+  DEFAULT_CARD_EFFECT, withDefaultEffect, clampSupport, applyInflationChange,
+  applyStateChange, getDifficultyById, evaluateGame
+} from './gameData.js';
 
 // This file is a self-contained module for testing the EconomicCardGame component.
 // It includes all necessary sub-components, constants, and helper functions.
