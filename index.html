@@ -2157,13 +2157,26 @@
                     const savedSettings = localStorage.getItem('economics_master_settings');
                     if (savedSettings) {
                         const parsed = JSON.parse(savedSettings);
-                        if (parsed.lang) setLang(parsed.lang);
-                        if (parsed.fontSizeLevel) setFontSizeLevel(parsed.fontSizeLevel);
-                        if (parsed.skipTurnSummary !== undefined) setSkipTurnSummary(parsed.skipTurnSummary);
-                        if (parsed.isMuted !== undefined) setIsMuted(parsed.isMuted);
-                        if (parsed.masterVolume !== undefined) setMasterVolume(parsed.masterVolume);
+                        // Validate settings to prevent crashes or logic errors
+                        if (parsed.lang === 'ja' || parsed.lang === 'en') {
+                            setLang(parsed.lang);
+                        }
+                        if (['small', 'medium', 'large'].includes(parsed.fontSizeLevel)) {
+                            setFontSizeLevel(parsed.fontSizeLevel);
+                        }
+                        if (typeof parsed.skipTurnSummary === 'boolean') {
+                            setSkipTurnSummary(parsed.skipTurnSummary);
+                        }
+                        if (typeof parsed.isMuted === 'boolean') {
+                            setIsMuted(parsed.isMuted);
+                        }
+                        if (typeof parsed.masterVolume === 'number' && Number.isFinite(parsed.masterVolume)) {
+                             // Clamp between 0 and 100
+                             const vol = Math.max(0, Math.min(100, parsed.masterVolume));
+                             setMasterVolume(vol);
+                        }
                     }
-                } catch (e) { console.error(e); }
+                } catch (e) { console.error("Failed to load settings:", e); }
             }, []);
 
             useEffect(() => {
@@ -2198,23 +2211,31 @@
             }, [autoProceed]);
 
             useEffect(() => {
+                const safeParse = (jsonString) => {
+                    try {
+                        if (!jsonString) return null;
+                        const parsed = JSON.parse(jsonString);
+                        // Basic validation: ensure it is an object and not null
+                        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                            return parsed;
+                        }
+                    } catch (e) { /* ignore parse error */ }
+                    return null;
+                };
+
                 try {
-                    const savedProgress = localStorage.getItem('economics_master_progress');
-                    if (savedProgress) {
-                        setGameProgress(JSON.parse(savedProgress));
-                    }
-                    const savedTitles = localStorage.getItem('earnedTitles');
-                    if (savedTitles) {
-                        setEarnedTitles(JSON.parse(savedTitles));
-                    }
-                    const savedAchievements = localStorage.getItem('unlockedAchievements');
-                    if (savedAchievements) {
-                        setUnlockedAchievements(JSON.parse(savedAchievements));
-                    }
-                    const savedCards = localStorage.getItem('economics_master_discovered_cards');
-                    if (savedCards) {
-                         setDiscoveredCards(JSON.parse(savedCards));
-                    }
+                    const progress = safeParse(localStorage.getItem('economics_master_progress'));
+                    if (progress) setGameProgress(progress);
+
+                    const titles = safeParse(localStorage.getItem('earnedTitles'));
+                    if (titles) setEarnedTitles(titles);
+
+                    const achievements = safeParse(localStorage.getItem('unlockedAchievements'));
+                    if (achievements) setUnlockedAchievements(achievements);
+
+                    const cards = safeParse(localStorage.getItem('economics_master_discovered_cards'));
+                    if (cards) setDiscoveredCards(cards);
+
                 } catch (e) {
                     console.error("Failed to load data from localStorage", e);
                 }
