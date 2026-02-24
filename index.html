@@ -1310,22 +1310,6 @@
 
         // --- Visual Components ---
 
-        const ComboOverlay = ({ message, show }) => {
-            if (!show) return null;
-            return (
-                <div className="fixed inset-0 z-[80] flex items-center justify-center pointer-events-none animate-fade-in">
-                    <div
-                        // The key forces a re-render and re-animation when the message changes
-                        key={message}
-                        className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] animate-pop-in"
-                        style={{ textStroke: '1px rgba(0,0,0,0.3)', WebkitTextStroke: '1px rgba(0,0,0,0.3)' }}
-                    >
-                        {message}
-                    </div>
-                </div>
-            );
-        };
-
         const NumberCounter = ({ value, duration = 1000 }) => {
             const [displayValue, setDisplayValue] = useState(value);
 
@@ -1519,60 +1503,6 @@
                                 ))}
                             </div>
                         )}
-                    </div>
-                </div>
-            );
-        };
-
-        const ComboGuidePanel = ({ lang }) => {
-            const combos = [
-                {
-                    tag: 'infrastructure',
-                    label: t('tagInfra', lang),
-                    desc: t('tagInfraDesc', lang),
-                    color: 'text-amber-400 bg-amber-900/20 border-amber-500/30'
-                },
-                {
-                    tag: 'education',
-                    label: t('tagEdu', lang),
-                    desc: t('tagEduDesc', lang),
-                    color: 'text-emerald-400 bg-emerald-900/20 border-emerald-500/30'
-                },
-                {
-                    tag: 'innovation',
-                    label: t('tagInno', lang),
-                    desc: t('tagInnoDesc', lang),
-                    color: 'text-cyan-400 bg-cyan-900/20 border-cyan-500/30'
-                },
-                {
-                    tag: 'tech',
-                    label: t('tagTech', lang),
-                    desc: t('tagTechDesc', lang),
-                    color: 'text-purple-400 bg-purple-900/20 border-purple-500/30'
-                }
-            ];
-
-            return (
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg mt-6">
-                    <div className="bg-slate-800/50 p-3 border-b border-slate-800 flex items-center gap-2">
-                         <IconZap size={14} className="text-yellow-400" />
-                         <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('comboGuide', lang)}</span>
-                    </div>
-                    <div className="p-4 space-y-2">
-                        {combos.map(c => (
-                            <div key={c.tag} className={`p-2 rounded-lg border ${c.color} flex flex-col gap-1`}>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-black/20 tracking-wider">#{c.tag}</span>
-                                    <IconArrowRight size={10} className="opacity-50" />
-                                    <span className="text-xs font-bold opacity-90">{c.label}</span>
-                                </div>
-                                <p className="text-[10px] opacity-80 leading-relaxed pl-1">{c.desc}</p>
-                            </div>
-                        ))}
-                         <div className="mt-2 pt-2 border-t border-slate-800/50 text-[10px] text-slate-500 text-center leading-tight">
-                            <span className="text-amber-400 font-bold">{t('comboHint', lang)}</span><br/>
-                            <span className="whitespace-pre-wrap">{t('comboHintDesc', lang)}</span>
-                        </div>
                     </div>
                 </div>
             );
@@ -1997,7 +1927,6 @@
             const [autoProceed, setAutoProceed] = useState(false);
             const [logs, setLogs] = useState([]);
             const [activeEvent, setActiveEvent] = useState(null);
-            const [lastTags, setLastTags] = useState([]);
             const [isMuted, setIsMuted] = useState(false);
             const [lastPlayedCard, setLastPlayedCard] = useState(null); // Purely for UI visualization
             const [floatingTexts, setFloatingTexts] = useState([]);
@@ -2007,8 +1936,6 @@
             const [crisisAlert, setCrisisAlert] = useState(null); // { message: string, type: 'danger'|'warning' }
             const [evaluation, setEvaluation] = useState(null);
             const [lang, setLang] = useState('ja'); // 'ja' | 'en'
-            const [comboMessage, setComboMessage] = useState(null);
-            const [comboChain, setComboChain] = useState({ tag: null, count: 0 });
             const [activeMission, setActiveMission] = useState(null); // { missionId, turnsLeft }
             const [completedMissionCount, setCompletedMissionCount] = useState(0);
             const [turnSummaryData, setTurnSummaryData] = useState(null);
@@ -2224,11 +2151,6 @@
                 if (type === 'gdp') colorClass = 'text-cyan-300';
                 if (type === 'support') colorClass = 'text-indigo-300';
                 if (type === 'damage') colorClass = 'text-rose-500';
-                if (type === 'combo') {
-                    colorClass = 'text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]';
-                    sizeClass = 'text-5xl';
-                }
-
                 setFloatingTexts(prev => [...prev, { id, x, y, text, colorClass, sizeClass, type }]);
                 setTimeout(() => {
                     setFloatingTexts(prev => prev.filter(ft => ft.id !== id));
@@ -2364,7 +2286,6 @@
                 setEnemy({ ...initialEnemyState, name: 'ライバル国', activeEffects: [] });
 
                 setPlayerHand([]);
-                setLastTags([]);
                 setTurn(1);
 
                 const eventName = getLoc(event, 'name', lang);
@@ -2531,17 +2452,6 @@
 
             // Combo logic is now inside playCard and more complex.
 
-            const getCardProvidedTags = (card) => {
-                const tags = [];
-                if (Array.isArray(card?.providesTags)) {
-                    tags.push(...card.providesTags);
-                }
-                if (card?.providesTag) {
-                    tags.push(card.providesTag);
-                }
-                return tags;
-            };
-
             const withEventMultiplier = (setter) => (updater) => setter(prev => {
                 const next = typeof updater === 'function' ? updater(prev) : updater;
                 return applyEventMultiplier(prev, next);
@@ -2559,35 +2469,15 @@
                 return Math.max(0, Math.round(inflated * multiplier));
             };
 
-            const applyComboBonus = (prevState, nextState, multiplier = 1) => {
-                const normalizedMultiplier = Number.isFinite(multiplier) ? multiplier : Number(multiplier) || 1;
-
-                if (normalizedMultiplier <= 1.0) return nextState;
-
-                const applyScale = (key) => {
-                    const delta = nextState[key] - prevState[key];
-                    if (delta <= 0) return prevState[key]; // Only boost positive effects
-                    return prevState[key] + Math.round(delta * normalizedMultiplier);
-                };
-
-                return {
-                    ...nextState,
-                    money: applyScale('money'),
-                    income: applyScale('income'),
-                    gdp: applyScale('gdp'),
-                };
-            };
-
             // プレイヤーのターン処理
             const playCard = (card, e) => {
                 if (gameState !== 'PLAYING') return;
 
                 const adjustedCost = calculateInflatedCost(card.cost, player.inflation);
-                const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
-                const providedTags = getCardProvidedTags(card);
                 const cardName = getLoc(card, 'name', lang);
 
                 // Era Effect: IT Revolution (Tech x2)
+                const providedTags = [].concat(card.providesTags || [], card.providesTag || []).filter(Boolean);
                 const isTech = providedTags.includes('tech');
                 const eraMultiplier = (era.id === 'IT_REV' && isTech) ? 2 : 1;
 
@@ -2638,9 +2528,6 @@
                     const { uniqueId: _, ...baseCard } = card;
                     setDiscardPile(prev => [...prev, baseCard]);
 
-                    // Bug Fix: Clear tags on failure so combo chain breaks
-                    setLastTags([]);
-
                     return checkWinCondition(nextPlayerState, enemy);
                 }
 
@@ -2653,64 +2540,6 @@
                      setDiscoveredCards(newDiscovered);
                      localStorage.setItem('economics_master_discovered_cards', JSON.stringify(newDiscovered));
                      addLog(lang === 'en' ? `📖 New card registered in Encyclopedia!` : `📖 新しいカードを図鑑に登録しました！`);
-                }
-
-                let comboMultiplier = 1.0;
-
-                if (comboReadyTags.length > 0) {
-                    const comboTag = comboReadyTags[0];
-                    let newComboChain;
-
-                    if (comboChain.tag === comboTag) {
-                        newComboChain = { tag: comboTag, count: comboChain.count + 1 };
-                    } else {
-                        newComboChain = { tag: comboTag, count: 1 };
-                    }
-                    setComboChain(newComboChain);
-
-                    if (newComboChain.count === 1) comboMultiplier = 1.3;
-                    else if (newComboChain.count === 2) comboMultiplier = 1.5;
-                    else comboMultiplier = 1.8;
-
-                    // Track Inflation Combos
-                    const newProgress = {
-                        ...gameProgress,
-                        total_inflation_combos: (gameProgress.total_inflation_combos || 0) + 1
-                    };
-                    setGameProgress(newProgress);
-                    localStorage.setItem('economics_master_progress', JSON.stringify(newProgress));
-
-                    const comboName = newComboChain.count > 1
-                        ? `⚡ ${newComboChain.count} CHAIN COMBO!`
-                        : `⚡ ${getLoc(card, 'name', lang)} COMBO!`;
-
-                    setComboMessage(comboName);
-                    setTimeout(() => setComboMessage(null), 2500);
-
-                    const msg = lang === 'en'
-                        ? (newComboChain.count > 1
-                            ? `★★ ${newComboChain.count} CHAIN COMBO! Effect x${comboMultiplier}!`
-                            : `★COMBO! [${comboReadyTags.join(', ')}] matched! Effect x${comboMultiplier}!`)
-                        : (newComboChain.count > 1
-                            ? `★★ ${newComboChain.count}連続コンボ！ 効果が ${comboMultiplier}倍に！`
-                            : `★コンボ発動！タグ『${comboReadyTags.join('・')}』が共鳴し、効果が ${comboMultiplier}倍に！`);
-                    addLog(msg);
-                    SoundManager.playSuccess();
-
-                    // Combo Risk/Reward
-                    setPlayer(p => {
-                        const newState = {
-                            ...p,
-                            inflation: clampInflation(p.inflation + 0.5),
-                            support: Math.max(0, p.support - 2)
-                        };
-                        const riskMsg = lang === 'en' ? `💥Combo side effect: Inflation +0.5%, Support -2%...` : `💥コンボの副作用でインフレが少し上昇(+0.5%)し、支持率が低下(-2%)した...`;
-                        addLog(riskMsg);
-                        return newState;
-                    });
-
-                } else {
-                    setComboChain({ tag: null, count: 0 });
                 }
 
                 if (card.type === 'ATTACK') {
@@ -2746,32 +2575,7 @@
                         }
                     }
 
-                    const comboBoosted = applyComboBonus(afterCost, boostedState, comboMultiplier);
-
-                    // Show detailed combo feedback
-                    if (comboMultiplier > 1.0) {
-                        const gdpGain = comboBoosted.gdp - afterCost.gdp;
-                        const incomeGain = comboBoosted.income - afterCost.income;
-                        const moneyGain = comboBoosted.money - afterCost.money;
-
-                        const textX = e ? e.clientX : window.innerWidth / 2;
-                        const textY = e ? e.clientY : window.innerHeight / 2;
-                        let yOffset = -60;
-
-                        if (gdpGain > 0) {
-                            addFloatingText(textX, textY + yOffset, `+${gdpGain}T GDP!`, 'gdp');
-                            yOffset += 30;
-                        }
-                        if (incomeGain > 0) {
-                             addFloatingText(textX, textY + yOffset, `+${incomeGain}T ${t('income', lang)}!`, 'income');
-                             yOffset += 30;
-                        }
-                        if (moneyGain > 0) {
-                             addFloatingText(textX, textY + yOffset, `+${moneyGain}T ${t('money', lang)}!`, 'income');
-                        }
-                    }
-
-                    const afterEvent = applyEventMultiplier(afterCost, comboBoosted);
+                    const afterEvent = applyEventMultiplier(afterCost, boostedState);
 
                     // Inflation
                     let inflationDelta = card.inflationChange || 0;
@@ -2796,12 +2600,7 @@
                     let highlightText = '';
                     const cardNameText = getLoc(card, 'name', lang);
 
-                    if (comboMultiplier > 1.0 && lastPlayedCard) {
-                        const prevCardName = getLoc(lastPlayedCard, 'name', lang);
-                        highlightText = lang === 'en'
-                            ? `GDP +${gdpGain}T (${prevCardName} × ${cardNameText} Combo)`
-                            : `GDP +${gdpGain}兆（${prevCardName} × ${cardNameText} コンボ）`;
-                    } else if (gdpGain > 0) {
+                    if (gdpGain > 0) {
                         highlightText = lang === 'en'
                             ? `GDP +${gdpGain}T (${cardNameText})`
                             : `GDP +${gdpGain}兆（${cardNameText}）`;
@@ -2818,8 +2617,7 @@
                     const eventAwareSetEnemy = withEventMultiplier(setEnemy);
                     eventAwareSetEnemy(prev => {
                         const effected = card.targetEffect ? card.targetEffect(prev, nextPlayerState) : prev;
-                        const comboBoosted = applyComboBonus(prev, effected, comboMultiplier);
-                        const unrested = applyUnrestPenalty(comboBoosted, 'ライバル');
+                        const unrested = applyUnrestPenalty(effected, 'ライバル');
                         const withSupport = applySupportChange(unrested, card.targetSupportChange, 'ライバル', lang === 'en' ? `"${cardName}" impact` : `「${cardName}」の影響`);
                         updatedEnemyState = withSupport;
                         return withSupport;
@@ -2843,12 +2641,6 @@
                 setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
                 const { uniqueId: _, ...baseCard } = card;
                 setDiscardPile(prev => [...prev, baseCard]);
-
-                if (providedTags.length > 0) {
-                    setLastTags(providedTags);
-                } else {
-                    setLastTags([]);
-                }
 
                 // After an action, check if any mission should be triggered
                 checkForNewMission(nextPlayerState);
@@ -3008,8 +2800,6 @@
                     selectTurnEvent();
                 }
 
-                setLastTags([]);
-                setComboChain({ tag: null, count: 0 }); // Reset combo chain at turn end
                 setTurnHighlight({ gdpGain: 0, text: '' }); // Reset for new turn
             };
 
@@ -3204,7 +2994,6 @@
                         onChange={handleSettingsChange}
                         lang={lang}
                     />
-                    <ComboOverlay message={comboMessage} show={!!comboMessage} />
                     <TurnOverlay turn={turn} show={showTurnOverlay} />
                     <CrisisOverlay message={crisisAlert?.message} show={!!crisisAlert} type={crisisAlert?.type} />
 
@@ -3404,8 +3193,6 @@
                                         const typeInfo = CARD_TYPES[card.type];
                                         const inflatedCost = calculateInflatedCost(card.cost, player.inflation);
                                         const canAfford = player.money >= inflatedCost;
-                                        const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
-                                        const providesTags = getCardProvidedTags(card);
                                         const successRate = calculateSuccessRate(card, player.support);
                                         const isRisky = successRate < 100;
 
@@ -3423,18 +3210,12 @@
                                                     ${canAfford
                                                         ? 'cursor-pointer hover:-translate-y-2 hover:shadow-2xl hover:scale-[1.02]'
                                                         : 'opacity-40 cursor-not-allowed grayscale border-slate-700 bg-slate-900'}
-                                                    ${comboReadyTags.length > 0 && canAfford ? 'ring-2 ring-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.4)] border-amber-400 z-10 animate-pulse-glow' : ''}
                                                 `}
                                                 style={{
                                                     transformStyle: 'preserve-3d',
                                                     perspective: '1000px'
                                                 }}
                                             >
-                                                {comboReadyTags.length > 0 && canAfford && (
-                                                    <div className="absolute -top-3 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg z-20 animate-bounce">
-                                                        ⚡ COMBO READY
-                                                    </div>
-                                                )}
 
                                                 {/* Header */}
                                                 <div className={`px-3 py-2 flex justify-between items-center ${typeInfo.headerStyle}`}>
@@ -3473,21 +3254,6 @@
                                                             {t('successRate', lang)}: {successRate}%
                                                         </div>
 
-                                                        {/* Tags */}
-                                                        {(comboReadyTags.length > 0 || providesTags.length > 0) && (
-                                                            <div className="flex flex-wrap gap-1 mt-auto pt-2">
-                                                                {comboReadyTags.map(tag => (
-                                                                     <span key={tag} className="bg-gradient-to-r from-amber-500/20 to-rose-500/20 text-amber-200 border border-amber-500/50 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide shadow-[0_0_10px_rgba(245,158,11,0.2)] animate-pulse">
-                                                                        ★ COMBO: {tag}
-                                                                     </span>
-                                                                ))}
-                                                                {providesTags.map(tag => (
-                                                                     <span key={tag} className="bg-slate-800/80 text-cyan-200/80 border border-cyan-800/50 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide">
-                                                                        #{tag}
-                                                                     </span>
-                                                                ))}
-                                                            </div>
-                                                        )}
                                                     </div>
                                                 </div>
                                             </button>
@@ -3536,9 +3302,6 @@
                                     ))}
                                 </div>
                             </div>
-
-                            {/* Combo Guide */}
-                            <ComboGuidePanel lang={lang} />
 
                             {/* TITLE SCREEN */}
                             {gameState === 'TITLE' && (
