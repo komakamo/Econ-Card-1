@@ -137,7 +137,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useCallback, memo } = React;
 
         // --- Sound Manager (Web Audio API) ---
         const SoundManager = {
@@ -1188,18 +1188,6 @@
             return { ...state, inflation: clampInflation((state.inflation ?? 0) + delta) };
         };
 
-        const calculateInflatedCost = (baseCost, inflationRate = 0) => {
-            return Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
-        };
-
-        const calculateSuccessRate = (card, support) => {
-            const base = card.baseSuccessRate ?? 100;
-            if (base >= 100) return 100;
-            // Bonus: (Support - 50) * 0.5. Support 70 -> +10%. Support 30 -> -10%.
-            const bonus = (support - 50) * 0.5;
-            return Math.min(100, Math.max(0, Math.round(base + bonus)));
-        };
-
         const evaluateGame = (player, difficulty, isWin, ideology = null, lang = 'ja', completedMissionCount = 0) => {
             // 1. Basic Stats
             const gdp = player.gdp;
@@ -1989,6 +1977,130 @@
 
         // --- メインコンポーネント ---
 
+        // Pure Helpers extracted for performance
+        const getCardProvidedTags = (card) => {
+            const tags = [];
+            if (Array.isArray(card?.providesTags)) {
+                tags.push(...card.providesTags);
+            }
+            if (card?.providesTag) {
+                tags.push(card.providesTag);
+            }
+            return tags;
+        };
+
+        const calculateSuccessRate = (card, support) => {
+            const base = card.baseSuccessRate ?? 100;
+            if (base >= 100) return 100;
+            const bonus = (support - 50) * 0.5;
+            return Math.min(100, Math.max(0, Math.round(base + bonus)));
+        };
+
+        const calculateInflatedCost = (baseCost, inflationRate = 0, activeEvent = null, era = null) => {
+            const inflated = Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
+            let multiplier = activeEvent?.effect?.costMultiplier || 1;
+
+            // Era Effect: Stagnation increases costs
+            if (era?.id === 'STAGNATION') {
+                multiplier *= 1.5;
+            }
+
+            return Math.max(0, Math.round(inflated * multiplier));
+        };
+
+        const CardButton = memo(({ card, onPlay, onHover, player, gameState, lastTags, lang, activeEvent, era }) => {
+             const typeInfo = CARD_TYPES[card.type];
+             const inflatedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
+             const canAfford = player.money >= inflatedCost;
+             const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
+             const providesTags = getCardProvidedTags(card);
+             const successRate = calculateSuccessRate(card, player.support);
+             const isRisky = successRate < 100;
+
+             return (
+                <button
+                    onClick={(e) => onPlay(card, e)}
+                    onMouseEnter={() => onHover(card)}
+                    onMouseLeave={() => onHover(null)}
+                    disabled={!canAfford || gameState !== 'PLAYING'}
+                    className={`
+                        relative text-left group
+                        flex flex-col h-full rounded-xl border-2 transition-all duration-500 ease-out overflow-hidden
+                        ${typeInfo.baseStyle}
+                        ${canAfford
+                            ? 'cursor-pointer hover:-translate-y-2 hover:shadow-2xl hover:scale-[1.02]'
+                            : 'opacity-40 cursor-not-allowed grayscale border-slate-700 bg-slate-900'}
+                        ${comboReadyTags.length > 0 && canAfford ? 'ring-2 ring-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.4)] border-amber-400 z-10 animate-pulse-glow' : ''}
+                    `}
+                    style={{
+                        transformStyle: 'preserve-3d',
+                        perspective: '1000px'
+                    }}
+                >
+                    {comboReadyTags.length > 0 && canAfford && (
+                        <div className="absolute -top-3 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg z-20 animate-bounce">
+                            ⚡ COMBO READY
+                        </div>
+                    )}
+
+                    {/* Header */}
+                    <div className={`px-3 py-2 flex justify-between items-center ${typeInfo.headerStyle}`}>
+                        <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                            {typeInfo.icon} {typeInfo.label}
+                        </span>
+                        <span className="font-mono text-lg font-black tracking-tighter">¥{inflatedCost}</span>
+                    </div>
+
+                    {/* Body */}
+                    <div className="p-3 flex flex-col flex-grow bg-slate-900/40 backdrop-blur-sm">
+                        <h4 className="font-bold text-slate-200 text-sm mb-1.5 min-h-[2.5em] flex items-center leading-snug">
+                            {getLoc(card, 'name', lang)}
+                        </h4>
+
+                        <p className="text-xs text-slate-400 mb-3 flex-grow leading-relaxed line-clamp-3">
+                            {getLoc(card, 'description', lang)}
+                        </p>
+
+                        <div className="space-y-1">
+                             {/* Cost Info */}
+                            {inflatedCost !== card.cost && (
+                                <div className="text-[10px] text-amber-500 bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-900/50 flex items-center gap-1 w-max">
+                                    <IconAlertCircle size={8} />
+                                    {t('cost', lang)}: {card.cost}→{inflatedCost}
+                                </div>
+                            )}
+
+                            {/* Success Rate Info */}
+                            <div className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 w-max ${
+                                isRisky
+                                    ? successRate < 70 ? 'text-red-400 bg-red-950/30 border-red-900/50' : 'text-orange-400 bg-orange-950/30 border-orange-900/50'
+                                    : 'text-emerald-400 bg-emerald-950/30 border-emerald-900/50'
+                            }`}>
+                                {isRisky && <IconAlertCircle size={8} />}
+                                {t('successRate', lang)}: {successRate}%
+                            </div>
+
+                            {/* Tags */}
+                            {(comboReadyTags.length > 0 || providesTags.length > 0) && (
+                                <div className="flex flex-wrap gap-1 mt-auto pt-2">
+                                    {comboReadyTags.map(tag => (
+                                         <span key={tag} className="bg-gradient-to-r from-amber-500/20 to-rose-500/20 text-amber-200 border border-amber-500/50 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide shadow-[0_0_10px_rgba(245,158,11,0.2)] animate-pulse">
+                                            ★ COMBO: {tag}
+                                         </span>
+                                    ))}
+                                    {providesTags.map(tag => (
+                                         <span key={tag} className="bg-slate-800/80 text-cyan-200/80 border border-cyan-800/50 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide">
+                                            #{tag}
+                                         </span>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </button>
+             );
+        });
+
         function EconomicCardGame() {
             const [turn, setTurn] = useState(1);
             const [era, setEra] = useState(ERAS.GROWTH);
@@ -2392,9 +2504,9 @@
                 drawCards(3, shuffledDeck, []);
             };
 
-            const addLog = (msg) => {
+            const addLog = useCallback((msg) => {
                 setLogs(prev => [msg, ...prev].slice(0, 10)); // Increased log size slightly
-            };
+            }, []);
 
             const chooseRandomEvent = () => EVENTS[Math.floor(Math.random() * EVENTS.length)];
 
@@ -2547,18 +2659,6 @@
                 return applyEventMultiplier(prev, next);
             });
 
-            const calculateInflatedCost = (baseCost, inflationRate = 0) => {
-                const inflated = Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
-                let multiplier = activeEvent?.effect?.costMultiplier || 1;
-
-                // Era Effect: Stagnation increases costs
-                if (era.id === 'STAGNATION') {
-                    multiplier *= 1.5;
-                }
-
-                return Math.max(0, Math.round(inflated * multiplier));
-            };
-
             const applyComboBonus = (prevState, nextState, multiplier = 1) => {
                 const normalizedMultiplier = Number.isFinite(multiplier) ? multiplier : Number(multiplier) || 1;
 
@@ -2578,11 +2678,117 @@
                 };
             };
 
+            // ----------------------------------------------------------------
+            // Helper Functions (Reordered for Dependencies & Performance)
+            // ----------------------------------------------------------------
+
+            const checkForNewMission = useCallback((playerState) => {
+                if (activeMission) return; // Don't stack missions
+
+                const triggeredMission = MISSIONS.find(m => m.trigger(playerState));
+                if (triggeredMission) {
+                    setActiveMission({ missionId: triggeredMission.id, turnsLeft: triggeredMission.turns });
+                    const missionName = getLoc(triggeredMission, 'name', lang);
+                    const missionObjective = getLoc(triggeredMission, 'objective_text', lang);
+                    addLog(`🚨 MISSION: ${missionName} - ${missionObjective}`);
+                    SoundManager.playTone(440, 'sine', 0.5, 0.1);
+                }
+            }, [activeMission, lang, addLog]);
+
+            const checkWinCondition = useCallback((nextPlayer = player, nextEnemy = enemy) => {
+                if (gameState !== 'PLAYING') return false;
+
+                const target = currentDifficulty.targetGdp || 300;
+                let won = false;
+                let lost = false;
+                let reason = '';
+
+                if (nextPlayer.gdp >= target) {
+                    won = true;
+                    reason = lang === 'en' ? 'Economic Goal Achieved!' : '経済目標達成！';
+                } else if (nextEnemy.gdp >= target) {
+                    lost = true;
+                    reason = lang === 'en' ? 'Defeated by Rival...' : 'ライバル国に敗北...';
+                } else if (nextPlayer.support <= 0) {
+                    lost = true;
+                    reason = lang === 'en' ? 'Administration collapsed due to low support' : '支持率低下により政権崩壊';
+                } else if (nextEnemy.support <= 0) {
+                    won = true;
+                    reason = lang === 'en' ? 'Rival administration collapsed!' : 'ライバル国が自滅！';
+                }
+
+                if (won || lost) {
+                    const isWin = won;
+                    setGameState(isWin ? 'WON' : 'LOST');
+                    SoundManager.playGameEnd(isWin);
+                    addLog(isWin ? `🎉 ${reason}` : `💀 ${reason}`);
+
+                    // Calculate Evaluation
+                    const result = evaluateGame(nextPlayer, currentDifficulty, isWin, IDEOLOGIES[selectedIdeology], lang, completedMissionCount);
+                    setEvaluation(result);
+
+                    if (isWin) {
+                        // Title check
+                        if (result.rank === 'S') {
+                            try {
+                                const newTitles = { ...earnedTitles, [selectedIdeology]: true };
+                                setEarnedTitles(newTitles);
+                                localStorage.setItem('earnedTitles', JSON.stringify(newTitles));
+                                const ideologyName = getLoc(IDEOLOGIES[selectedIdeology], 'name', lang);
+                                const titleName = getLoc(IDEOLOGIES[selectedIdeology], 'title', lang);
+                                addLog(`🏆 Title Unlocked: [${titleName}] (${ideologyName} S Rank)`);
+                            } catch (e) {
+                                console.error("Failed to save titles to localStorage", e);
+                            }
+                        }
+
+                        // Progress Tracking (Ideology Unlocks)
+                        if ((result.rank === 'S' || result.rank === 'A') && selectedIdeology === 'MONETARIST') {
+                            const currentCount = gameProgress.monetarist_rank_a_count || 0;
+                            const newCount = currentCount + 1;
+                            const newProgress = { ...gameProgress, monetarist_rank_a_count: newCount };
+                            setGameProgress(newProgress);
+                            localStorage.setItem('economics_master_progress', JSON.stringify(newProgress));
+
+                            // Notify if this action unlocked MMT
+                             if (currentCount < 3 && newCount >= 3) {
+                                addLog(`🔓 UNLOCKED: New Ideology [${getLoc(IDEOLOGIES.MMT, 'name', lang)}]!`);
+                            }
+                        }
+
+                        // Achievement check
+                        let newAchievementsFound = false;
+                        const newAchievements = { ...unlockedAchievements };
+                        for (const key in ACHIEVEMENTS) {
+                            const achievement = ACHIEVEMENTS[key];
+                            if (!newAchievements[achievement.id] && achievement.check(nextPlayer, isWin)) {
+                                newAchievements[achievement.id] = true;
+                                newAchievementsFound = true;
+                                const achievementName = getLoc(achievement, 'name', lang);
+                                addLog(`⭐ Achievement Unlocked: [${achievementName}]`);
+                            }
+                        }
+                        if (newAchievementsFound) {
+                            try {
+                                setUnlockedAchievements(newAchievements);
+                                localStorage.setItem('unlockedAchievements', JSON.stringify(newAchievements));
+                            } catch (e) {
+                                console.error("Failed to save achievements to localStorage", e);
+                            }
+                        }
+                    }
+
+                    return true;
+                }
+
+                return false;
+            }, [gameState, player, enemy, currentDifficulty, lang, completedMissionCount, selectedIdeology, earnedTitles, gameProgress, unlockedAchievements, addLog, unlockedAchievements]);
+
             // プレイヤーのターン処理
-            const playCard = (card, e) => {
+            const playCard = useCallback((card, e) => {
                 if (gameState !== 'PLAYING') return;
 
-                const adjustedCost = calculateInflatedCost(card.cost, player.inflation);
+                const adjustedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
                 const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
                 const providedTags = getCardProvidedTags(card);
                 const cardName = getLoc(card, 'name', lang);
@@ -2854,19 +3060,116 @@
                 checkForNewMission(nextPlayerState);
 
                 return checkWinCondition(nextPlayerState, updatedEnemyState ?? enemy);
+            }, [gameState, player, enemy, lang, activeEvent, era, lastTags, gameDeck, discardPile, discoveredCards, gameProgress, comboChain, turnHighlight, checkForNewMission, checkWinCondition, addLog, unlockedAchievements, earnedTitles, currentDifficulty, selectedIdeology, completedMissionCount]);
+
+            const aiTurn = () => {
+                // Era Effect for AI
+                let driftTarget = 0;
+                let eraIncomePenalty = 0;
+                if (era.id === 'STAGNATION') {
+                    driftTarget = -2;
+                    eraIncomePenalty = 5;
+                }
+
+                // 0. Process Delayed Effects (AI)
+                // Note: using 'enemy' from state, assuming it's stable during the turn transition
+                let currentEnemyState = { ...enemy };
+                let nextActiveEffects = [];
+                let effectsTriggered = [];
+
+                if (currentEnemyState.activeEffects) {
+                    currentEnemyState.activeEffects.forEach(eff => {
+                        if (eff.turnsLeft <= 1) {
+                            currentEnemyState = eff.effect(currentEnemyState);
+                            effectsTriggered.push(eff.name);
+                        } else {
+                            nextActiveEffects.push({ ...eff, turnsLeft: eff.turnsLeft - 1 });
+                        }
+                    });
+                }
+                currentEnemyState.activeEffects = nextActiveEffects;
+
+                if (effectsTriggered.length > 0) {
+                    addLog(lang === 'en' ? `RIVAL: Delayed effects: ${effectsTriggered.join(', ')}` : `ライバル: 時間差効果発動: ${effectsTriggered.join(', ')}`);
+                }
+
+                const drifted = applyInflationDrift(currentEnemyState.inflation, driftTarget);
+                if (drifted !== currentEnemyState.inflation) {
+                    addLog(lang === 'en' ? `RIVAL: Inflation drift ${currentEnemyState.inflation.toFixed(1)}% -> ${drifted.toFixed(1)}%` : `ライバル: インフレ率 ${currentEnemyState.inflation.toFixed(1)}% → ${drifted.toFixed(1)}% (自動調整)`);
+                }
+                const afterDrift = { ...currentEnemyState, inflation: drifted };
+                const ratingInfo = getRatingInfo(afterDrift.rating);
+                const incomePenalty = Math.round((activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier + eraIncomePenalty);
+                const aiIncomeGain = Math.max(0, afterDrift.income - incomePenalty);
+                let afterIncome = { ...afterDrift, money: afterDrift.money + aiIncomeGain };
+                afterIncome = applyInterestPayment(afterIncome, 'ライバル');
+                const ratedEnemy = applyRatingUpdate(afterIncome, 'ライバル');
+                const unrestAdjusted = applyUnrestPenalty(ratedEnemy, 'ライバル');
+
+                const potentialActions = ALL_CARDS.filter(c => c.id < MAX_STANDARD_CARD_ID && calculateInflatedCost(c.cost, unrestAdjusted.inflation, activeEvent, era) <= unrestAdjusted.money);
+
+                if (potentialActions.length === 0) {
+                    addLog(lang === 'en' ? `RIVAL: Saving funds.` : `ライバル: 資金不足のため資金を温存。`);
+                    setEnemy(unrestAdjusted);
+                    return checkWinCondition(player, unrestAdjusted);
+                }
+
+                const aiCard = potentialActions[Math.floor(Math.random() * potentialActions.length)];
+                const inflatedCost = calculateInflatedCost(aiCard.cost, unrestAdjusted.inflation, activeEvent, era);
+                let afterPayment = { ...unrestAdjusted, money: unrestAdjusted.money - inflatedCost };
+                const aiCardName = getLoc(aiCard, 'name', lang); // Use localized name for AI logs
+
+                if (aiCard.type === 'ATTACK') {
+                    const afterSupport = applySupportChange(afterPayment, aiCard.supportChange, 'ライバル', lang === 'en' ? `"${aiCardName}" political impact` : `「${aiCard.name}」の政治的影響`);
+
+                    // Calc Player Impact
+                    // Calculate impact on player immediately to check win condition and set state
+                    const effected = aiCard.targetEffect ? aiCard.targetEffect(player, afterSupport) : player;
+                    const unrested = applyUnrestPenalty(effected, 'あなた');
+                    const finalPreEvent = applySupportChange(unrested, aiCard.targetSupportChange, 'あなた', lang === 'en' ? `"${aiCardName}" impact` : `「${aiCard.name}」の影響`);
+                    const finalPlayer = applyEventMultiplier(player, finalPreEvent);
+
+                    triggerShake('player'); // Shake player panel
+                    addLog(lang === 'en' ? `RIVAL: Used "${aiCardName}"!` : `ライバル: 「${aiCard.name}」を使用！`);
+
+                    setEnemy(afterSupport);
+                    setPlayer(finalPlayer);
+
+                    return checkWinCondition(finalPlayer, afterSupport);
+                }
+
+                const afterEffect = applyEventMultiplier(afterPayment, aiCard.effect(afterPayment, player));
+                const afterInflation = applyInflationChange(afterEffect, aiCard.inflationChange);
+                if (aiCard.inflationChange) {
+                    addLog(lang === 'en' ? `RIVAL: "${aiCardName}" inflation impact` : `ライバル: 「${aiCard.name}」で物価が変動 (${aiCard.inflationChange > 0 ? '+' : ''}${aiCard.inflationChange}%)`);
+                }
+                addLog(lang === 'en' ? `RIVAL: Used "${aiCardName}".` : `ライバル: 「${aiCard.name}」を使用し成長中...`);
+                const unrested = applyUnrestPenalty(afterInflation, 'ライバル');
+                const afterSupport = applySupportChange(unrested, aiCard.supportChange, 'ライバル', lang === 'en' ? `"${aiCardName}" effect` : `「${aiCard.name}」の効果`);
+
+                setEnemy(afterSupport);
+                return checkWinCondition(player, afterSupport);
             };
 
-            const checkForNewMission = (playerState) => {
-                if (activeMission) return; // Don't stack missions
+            const proceedToNextTurn = () => {
+                setShowTurnSummary(false);
 
-                const triggeredMission = MISSIONS.find(m => m.trigger(playerState));
-                if (triggeredMission) {
-                    setActiveMission({ missionId: triggeredMission.id, turnsLeft: triggeredMission.turns });
-                    const missionName = getLoc(triggeredMission, 'name', lang);
-                    const missionObjective = getLoc(triggeredMission, 'objective_text', lang);
-                    addLog(`🚨 MISSION: ${missionName} - ${missionObjective}`);
-                    SoundManager.playTone(440, 'sine', 0.5, 0.1);
+                // 2. 勝利判定
+                if (checkWinCondition()) return;
+
+                // 3. AIのターン
+                const aiEndedGame = aiTurn();
+
+                // 4. 次のターンの準備
+                if (!aiEndedGame) {
+                    setTurn(prev => prev + 1);
+                    drawCards(1);
+                    selectTurnEvent();
                 }
+
+                setLastTags([]);
+                setComboChain({ tag: null, count: 0 }); // Reset combo chain at turn end
+                setTurnHighlight({ gdpGain: 0, text: '' }); // Reset for new turn
             };
 
             // ターン終了処理 & AIターン
@@ -2990,205 +3293,6 @@
                 } else {
                     setShowTurnSummary(true);
                 }
-            };
-
-            const proceedToNextTurn = () => {
-                setShowTurnSummary(false);
-
-                // 2. 勝利判定
-                if (checkWinCondition()) return;
-
-                // 3. AIのターン
-                const aiEndedGame = aiTurn();
-
-                // 4. 次のターンの準備
-                if (!aiEndedGame) {
-                    setTurn(prev => prev + 1);
-                    drawCards(1);
-                    selectTurnEvent();
-                }
-
-                setLastTags([]);
-                setComboChain({ tag: null, count: 0 }); // Reset combo chain at turn end
-                setTurnHighlight({ gdpGain: 0, text: '' }); // Reset for new turn
-            };
-
-            const aiTurn = () => {
-                // Era Effect for AI
-                let driftTarget = 0;
-                let eraIncomePenalty = 0;
-                if (era.id === 'STAGNATION') {
-                    driftTarget = -2;
-                    eraIncomePenalty = 5;
-                }
-
-                // 0. Process Delayed Effects (AI)
-                // Note: using 'enemy' from state, assuming it's stable during the turn transition
-                let currentEnemyState = { ...enemy };
-                let nextActiveEffects = [];
-                let effectsTriggered = [];
-
-                if (currentEnemyState.activeEffects) {
-                    currentEnemyState.activeEffects.forEach(eff => {
-                        if (eff.turnsLeft <= 1) {
-                            currentEnemyState = eff.effect(currentEnemyState);
-                            effectsTriggered.push(eff.name);
-                        } else {
-                            nextActiveEffects.push({ ...eff, turnsLeft: eff.turnsLeft - 1 });
-                        }
-                    });
-                }
-                currentEnemyState.activeEffects = nextActiveEffects;
-
-                if (effectsTriggered.length > 0) {
-                    addLog(lang === 'en' ? `RIVAL: Delayed effects: ${effectsTriggered.join(', ')}` : `ライバル: 時間差効果発動: ${effectsTriggered.join(', ')}`);
-                }
-
-                const drifted = applyInflationDrift(currentEnemyState.inflation, driftTarget);
-                if (drifted !== currentEnemyState.inflation) {
-                    addLog(lang === 'en' ? `RIVAL: Inflation drift ${currentEnemyState.inflation.toFixed(1)}% -> ${drifted.toFixed(1)}%` : `ライバル: インフレ率 ${currentEnemyState.inflation.toFixed(1)}% → ${drifted.toFixed(1)}% (自動調整)`);
-                }
-                const afterDrift = { ...currentEnemyState, inflation: drifted };
-                const ratingInfo = getRatingInfo(afterDrift.rating);
-                const incomePenalty = Math.round((activeEvent?.effect?.incomePenalty ?? 0) * ratingInfo.eventDamageMultiplier + eraIncomePenalty);
-                const aiIncomeGain = Math.max(0, afterDrift.income - incomePenalty);
-                let afterIncome = { ...afterDrift, money: afterDrift.money + aiIncomeGain };
-                afterIncome = applyInterestPayment(afterIncome, 'ライバル');
-                const ratedEnemy = applyRatingUpdate(afterIncome, 'ライバル');
-                const unrestAdjusted = applyUnrestPenalty(ratedEnemy, 'ライバル');
-
-                const potentialActions = ALL_CARDS.filter(c => c.id < MAX_STANDARD_CARD_ID && calculateInflatedCost(c.cost, unrestAdjusted.inflation) <= unrestAdjusted.money);
-
-                if (potentialActions.length === 0) {
-                    addLog(lang === 'en' ? `RIVAL: Saving funds.` : `ライバル: 資金不足のため資金を温存。`);
-                    setEnemy(unrestAdjusted);
-                    return checkWinCondition(player, unrestAdjusted);
-                }
-
-                const aiCard = potentialActions[Math.floor(Math.random() * potentialActions.length)];
-                const inflatedCost = calculateInflatedCost(aiCard.cost, unrestAdjusted.inflation);
-                let afterPayment = { ...unrestAdjusted, money: unrestAdjusted.money - inflatedCost };
-                const aiCardName = getLoc(aiCard, 'name', lang); // Use localized name for AI logs
-
-                if (aiCard.type === 'ATTACK') {
-                    const afterSupport = applySupportChange(afterPayment, aiCard.supportChange, 'ライバル', lang === 'en' ? `"${aiCardName}" political impact` : `「${aiCard.name}」の政治的影響`);
-
-                    // Calc Player Impact
-                    // Calculate impact on player immediately to check win condition and set state
-                    const effected = aiCard.targetEffect ? aiCard.targetEffect(player, afterSupport) : player;
-                    const unrested = applyUnrestPenalty(effected, 'あなた');
-                    const finalPreEvent = applySupportChange(unrested, aiCard.targetSupportChange, 'あなた', lang === 'en' ? `"${aiCardName}" impact` : `「${aiCard.name}」の影響`);
-                    const finalPlayer = applyEventMultiplier(player, finalPreEvent);
-
-                    triggerShake('player'); // Shake player panel
-                    addLog(lang === 'en' ? `RIVAL: Used "${aiCardName}"!` : `ライバル: 「${aiCard.name}」を使用！`);
-
-                    setEnemy(afterSupport);
-                    setPlayer(finalPlayer);
-
-                    return checkWinCondition(finalPlayer, afterSupport);
-                }
-
-                const afterEffect = applyEventMultiplier(afterPayment, aiCard.effect(afterPayment, player));
-                const afterInflation = applyInflationChange(afterEffect, aiCard.inflationChange);
-                if (aiCard.inflationChange) {
-                    addLog(lang === 'en' ? `RIVAL: "${aiCardName}" inflation impact` : `ライバル: 「${aiCard.name}」で物価が変動 (${aiCard.inflationChange > 0 ? '+' : ''}${aiCard.inflationChange}%)`);
-                }
-                addLog(lang === 'en' ? `RIVAL: Used "${aiCardName}".` : `ライバル: 「${aiCard.name}」を使用し成長中...`);
-                const unrested = applyUnrestPenalty(afterInflation, 'ライバル');
-                const afterSupport = applySupportChange(unrested, aiCard.supportChange, 'ライバル', lang === 'en' ? `"${aiCardName}" effect` : `「${aiCard.name}」の効果`);
-
-                setEnemy(afterSupport);
-                return checkWinCondition(player, afterSupport);
-            };
-
-            const checkWinCondition = (nextPlayer = player, nextEnemy = enemy) => {
-                if (gameState !== 'PLAYING') return false;
-
-                const target = currentDifficulty.targetGdp || 300;
-                let won = false;
-                let lost = false;
-                let reason = '';
-
-                if (nextPlayer.gdp >= target) {
-                    won = true;
-                    reason = lang === 'en' ? 'Economic Goal Achieved!' : '経済目標達成！';
-                } else if (nextEnemy.gdp >= target) {
-                    lost = true;
-                    reason = lang === 'en' ? 'Defeated by Rival...' : 'ライバル国に敗北...';
-                } else if (nextPlayer.support <= 0) {
-                    lost = true;
-                    reason = lang === 'en' ? 'Administration collapsed due to low support' : '支持率低下により政権崩壊';
-                } else if (nextEnemy.support <= 0) {
-                    won = true;
-                    reason = lang === 'en' ? 'Rival administration collapsed!' : 'ライバル国が自滅！';
-                }
-
-                if (won || lost) {
-                    const isWin = won;
-                    setGameState(isWin ? 'WON' : 'LOST');
-                    SoundManager.playGameEnd(isWin);
-                    addLog(isWin ? `🎉 ${reason}` : `💀 ${reason}`);
-
-                    // Calculate Evaluation
-                    const result = evaluateGame(nextPlayer, currentDifficulty, isWin, IDEOLOGIES[selectedIdeology], lang, completedMissionCount);
-                    setEvaluation(result);
-
-                    if (isWin) {
-                        // Title check
-                        if (result.rank === 'S') {
-                            try {
-                                const newTitles = { ...earnedTitles, [selectedIdeology]: true };
-                                setEarnedTitles(newTitles);
-                                localStorage.setItem('earnedTitles', JSON.stringify(newTitles));
-                                const ideologyName = getLoc(IDEOLOGIES[selectedIdeology], 'name', lang);
-                                const titleName = getLoc(IDEOLOGIES[selectedIdeology], 'title', lang);
-                                addLog(`🏆 Title Unlocked: [${titleName}] (${ideologyName} S Rank)`);
-                            } catch (e) {
-                                console.error("Failed to save titles to localStorage", e);
-                            }
-                        }
-
-                        // Progress Tracking (Ideology Unlocks)
-                        if ((result.rank === 'S' || result.rank === 'A') && selectedIdeology === 'MONETARIST') {
-                            const currentCount = gameProgress.monetarist_rank_a_count || 0;
-                            const newCount = currentCount + 1;
-                            const newProgress = { ...gameProgress, monetarist_rank_a_count: newCount };
-                            setGameProgress(newProgress);
-                            localStorage.setItem('economics_master_progress', JSON.stringify(newProgress));
-
-                            // Notify if this action unlocked MMT
-                             if (currentCount < 3 && newCount >= 3) {
-                                addLog(`🔓 UNLOCKED: New Ideology [${getLoc(IDEOLOGIES.MMT, 'name', lang)}]!`);
-                            }
-                        }
-
-                        // Achievement check
-                        let newAchievementsFound = false;
-                        const newAchievements = { ...unlockedAchievements };
-                        for (const key in ACHIEVEMENTS) {
-                            const achievement = ACHIEVEMENTS[key];
-                            if (!newAchievements[achievement.id] && achievement.check(nextPlayer, isWin)) {
-                                newAchievements[achievement.id] = true;
-                                newAchievementsFound = true;
-                                const achievementName = getLoc(achievement, 'name', lang);
-                                addLog(`⭐ Achievement Unlocked: [${achievementName}]`);
-                            }
-                        }
-                        if (newAchievementsFound) {
-                            try {
-                                setUnlockedAchievements(newAchievements);
-                                localStorage.setItem('unlockedAchievements', JSON.stringify(newAchievements));
-                            } catch (e) {
-                                console.error("Failed to save achievements to localStorage", e);
-                            }
-                        }
-                    }
-
-                    return true;
-                }
-
-                return false;
             };
 
             return (
@@ -3400,99 +3504,20 @@
                             </div>
 
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                    {playerHand.map((card) => {
-                                        const typeInfo = CARD_TYPES[card.type];
-                                        const inflatedCost = calculateInflatedCost(card.cost, player.inflation);
-                                        const canAfford = player.money >= inflatedCost;
-                                        const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
-                                        const providesTags = getCardProvidedTags(card);
-                                        const successRate = calculateSuccessRate(card, player.support);
-                                        const isRisky = successRate < 100;
-
-                                        return (
-                                            <button
-                                                key={card.uniqueId}
-                                                onClick={(e) => playCard(card, e)}
-                                                 onMouseEnter={() => setHoveredCard(card)}
-                                                 onMouseLeave={() => setHoveredCard(null)}
-                                                disabled={!canAfford || gameState !== 'PLAYING'}
-                                                className={`
-                                                    relative text-left group
-                                                    flex flex-col h-full rounded-xl border-2 transition-all duration-500 ease-out overflow-hidden
-                                                    ${typeInfo.baseStyle}
-                                                    ${canAfford
-                                                        ? 'cursor-pointer hover:-translate-y-2 hover:shadow-2xl hover:scale-[1.02]'
-                                                        : 'opacity-40 cursor-not-allowed grayscale border-slate-700 bg-slate-900'}
-                                                    ${comboReadyTags.length > 0 && canAfford ? 'ring-2 ring-amber-400 shadow-[0_0_30px_rgba(251,191,36,0.4)] border-amber-400 z-10 animate-pulse-glow' : ''}
-                                                `}
-                                                style={{
-                                                    transformStyle: 'preserve-3d',
-                                                    perspective: '1000px'
-                                                }}
-                                            >
-                                                {comboReadyTags.length > 0 && canAfford && (
-                                                    <div className="absolute -top-3 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-lg z-20 animate-bounce">
-                                                        ⚡ COMBO READY
-                                                    </div>
-                                                )}
-
-                                                {/* Header */}
-                                                <div className={`px-3 py-2 flex justify-between items-center ${typeInfo.headerStyle}`}>
-                                                    <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                                                        {typeInfo.icon} {typeInfo.label}
-                                                    </span>
-                                                    <span className="font-mono text-lg font-black tracking-tighter">¥{inflatedCost}</span>
-                                                </div>
-
-                                                {/* Body */}
-                                                <div className="p-3 flex flex-col flex-grow bg-slate-900/40 backdrop-blur-sm">
-                                                    <h4 className="font-bold text-slate-200 text-sm mb-1.5 min-h-[2.5em] flex items-center leading-snug">
-                                                        {getLoc(card, 'name', lang)}
-                                                    </h4>
-
-                                                    <p className="text-xs text-slate-400 mb-3 flex-grow leading-relaxed line-clamp-3">
-                                                        {getLoc(card, 'description', lang)}
-                                                    </p>
-
-                                                    <div className="space-y-1">
-                                                         {/* Cost Info */}
-                                                        {inflatedCost !== card.cost && (
-                                                            <div className="text-[10px] text-amber-500 bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-900/50 flex items-center gap-1 w-max">
-                                                                <IconAlertCircle size={8} />
-                                                                {t('cost', lang)}: {card.cost}→{inflatedCost}
-                                                            </div>
-                                                        )}
-
-                                                        {/* Success Rate Info (Only if risky or varied) */}
-                                                        <div className={`text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1 w-max ${
-                                                            isRisky
-                                                                ? successRate < 70 ? 'text-red-400 bg-red-950/30 border-red-900/50' : 'text-orange-400 bg-orange-950/30 border-orange-900/50'
-                                                                : 'text-emerald-400 bg-emerald-950/30 border-emerald-900/50'
-                                                        }`}>
-                                                            {isRisky && <IconAlertCircle size={8} />}
-                                                            {t('successRate', lang)}: {successRate}%
-                                                        </div>
-
-                                                        {/* Tags */}
-                                                        {(comboReadyTags.length > 0 || providesTags.length > 0) && (
-                                                            <div className="flex flex-wrap gap-1 mt-auto pt-2">
-                                                                {comboReadyTags.map(tag => (
-                                                                     <span key={tag} className="bg-gradient-to-r from-amber-500/20 to-rose-500/20 text-amber-200 border border-amber-500/50 px-2 py-0.5 rounded-full text-[10px] font-black tracking-wide shadow-[0_0_10px_rgba(245,158,11,0.2)] animate-pulse">
-                                                                        ★ COMBO: {tag}
-                                                                     </span>
-                                                                ))}
-                                                                {providesTags.map(tag => (
-                                                                     <span key={tag} className="bg-slate-800/80 text-cyan-200/80 border border-cyan-800/50 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide">
-                                                                        #{tag}
-                                                                     </span>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        );
-                                    })}
+                                    {playerHand.map((card) => (
+                                        <CardButton
+                                            key={card.uniqueId}
+                                            card={card}
+                                            onPlay={playCard}
+                                            onHover={setHoveredCard}
+                                            player={player}
+                                            gameState={gameState}
+                                            lastTags={lastTags}
+                                            lang={lang}
+                                            activeEvent={activeEvent}
+                                            era={era}
+                                        />
+                                    ))}
                                     {playerHand.length === 0 && (
                                         <div className="col-span-full py-8 flex flex-col items-center justify-center text-slate-600 border-2 border-dashed border-slate-800 rounded-xl">
                                             <IconBookOpen className="mb-2 opacity-50" size={24} />
