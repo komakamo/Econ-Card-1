@@ -704,7 +704,7 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = secureRandom }) 
     const [playerHand, setPlayerHand] = useState([]);
     const [isResolvingTurn, setIsResolvingTurn] = useState(false);
 
-    const addLog = useCallback((msg) => setLogs(prev => [msg, ...prev].slice(0, 50)), []);
+    const addLog = useCallback((msg) => setLogs(prev => [{ id: randomFn(), message: msg }, ...prev].slice(0, 50)), [randomFn]);
 
     const clearErrorMessage = useCallback(() => {
         if (errorTimeoutRef.current) {
@@ -1155,8 +1155,8 @@ function EconomicCardGame({ initialDeck = ALL_CARDS, randomFn = secureRandom }) 
                     <div data-testid="log-panel">
                         <h4>Activity Log</h4>
                         <ul>
-                            {logs.map((entry, index) => (
-                                <li key={`${entry}-${index}`}>{entry}</li>
+                            {logs.map((entry) => (
+                                <li key={entry.id}>{entry.message}</li>
                             ))}
                         </ul>
                     </div>
