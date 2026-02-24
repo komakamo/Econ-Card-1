@@ -2498,8 +2498,8 @@
                 const ideologyName = getLoc(ideology, 'name', lang);
 
                 setLogs([
-                    lang === 'en' ? `📢 Event: ${eventName} - ${eventDesc}` : `📢 今ターンのイベント: 「${eventName}」 - ${eventDesc}`,
-                    lang === 'en' ? `Game Start! Diff: ${diffLabel} / Style: ${ideologyName}` : `ゲーム開始！難易度: ${diffLabel} / 思想: ${ideologyName}`
+                    { id: Math.random(), message: lang === 'en' ? `📢 Event: ${eventName} - ${eventDesc}` : `📢 今ターンのイベント: 「${eventName}」 - ${eventDesc}` },
+                    { id: Math.random(), message: lang === 'en' ? `Game Start! Diff: ${diffLabel} / Style: ${ideologyName}` : `ゲーム開始！難易度: ${diffLabel} / 思想: ${ideologyName}` }
                 ]);
                 setGameState('PLAYING');
                 setLastPlayedCard(null);
@@ -2518,7 +2518,7 @@
             };
 
             const addLog = useCallback((msg) => {
-                setLogs(prev => [msg, ...prev].slice(0, 10)); // Increased log size slightly
+                setLogs(prev => [{ id: Math.random(), message: msg }, ...prev].slice(0, 10)); // Increased log size slightly
             }, []);
 
             const chooseRandomEvent = () => EVENTS[Math.floor(Math.random() * EVENTS.length)];
@@ -3564,10 +3564,10 @@
 
                                 <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-900">
                                     {logs.map((log, i) => (
-                                        <div key={i} className="text-xs leading-relaxed animate-fade-in">
+                                        <div key={log.id} className="text-xs leading-relaxed animate-fade-in">
                                             <div className="flex gap-2 text-slate-400">
                                                 <span className="text-cyan-700 mt-0.5 select-none text-[8px]">●</span>
-                                                <span className={`${i===0 ? 'text-slate-200 font-medium' : ''}`}>{log}</span>
+                                                <span className={`${i===0 ? 'text-slate-200 font-medium' : ''}`}>{log.message}</span>
                                             </div>
                                             {i === 0 && <div className="mt-2 h-px bg-gradient-to-r from-cyan-900/50 to-transparent"></div>}
                                         </div>
