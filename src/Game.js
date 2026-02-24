@@ -602,7 +602,7 @@ const CrisisOverlay = ({ event, onClose, onConfirm, lang }) => {
         </div>
     );
 };
-const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => {
+const StatusPanel = memo(({ data, isEnemy, interest, isShaking, lang }) => {
     const inflationDisplay = Number.isFinite(data?.inflation) ? data.inflation.toFixed(1) : '0.0';
     const inflationTestId = isEnemy ? 'enemy-inflation' : 'player-inflation';
 
@@ -616,7 +616,7 @@ const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => {
             <div className="font-mono" data-testid={isEnemy ? 'enemy-support' : 'player-support'}>Support: <NumberCounter value={data.support} />%</div>
         </div>
     );
-};
+});
 
 // --- Main Game Component ---
 /**
