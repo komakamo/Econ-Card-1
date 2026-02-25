@@ -1,5 +1,13 @@
 export const SETTINGS_STORAGE_KEY = 'economic_game_settings';
 
+export const SETTINGS_DEFAULTS = {
+    lang: 'ja',
+    fontSizeLevel: 'medium',
+    skipTurnSummary: false,
+    isMuted: false,
+    masterVolume: 50,
+};
+
 export const validateObject = (parsed) => {
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
 };
@@ -65,4 +73,18 @@ export const applyValidatedSettings = (validated, handlers = {}) => {
 export const loadAndApplySettings = (handlers, storage, key = SETTINGS_STORAGE_KEY) => {
     const validated = loadSettingsFromStorage(storage, key);
     return applyValidatedSettings(validated, handlers);
+};
+
+export const sanitizeSettingsForStorage = (settings) => {
+    return {
+        ...SETTINGS_DEFAULTS,
+        ...validateSettings(settings),
+    };
+};
+
+export const saveSettingsToStorage = (storage, settings, key = SETTINGS_STORAGE_KEY) => {
+    if (!storage || typeof storage.setItem !== 'function') return null;
+    const sanitized = sanitizeSettingsForStorage(settings);
+    storage.setItem(key, JSON.stringify(sanitized));
+    return sanitized;
 };

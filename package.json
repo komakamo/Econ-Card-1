@@ -4,7 +4,8 @@
   "scripts": {
     "test": "jest",
     "build": "node scripts/build-dist.mjs",
-    "smoke:dist": "node scripts/smoke-dist.mjs"
+    "smoke:dist": "node scripts/smoke-dist.mjs",
+    "lint": "eslint src"
   },
   "dependencies": {
     "react": "^18.2.0",
