@@ -1,32 +1,12 @@
-
 /**
  * @jest-environment node
  */
-const validateSettings = (parsed) => {
-    const validated = {};
-    if (parsed && typeof parsed === 'object') {
-        if (['ja', 'en'].includes(parsed.lang)) {
-            validated.lang = parsed.lang;
-        }
-        if (['small', 'medium', 'large'].includes(parsed.fontSizeLevel)) {
-            validated.fontSizeLevel = parsed.fontSizeLevel;
-        }
-        if (typeof parsed.skipTurnSummary === 'boolean') {
-            validated.skipTurnSummary = parsed.skipTurnSummary;
-        }
-        if (typeof parsed.isMuted === 'boolean') {
-            validated.isMuted = parsed.isMuted;
-        }
-        if (typeof parsed.masterVolume === 'number' && Number.isFinite(parsed.masterVolume)) {
-            validated.masterVolume = Math.max(0, Math.min(100, parsed.masterVolume));
-        }
-    }
-    return validated;
-};
-
-const validateObject = (parsed) => {
-    return (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) ? parsed : null;
-};
+import {
+    SETTINGS_STORAGE_KEY,
+    validateSettings,
+    validateObject,
+    loadAndApplySettings,
+} from '../src/settingsValidation';
 
 describe('Security Validation Logic', () => {
     test('validateSettings handles valid inputs', () => {
@@ -35,14 +15,14 @@ describe('Security Validation Logic', () => {
             fontSizeLevel: 'large',
             skipTurnSummary: true,
             isMuted: false,
-            masterVolume: 80
+            masterVolume: 80,
         };
         const result = validateSettings(input);
         expect(result).toEqual(input);
     });
 
     test('validateSettings rejects invalid lang', () => {
-        const input = { lang: 'fr' }; // Invalid lang
+        const input = { lang: 'fr' };
         const result = validateSettings(input);
         expect(result.lang).toBeUndefined();
     });
@@ -52,7 +32,7 @@ describe('Security Validation Logic', () => {
             lang: 123,
             fontSizeLevel: true,
             skipTurnSummary: 'yes',
-            masterVolume: 'loud'
+            masterVolume: 'loud',
         };
         const result = validateSettings(input);
         expect(result).toEqual({});
@@ -74,7 +54,42 @@ describe('Security Validation Logic', () => {
         expect(validateObject('string')).toBeNull();
         expect(validateObject(123)).toBeNull();
         expect(validateObject(true)).toBeNull();
-        // Ideally we also reject arrays if we expect a map-like object
         expect(validateObject([1, 2])).toBeNull();
+    });
+
+    test('loadAndApplySettings loads from storage and applies sanitized values through validateSettings path', () => {
+        const storage = {
+            getItem: jest.fn(() => JSON.stringify({
+                lang: 'en',
+                fontSizeLevel: 'large',
+                skipTurnSummary: true,
+                isMuted: false,
+                masterVolume: 150,
+                unknown: 'ignored',
+            })),
+        };
+        const handlers = {
+            setLang: jest.fn(),
+            setFontSizeLevel: jest.fn(),
+            setSkipTurnSummary: jest.fn(),
+            setIsMuted: jest.fn(),
+            setMasterVolume: jest.fn(),
+        };
+
+        const applied = loadAndApplySettings(handlers, storage, SETTINGS_STORAGE_KEY);
+
+        expect(storage.getItem).toHaveBeenCalledWith(SETTINGS_STORAGE_KEY);
+        expect(applied).toEqual({
+            lang: 'en',
+            fontSizeLevel: 'large',
+            skipTurnSummary: true,
+            isMuted: false,
+            masterVolume: 100,
+        });
+        expect(handlers.setLang).toHaveBeenCalledWith('en');
+        expect(handlers.setFontSizeLevel).toHaveBeenCalledWith('large');
+        expect(handlers.setSkipTurnSummary).toHaveBeenCalledWith(true);
+        expect(handlers.setIsMuted).toHaveBeenCalledWith(false);
+        expect(handlers.setMasterVolume).toHaveBeenCalledWith(100);
     });
 });
