@@ -1,13 +1,3 @@
-(function(root, factory) {
-    if (typeof module === 'object' && module.exports) {
-        // Node/CommonJS
-        module.exports = factory();
-    } else {
-        // Browser globals
-        root.GameLogic = factory();
-    }
-}(typeof self !== 'undefined' ? self : this, function() {
-
     // --- Localization Helpers ---
     const UI_TEXT = {
         ja: {
@@ -187,7 +177,7 @@
 
     const applyInflationChange = (state, delta = 0) => {
         if (!delta) return state;
-        return { ...state, inflation: clampInflation((state.inflation ?? 0) + delta) };
+    const GameLogic = { ...state, inflation: clampInflation((state.inflation ?? 0) + delta) };
     };
 
     const RATING_TIERS = [
@@ -855,7 +845,7 @@
         };
     };
 
-    return {
+const GameLogic = {
         UI_TEXT,
         getLoc,
         t,
@@ -884,4 +874,5 @@
         evaluateGame,
         calculateInflatedCost,
     };
-}));
+
+export default GameLogic;

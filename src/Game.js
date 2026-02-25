@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
-import GameLogic from './logic';
+import GameLogic from './logic.js';
 
 // --- Game Logic Constants ---
 const {
@@ -343,6 +343,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
     const addFloatingText = () => {}; // Stub
 
     const applyUnrestPenalty = (state, actorLabel) => {
+        if (!state) return state;
         if (state.inflation < 8) return state;
         const incomePenalty = state.inflation >= 12 ? 4 : 2;
         const gdpPenalty = state.inflation >= 10 ? 5 : 0;
@@ -644,9 +645,9 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
 
         if (card.type === 'ATTACK') {
             const afterSupport = applySupportChange(afterCost, card.supportChange, 'あなた');
-            nextPlayerState = afterSupport;
+            nextPlayerState = afterSupport || afterCost;
         } else {
-            const baseState = card.effect(afterCost, enemy);
+            const baseState = card.effect(afterCost, enemy) || afterCost;
             let boostedState = baseState;
             if (eraMultiplier > 1) {
                  const keys = ['money', 'income', 'gdp'];
@@ -671,7 +672,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
             const afterInflation = applyInflationChange(afterEvent, inflationDelta);
             const afterUnrest = applyUnrestPenalty(afterInflation, 'あなた');
             const afterSupport = applySupportChange(afterUnrest, card.supportChange, 'あなた');
-            nextPlayerState = afterSupport;
+            nextPlayerState = afterSupport || afterCost;
         }
 
         const gdpGain = nextPlayerState.gdp - player.gdp;
