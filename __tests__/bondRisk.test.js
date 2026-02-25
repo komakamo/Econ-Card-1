@@ -1,4 +1,6 @@
-import { resolveBondRisk } from '../src/Game';
+import GameLogic from '../src/logic';
+
+const { resolveBondRisk } = GameLogic;
 
 const createSeededRandom = (seed) => {
   let value = seed;

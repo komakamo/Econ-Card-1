@@ -1,7 +1,10 @@
 import React from 'react';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import EconomicCardGame, { applyInflationDrift } from '../src/Game';
+import EconomicCardGame from '../src/Game';
+import GameLogic from '../src/logic';
+
+const { applyInflationDrift } = GameLogic;
 
 // Mocking requestAnimationFrame for Jest
 global.requestAnimationFrame = (callback) => {

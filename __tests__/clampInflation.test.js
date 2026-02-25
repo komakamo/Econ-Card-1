@@ -1,4 +1,6 @@
-import { clampInflation, INFLATION_MIN, INFLATION_MAX } from '../src/Game';
+import GameLogic from '../src/logic';
+
+const { clampInflation, INFLATION_MIN, INFLATION_MAX } = GameLogic;
 
 describe('clampInflation', () => {
     test('should return value within range as is (rounded to 1 decimal)', () => {

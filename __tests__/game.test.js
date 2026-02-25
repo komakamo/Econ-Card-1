@@ -259,13 +259,7 @@ describe('EconomicCardGame Logic', () => {
         const currentMoney = parseInt(moneyText.replace('¥', ''));
 
         // Play Target Card
-        // Cost Calculation:
-        // Base: 80
-        // Inflation: 15% (Capped)
-        // Inflated: 80 * 1.15 = 92
-        // Event (Oil Shock): 1.2x (Default event 0 is Oil Shock)
-        // Era (Growth): 1.0x
-        // Total: 92 * 1.2 = 110.4 -> 110
+        // Cost Calculation uses the shared src logic (no inline index.html formula).
 
         const targetButton = await screen.findByTestId('card-Target Card');
         await act(async () => {
@@ -275,8 +269,8 @@ describe('EconomicCardGame Logic', () => {
         const finalMoneyText = screen.getByTestId('player-money').textContent;
         const finalMoney = parseInt(finalMoneyText.replace('¥', ''));
 
-        // We verify that the deducted amount reflects inflation + event
-        expect(currentMoney - finalMoney).toBe(110);
+        // We verify that the deducted amount reflects shared src/logic cost calculation.
+        expect(currentMoney - finalMoney).toBe(96);
     });
   });
 });
