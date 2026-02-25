@@ -836,6 +836,17 @@ var DIFFICULTY_SETTINGS = {
 // AI Logic Constants
 var MAX_STANDARD_CARD_ID = 100; // AI only plays cards with ID < 100
 
+var getPotentialActions = _ref2 => {
+  var {
+    money,
+    inflation,
+    activeEvent = null,
+    era = null,
+    cards = ALL_CARDS,
+    maxStandardCardId = MAX_STANDARD_CARD_ID
+  } = _ref2;
+  return cards.filter(card => card.id < maxStandardCardId && calculateInflatedCost(card.cost, inflation, activeEvent, era) <= money);
+};
 var getGameStatus = (player, enemy, difficulty, turn) => {
   var target = difficulty.targetGdp || 300;
   var maxTurns = difficulty.maxTurns || 40;
@@ -1010,6 +1021,7 @@ var GameLogic = {
   MISSIONS,
   DIFFICULTY_SETTINGS,
   MAX_STANDARD_CARD_ID,
+  getPotentialActions,
   getGameStatus,
   evaluateGame,
   calculateInflatedCost

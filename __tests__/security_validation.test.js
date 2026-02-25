@@ -6,6 +6,9 @@ import {
     validateSettings,
     validateObject,
     loadAndApplySettings,
+    sanitizeSettingsForStorage,
+    saveSettingsToStorage,
+    SETTINGS_DEFAULTS,
 } from '../src/settingsValidation';
 
 describe('Security Validation Logic', () => {
@@ -93,3 +96,25 @@ describe('Security Validation Logic', () => {
         expect(handlers.setMasterVolume).toHaveBeenCalledWith(100);
     });
 });
+
+test('sanitizeSettingsForStorage fills defaults and removes invalid values', () => {
+    const sanitized = sanitizeSettingsForStorage({ lang: 'en', masterVolume: 200, fontSizeLevel: 'bad' });
+    expect(sanitized).toEqual({
+        ...SETTINGS_DEFAULTS,
+        lang: 'en',
+        masterVolume: 100,
+    });
+});
+
+test('saveSettingsToStorage writes sanitized payload', () => {
+    const storage = { setItem: jest.fn() };
+    const saved = saveSettingsToStorage(storage, { skipTurnSummary: true, masterVolume: -10 }, SETTINGS_STORAGE_KEY);
+
+    expect(saved).toEqual({
+        ...SETTINGS_DEFAULTS,
+        skipTurnSummary: true,
+        masterVolume: 0,
+    });
+    expect(storage.setItem).toHaveBeenCalledWith(SETTINGS_STORAGE_KEY, JSON.stringify(saved));
+});
+

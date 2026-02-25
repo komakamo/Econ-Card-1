@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import GameLogic from './logic.js';
-import { SETTINGS_STORAGE_KEY, loadAndApplySettings } from './settingsValidation.js';
+import { SETTINGS_STORAGE_KEY, loadAndApplySettings, saveSettingsToStorage } from './settingsValidation.js';
 
 // --- Game Logic Constants ---
 const {
-    UI_TEXT, t, getLoc,
-    EVENTS, ERAS, IDEOLOGIES, ACHIEVEMENTS,
+    t, getLoc,
+    EVENTS, ERAS, IDEOLOGIES,
     ALL_CARDS, MISSIONS, DIFFICULTY_SETTINGS,
     INFLATION_MIN, INFLATION_MAX,
-    RATING_TIERS, getRatingByDebt, getRatingInfo,
+    getRatingByDebt, getRatingInfo,
     clampInflation, applyInflationDrift, applyInflationChange,
     MAX_STANDARD_CARD_ID, getPotentialActions,
     getGameStatus, evaluateGame, resolveBondRisk,
@@ -34,27 +34,15 @@ const SoundManager = {
 };
 
 // --- Icons ---
-const IconWallet = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"/><path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/></svg>;
-const IconTrendingUp = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>;
 const IconZap = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
 const IconShield = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>;
 const IconAlertCircle = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
-const IconArrowRight = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
-const IconRefreshCw = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>;
 const IconBookOpen = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>;
 const IconVolume2 = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>;
 const IconVolumeX = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>;
 const IconX = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>;
 const IconSettings = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>;
-const IconGlobe = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>;
-const IconAward = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 17 17 23 15.79 13.88"></polyline></svg>;
 const IconStar = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
-const IconLock = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
-const IconType = ({ size = 24, className = "" }) => <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>;
-
-const ICON_MAP = {
-    IconStar: IconStar,
-};
 
 // --- Config (UI) ---
 const CARD_TYPES = {
@@ -152,8 +140,6 @@ const CardInfoPanel = ({ card, lang }) => {
     );
 };
 
-const ComboGuidePanel = () => <div />;
-
 const MissionStatusContent = ({ activeMission, player, lang }) => {
     if (!activeMission) {
         return <p data-testid="mission-status-empty">{lang === 'en' ? 'No active mission' : '進行中ミッションなし'}</p>;
@@ -187,10 +173,74 @@ const MissionPanel = ({ activeMission, player, completedMissionCount, lang }) =>
         <MissionStatusContent activeMission={activeMission} player={player} lang={lang} />
     </div>
 );
-const CardEncyclopediaPanel = ({ onClose }) => <button onClick={onClose}>Close</button>;
-const SettingsModal = ({ isOpen, onClose, settings, onChange }) => isOpen ? <button onClick={onClose}>Close</button> : null;
+const FONT_SIZE_OPTIONS = ['small', 'medium', 'large'];
 
-const StatusPanel = ({ data, isEnemy, interest, isShaking, lang }) => {
+const SettingsModal = ({ isOpen, onClose, settings, onChange }) => {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[120] bg-black/60 flex items-center justify-center p-4" data-testid="settings-modal"> 
+            <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-3"> 
+                <div className="flex items-center justify-between"> 
+                    <h3 className="text-lg font-bold">Settings</h3>
+                    <button onClick={onClose} aria-label="Close settings"><IconX size={18} /></button>
+                </div>
+                <label className="block"> 
+                    Language
+                    <select
+                        value={settings.lang}
+                        onChange={(event) => onChange('lang', event.target.value)}
+                        data-testid="settings-lang"
+                    >
+                        <option value="ja">日本語</option>
+                        <option value="en">English</option>
+                    </select>
+                </label>
+                <label className="block"> 
+                    Font size
+                    <select
+                        value={settings.fontSizeLevel}
+                        onChange={(event) => onChange('fontSizeLevel', event.target.value)}
+                        data-testid="settings-font-size"
+                    >
+                        {FONT_SIZE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                </label>
+                <label className="block"> 
+                    Master volume: {settings.masterVolume}
+                    <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        value={settings.masterVolume}
+                        onChange={(event) => onChange('masterVolume', Number(event.target.value))}
+                        data-testid="settings-master-volume"
+                    />
+                </label>
+                <label className="flex items-center gap-2"> 
+                    <input
+                        type="checkbox"
+                        checked={settings.skipTurnSummary}
+                        onChange={(event) => onChange('skipTurnSummary', event.target.checked)}
+                        data-testid="settings-skip-summary"
+                    />
+                    Skip turn summary
+                </label>
+                <label className="flex items-center gap-2"> 
+                    <input
+                        type="checkbox"
+                        checked={settings.isMuted}
+                        onChange={(event) => onChange('isMuted', event.target.checked)}
+                        data-testid="settings-muted"
+                    />
+                    Mute audio
+                </label>
+            </div>
+        </div>
+    );
+};
+
+const StatusPanel = ({ data, isEnemy }) => {
     if (!data) return <div className="p-4 border rounded text-red-500">Error: No Data</div>;
     return (
         <div className={`relative overflow-hidden p-6 rounded-3xl border transition-all duration-300`}>
@@ -222,16 +272,12 @@ const calculateSuccessRate = (card, support) => {
     return Math.min(100, Math.max(0, Math.round(base + bonus)));
 };
 
-const CardButton = memo(({ card, onPlay, onHover, player, gameState, lastTags, lang, activeEvent, era }) => {
+const CardButton = memo(({ card, onPlay, player, gameState, lang, activeEvent, era }) => {
      const typeInfo = CARD_TYPES[card.type];
      const inflatedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
-     const canAfford = player.money >= inflatedCost;
-
      return (
         <button
-            onClick={(e) => onPlay(card, e)}
-            onMouseEnter={() => onHover(card)}
-            onMouseLeave={() => onHover(null)}
+            onClick={() => onPlay(card)}
             disabled={gameState !== 'PLAYING'}
             data-testid={`card-${getLoc(card, 'name', lang)}`}
             className={`card-button ${typeInfo.baseStyle}`}
@@ -255,7 +301,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
     const createRandomId = () => randomInt(Number.MAX_SAFE_INTEGER);
     const missionProcessedTurnRef = useRef(0);
     const [turn, setTurn] = useState(1);
-    const [era, setEra] = useState(ERAS.GROWTH);
+    const [era] = useState(ERAS.GROWTH);
     const [gameState, setGameState] = useState('TITLE'); // TITLE, SETUP, PLAYING, WON, LOST
     const [skipTurnSummary, setSkipTurnSummary] = useState(false);
     const [autoProceed, setAutoProceed] = useState(false);
@@ -263,29 +309,14 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
     const [activeEvent, setActiveEvent] = useState(null);
     const [lastTags, setLastTags] = useState([]);
     const [isMuted, setIsMuted] = useState(false);
-    const [lastPlayedCard, setLastPlayedCard] = useState(null);
-    const [floatingTexts, setFloatingTexts] = useState([]);
-    const [showTurnOverlay, setShowTurnOverlay] = useState(false);
-    const [shake, setShake] = useState({ player: false, enemy: false });
-    const [hoveredCard, setHoveredCard] = useState(null);
-    const [crisisAlert, setCrisisAlert] = useState(null);
     const [evaluation, setEvaluation] = useState(null);
     const [lang, setLang] = useState('ja');
-    const [comboMessage, setComboMessage] = useState(null);
-    const [comboChain, setComboChain] = useState({ tag: null, count: 0 });
     const [activeMission, setActiveMission] = useState(null);
     const [completedMissionCount, setCompletedMissionCount] = useState(0);
     const [turnSummaryData, setTurnSummaryData] = useState(null);
     const [showTurnSummary, setShowTurnSummary] = useState(false);
     const [turnHighlight, setTurnHighlight] = useState({ gdpGain: 0, text: '' });
-    const [earnedTitles, setEarnedTitles] = useState({});
-    const [unlockedAchievements, setUnlockedAchievements] = useState({});
-    const [discoveredCards, setDiscoveredCards] = useState({});
-    const [showEncyclopedia, setShowEncyclopedia] = useState(false);
-    const [gameProgress, setGameProgress] = useState({
-        monetarist_rank_a_count: 0,
-        total_inflation_combos: 0,
-    });
+    const [unlockedAchievements] = useState({});
     const [fontSizeLevel, setFontSizeLevel] = useState('medium');
     const [masterVolume, setMasterVolume] = useState(50);
     const [showSettings, setShowSettings] = useState(false);
@@ -322,9 +353,19 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
 
     useEffect(() => {
         if (typeof localStorage === 'undefined') return;
-        const settings = { lang, fontSizeLevel, skipTurnSummary, isMuted, masterVolume };
-        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+        saveSettingsToStorage(localStorage, {
+            lang,
+            fontSizeLevel,
+            skipTurnSummary,
+            isMuted,
+            masterVolume,
+        }, SETTINGS_STORAGE_KEY);
     }, [lang, fontSizeLevel, skipTurnSummary, isMuted, masterVolume]);
+
+    useEffect(() => {
+        SoundManager.setMuted(isMuted);
+        SoundManager.setVolume(masterVolume / 100);
+    }, [isMuted, masterVolume]);
 
     useEffect(() => {
         if (autoProceed) {
@@ -358,9 +399,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         interestDue: 0,
     });
 
-    const addFloatingText = () => {}; // Stub
-
-    const applyUnrestPenalty = (state, actorLabel) => {
+    const applyUnrestPenalty = (state) => {
         if (!state) return state;
         if (state.inflation < 8) return state;
         const incomePenalty = state.inflation >= 12 ? 4 : 2;
@@ -372,14 +411,14 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         };
     };
 
-    const applySupportChange = (state, delta = 0, actorLabel, reason) => {
+    const applySupportChange = (state, delta = 0) => {
         if (!delta) return state;
         const prevSupport = state.support ?? 0;
         const nextSupport = Math.min(100, Math.max(0, prevSupport + delta));
         return { ...state, support: nextSupport };
     };
 
-    const applyRatingUpdate = (state, actorLabel) => {
+    const applyRatingUpdate = (state) => {
         const nextRating = getRatingByDebt(state.debt ?? 0);
         return { ...state, rating: nextRating };
     };
@@ -389,7 +428,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         return Math.max(0, Math.round((state.interestDue ?? 0) * ratingInfo.interestMultiplier));
     };
 
-    const applyInterestPayment = (state, actorLabel) => {
+    const applyInterestPayment = (state) => {
         const interest = getInterestForTurn(state);
         if (!interest) return state;
         return { ...state, money: Math.max(0, state.money - interest) };
@@ -485,7 +524,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         setDiscardPile(discarded);
     };
 
-    const issueBonds = (e) => {
+    const issueBonds = () => {
         if (gameState !== 'PLAYING') return;
         if (bondIssuedThisTurn) return;
         setPlayer(prev => {
@@ -501,7 +540,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         addLog(lang === 'en' ? 'Issued bonds: Funds +50, Debt +50, Interest +5' : '国債発行: 資金+50、債務+50、利払+5');
     };
 
-    const repayDebt = (e) => {
+    const repayDebt = () => {
         if (gameState !== 'PLAYING') return;
         if (player.money < 50) return;
         if ((player.debt || 0) <= 0) return;
@@ -619,7 +658,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         return true;
     }, [gameState, player, enemy, currentDifficulty, turn, lang, completedMissionCount, selectedIdeology]);
 
-    const playCard = useCallback((card, e) => {
+    const playCard = useCallback((card) => {
         if (gameState !== 'PLAYING') return;
 
         const adjustedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
@@ -648,9 +687,8 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
             if (card.onFailure) penaltyState = card.onFailure(penaltyState);
             nextPlayerState = penaltyState;
             setPlayer(nextPlayerState);
-            setLastPlayedCard(card);
-            setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
-            const { uniqueId: _, ...baseCard } = card;
+                setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
+            const { uniqueId: _discardedUniqueId, ...baseCard } = card;
             setDiscardPile(prev => [...prev, baseCard]);
             setLastTags([]);
             return checkWinCondition(nextPlayerState, enemy);
@@ -715,9 +753,8 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
             addLog(`Memo: ${getLoc(card, 'tip', lang)}`);
         }
 
-        setLastPlayedCard(card);
         setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
-        const { uniqueId: _, ...baseCard } = card;
+        const { uniqueId: _discardedUniqueId, ...baseCard } = card;
         setDiscardPile(prev => [...prev, baseCard]);
 
         if (providedTags.length > 0) {
@@ -728,7 +765,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
 
         checkForNewMission(nextPlayerState);
         return checkWinCondition(nextPlayerState, updatedEnemyState ?? enemy);
-    }, [gameState, player, enemy, lang, activeEvent, era, lastTags, gameDeck, discardPile, discoveredCards, gameProgress, comboChain, turnHighlight, checkForNewMission, checkWinCondition, addLog, unlockedAchievements, earnedTitles, currentDifficulty, selectedIdeology, completedMissionCount]);
+    }, [gameState, player, enemy, lang, activeEvent, era, lastTags, gameDeck, discardPile, turnHighlight, checkForNewMission, checkWinCondition, addLog]);
 
     const aiTurn = () => {
         let driftTarget = 0;
@@ -803,6 +840,26 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         setTurnHighlight({ gdpGain: 0, text: '' });
     };
 
+    const updateSetting = (key, value) => {
+        const handlers = {
+            lang: setLang,
+            fontSizeLevel: setFontSizeLevel,
+            skipTurnSummary: setSkipTurnSummary,
+            isMuted: setIsMuted,
+            masterVolume: setMasterVolume,
+        };
+        const handler = handlers[key];
+        if (handler) {
+            handler(value);
+        }
+    };
+
+    const fontSizeClass = {
+        small: 'text-sm',
+        medium: 'text-base',
+        large: 'text-lg',
+    }[fontSizeLevel] ?? 'text-base';
+
     const endTurn = () => {
         if (gameState !== 'PLAYING' || showTurnSummary) return;
         setBondIssuedThisTurn(false);
@@ -824,7 +881,6 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
             money: currentPlayerState.money + playerIncomeGain,
             inflation: driftedInflation,
         };
-        const interestPaid = getInterestForTurn(playerAfterIncome);
         playerAfterIncome = applyInterestPayment(playerAfterIncome, 'あなた');
         const ratedPlayer = applyRatingUpdate(playerAfterIncome, 'あなた');
         const unrestApplied = applyUnrestPenalty(ratedPlayer, 'あなた');
@@ -846,13 +902,15 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
     };
 
     return (
-        <div className={`min-h-screen ${era.bgClass}`}>
-            <div>
+        <div className={`min-h-screen ${era.bgClass} ${fontSizeClass}`}>
+            <div className="flex items-center gap-2"> 
                 <button onClick={() => setLang('en')} data-testid="lang-en">English</button>
                 <button onClick={() => setLang('ja')} data-testid="lang-ja">日本語</button>
-                <button onClick={() => setIsMuted(prev => !prev)} data-testid="mute-toggle">
-                    {isMuted ? 'Unmute' : 'Mute'}
+                <button onClick={() => setIsMuted(prev => !prev)} data-testid="mute-toggle" className="inline-flex items-center gap-1">
+                    {isMuted ? <IconVolumeX size={16} /> : <IconVolume2 size={16} />}
+                    <span>{isMuted ? 'Unmute' : 'Mute'}</span>
                 </button>
+                <button onClick={() => setShowSettings(true)} data-testid="open-settings"><IconSettings size={16} /></button>
             </div>
             {gameState === 'TITLE' && (
                 <div>
@@ -865,11 +923,23 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
                         Difficulty:
                         <select
                             value={selectedDifficulty}
-                            onChange={(e) => setSelectedDifficulty(e.target.value)}
+                            onChange={(event) => setSelectedDifficulty(event.target.value)}
                             data-testid="difficulty-select"
                         >
                             {Object.values(DIFFICULTY_SETTINGS).map(diff => (
                                 <option key={diff.id} value={diff.id}>{diff.label}</option>
+                            ))}
+                        </select>
+                    </label>
+                    <label>
+                        Ideology:
+                        <select
+                            value={selectedIdeology}
+                            onChange={(event) => setSelectedIdeology(event.target.value)}
+                            data-testid="ideology-select"
+                        >
+                            {Object.values(IDEOLOGIES).map((ideology) => (
+                                <option key={ideology.id} value={ideology.id}>{getLoc(ideology, 'name', lang)}</option>
                             ))}
                         </select>
                     </label>
@@ -891,7 +961,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
                         <h3>{t('yourHand', lang)}</h3>
                         <div>
                             {playerHand.map(card => (
-                                <CardButton key={card.uniqueId} card={card} onPlay={playCard} onHover={setHoveredCard} player={player} gameState={gameState} lastTags={lastTags} lang={lang} activeEvent={activeEvent} era={era} />
+                                <CardButton key={card.uniqueId} card={card} onPlay={playCard} player={player} gameState={gameState} lang={lang} activeEvent={activeEvent} era={era} />
                             ))}
                         </div>
                         <button onClick={repayDebt} disabled={gameState !== 'PLAYING' || (player.debt || 0) <= 0 || player.money < 50}>Repay</button>
@@ -918,6 +988,12 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
                 </div>
             ) : null}
             <TurnSummaryPanel data={turnSummaryData} onContinue={proceedToNextTurn} lang={lang} />
+            <SettingsModal
+                isOpen={showSettings}
+                onClose={() => setShowSettings(false)}
+                settings={{ lang, fontSizeLevel, skipTurnSummary, isMuted, masterVolume }}
+                onChange={updateSetting}
+            />
         </div>
     );
 }

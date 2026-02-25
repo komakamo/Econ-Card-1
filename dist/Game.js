@@ -9,29 +9,28 @@ function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" 
 function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r || "default"); if ("object" != typeof i) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import GameLogic from './logic.js';
+import { SETTINGS_STORAGE_KEY, loadAndApplySettings, saveSettingsToStorage } from './settingsValidation.js';
 
 // --- Game Logic Constants ---
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 var {
-  UI_TEXT,
   t,
   getLoc,
   EVENTS,
   ERAS,
   IDEOLOGIES,
-  ACHIEVEMENTS,
   ALL_CARDS,
   MISSIONS,
   DIFFICULTY_SETTINGS,
   INFLATION_MIN,
   INFLATION_MAX,
-  RATING_TIERS,
   getRatingByDebt,
   getRatingInfo,
   clampInflation,
   applyInflationDrift,
   applyInflationChange,
   MAX_STANDARD_CARD_ID,
+  getPotentialActions,
   getGameStatus,
   evaluateGame,
   resolveBondRisk,
@@ -62,57 +61,11 @@ var SoundManager = {
 };
 
 // --- Icons ---
-var IconWallet = _ref => {
+var IconZap = _ref => {
   var {
     size = 24,
     className = ""
   } = _ref;
-  return /*#__PURE__*/_jsxs("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    className: className,
-    children: [/*#__PURE__*/_jsx("path", {
-      d: "M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1"
-    }), /*#__PURE__*/_jsx("path", {
-      d: "M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"
-    })]
-  });
-};
-var IconTrendingUp = _ref2 => {
-  var {
-    size = 24,
-    className = ""
-  } = _ref2;
-  return /*#__PURE__*/_jsxs("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    className: className,
-    children: [/*#__PURE__*/_jsx("polyline", {
-      points: "22 7 13.5 15.5 8.5 10.5 2 17"
-    }), /*#__PURE__*/_jsx("polyline", {
-      points: "16 7 22 7 22 13"
-    })]
-  });
-};
-var IconZap = _ref3 => {
-  var {
-    size = 24,
-    className = ""
-  } = _ref3;
   return /*#__PURE__*/_jsx("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     width: size,
@@ -129,11 +82,11 @@ var IconZap = _ref3 => {
     })
   });
 };
-var IconShield = _ref4 => {
+var IconShield = _ref2 => {
   var {
     size = 24,
     className = ""
-  } = _ref4;
+  } = _ref2;
   return /*#__PURE__*/_jsx("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     width: size,
@@ -150,11 +103,11 @@ var IconShield = _ref4 => {
     })
   });
 };
-var IconAlertCircle = _ref5 => {
+var IconAlertCircle = _ref3 => {
   var {
     size = 24,
     className = ""
-  } = _ref5;
+  } = _ref3;
   return /*#__PURE__*/_jsxs("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     width: size,
@@ -183,62 +136,11 @@ var IconAlertCircle = _ref5 => {
     })]
   });
 };
-var IconArrowRight = _ref6 => {
+var IconBookOpen = _ref4 => {
   var {
     size = 24,
     className = ""
-  } = _ref6;
-  return /*#__PURE__*/_jsxs("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    className: className,
-    children: [/*#__PURE__*/_jsx("line", {
-      x1: "5",
-      y1: "12",
-      x2: "19",
-      y2: "12"
-    }), /*#__PURE__*/_jsx("polyline", {
-      points: "12 5 19 12 12 19"
-    })]
-  });
-};
-var IconRefreshCw = _ref7 => {
-  var {
-    size = 24,
-    className = ""
-  } = _ref7;
-  return /*#__PURE__*/_jsxs("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    className: className,
-    children: [/*#__PURE__*/_jsx("path", {
-      d: "M23 4v6h-6"
-    }), /*#__PURE__*/_jsx("path", {
-      d: "M1 20v-6h6"
-    }), /*#__PURE__*/_jsx("path", {
-      d: "M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"
-    })]
-  });
-};
-var IconBookOpen = _ref8 => {
-  var {
-    size = 24,
-    className = ""
-  } = _ref8;
+  } = _ref4;
   return /*#__PURE__*/_jsxs("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     width: size,
@@ -257,11 +159,11 @@ var IconBookOpen = _ref8 => {
     })]
   });
 };
-var IconVolume2 = _ref9 => {
+var IconVolume2 = _ref5 => {
   var {
     size = 24,
     className = ""
-  } = _ref9;
+  } = _ref5;
   return /*#__PURE__*/_jsxs("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     width: size,
@@ -280,11 +182,11 @@ var IconVolume2 = _ref9 => {
     })]
   });
 };
-var IconVolumeX = _ref0 => {
+var IconVolumeX = _ref6 => {
   var {
     size = 24,
     className = ""
-  } = _ref0;
+  } = _ref6;
   return /*#__PURE__*/_jsxs("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     width: size,
@@ -311,11 +213,11 @@ var IconVolumeX = _ref0 => {
     })]
   });
 };
-var IconX = _ref1 => {
+var IconX = _ref7 => {
   var {
     size = 24,
     className = ""
-  } = _ref1;
+  } = _ref7;
   return /*#__PURE__*/_jsxs("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     width: size,
@@ -340,11 +242,11 @@ var IconX = _ref1 => {
     })]
   });
 };
-var IconSettings = _ref10 => {
+var IconSettings = _ref8 => {
   var {
     size = 24,
     className = ""
-  } = _ref10;
+  } = _ref8;
   return /*#__PURE__*/_jsxs("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     width: size,
@@ -365,66 +267,11 @@ var IconSettings = _ref10 => {
     })]
   });
 };
-var IconGlobe = _ref11 => {
+var IconStar = _ref9 => {
   var {
     size = 24,
     className = ""
-  } = _ref11;
-  return /*#__PURE__*/_jsxs("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    className: className,
-    children: [/*#__PURE__*/_jsx("circle", {
-      cx: "12",
-      cy: "12",
-      r: "10"
-    }), /*#__PURE__*/_jsx("line", {
-      x1: "2",
-      y1: "12",
-      x2: "22",
-      y2: "12"
-    }), /*#__PURE__*/_jsx("path", {
-      d: "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
-    })]
-  });
-};
-var IconAward = _ref12 => {
-  var {
-    size = 24,
-    className = ""
-  } = _ref12;
-  return /*#__PURE__*/_jsxs("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    className: className,
-    children: [/*#__PURE__*/_jsx("circle", {
-      cx: "12",
-      cy: "8",
-      r: "7"
-    }), /*#__PURE__*/_jsx("polyline", {
-      points: "8.21 13.89 7 23 12 17 17 23 15.79 13.88"
-    })]
-  });
-};
-var IconStar = _ref13 => {
-  var {
-    size = 24,
-    className = ""
-  } = _ref13;
+  } = _ref9;
   return /*#__PURE__*/_jsx("svg", {
     xmlns: "http://www.w3.org/2000/svg",
     width: size,
@@ -440,68 +287,6 @@ var IconStar = _ref13 => {
       points: "12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"
     })
   });
-};
-var IconLock = _ref14 => {
-  var {
-    size = 24,
-    className = ""
-  } = _ref14;
-  return /*#__PURE__*/_jsxs("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    className: className,
-    children: [/*#__PURE__*/_jsx("rect", {
-      x: "3",
-      y: "11",
-      width: "18",
-      height: "11",
-      rx: "2",
-      ry: "2"
-    }), /*#__PURE__*/_jsx("path", {
-      d: "M7 11V7a5 5 0 0 1 10 0v4"
-    })]
-  });
-};
-var IconType = _ref15 => {
-  var {
-    size = 24,
-    className = ""
-  } = _ref15;
-  return /*#__PURE__*/_jsxs("svg", {
-    xmlns: "http://www.w3.org/2000/svg",
-    width: size,
-    height: size,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round",
-    strokeLinejoin: "round",
-    className: className,
-    children: [/*#__PURE__*/_jsx("polyline", {
-      points: "4 7 4 4 20 4 20 7"
-    }), /*#__PURE__*/_jsx("line", {
-      x1: "9",
-      y1: "20",
-      x2: "15",
-      y2: "20"
-    }), /*#__PURE__*/_jsx("line", {
-      x1: "12",
-      y1: "4",
-      x2: "12",
-      y2: "20"
-    })]
-  });
-};
-var ICON_MAP = {
-  IconStar: IconStar
 };
 
 // --- Config (UI) ---
@@ -542,11 +327,11 @@ var CARD_TYPES = {
 var BackgroundEffects = () => /*#__PURE__*/_jsx("div", {}); // Stub for tests
 var Confetti = () => /*#__PURE__*/_jsx("div", {}); // Stub for tests
 
-var ComboOverlay = _ref16 => {
+var ComboOverlay = _ref0 => {
   var {
     message,
     show
-  } = _ref16;
+  } = _ref0;
   if (!show) return null;
   return /*#__PURE__*/_jsx("div", {
     className: "fixed inset-0 z-[80] flex items-center justify-center pointer-events-none animate-fade-in",
@@ -556,20 +341,20 @@ var ComboOverlay = _ref16 => {
     })
   });
 };
-var NumberCounter = _ref17 => {
+var NumberCounter = _ref1 => {
   var {
     value
-  } = _ref17;
+  } = _ref1;
   return /*#__PURE__*/_jsx("span", {
     children: value
   });
 }; // Simplified for tests
 
-var TurnOverlay = _ref18 => {
+var TurnOverlay = _ref10 => {
   var {
     turn,
     show
-  } = _ref18;
+  } = _ref10;
   if (!show) return null;
   return /*#__PURE__*/_jsx("div", {
     className: "fixed inset-0 z-[60] flex items-center justify-center pointer-events-none",
@@ -579,12 +364,12 @@ var TurnOverlay = _ref18 => {
     })
   });
 };
-var CrisisOverlay = _ref19 => {
+var CrisisOverlay = _ref11 => {
   var {
     message,
     show,
     type = 'danger'
-  } = _ref19;
+  } = _ref11;
   if (!show) return null;
   var color = type === 'danger' ? 'text-red-500 border-red-600 bg-red-950/90' : 'text-amber-500 border-amber-600 bg-amber-950/90';
   return /*#__PURE__*/_jsx("div", {
@@ -604,12 +389,12 @@ var CrisisOverlay = _ref19 => {
     })
   });
 };
-var TurnSummaryPanel = _ref20 => {
+var TurnSummaryPanel = _ref12 => {
   var {
     data,
     onContinue,
     lang
-  } = _ref20;
+  } = _ref12;
   if (!data) return null;
   return /*#__PURE__*/_jsx("div", {
     className: "fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in",
@@ -625,12 +410,12 @@ var TurnSummaryPanel = _ref20 => {
     })
   });
 };
-var CardInfoPanel = _ref21 => {
+var CardInfoPanel = _ref13 => {
   var _typeInfo$headerStyle;
   var {
     card,
     lang
-  } = _ref21;
+  } = _ref13;
   if (!card) return null;
   var typeInfo = CARD_TYPES[card.type];
   return /*#__PURE__*/_jsxs("div", {
@@ -650,13 +435,12 @@ var CardInfoPanel = _ref21 => {
     })]
   });
 };
-var ComboGuidePanel = () => /*#__PURE__*/_jsx("div", {});
-var MissionStatusContent = _ref22 => {
+var MissionStatusContent = _ref14 => {
   var {
     activeMission,
     player,
     lang
-  } = _ref22;
+  } = _ref14;
   if (!activeMission) {
     return /*#__PURE__*/_jsx("p", {
       "data-testid": "mission-status-empty",
@@ -683,12 +467,12 @@ var MissionStatusContent = _ref22 => {
     })]
   });
 };
-var IdeologyMissionPanel = _ref23 => {
+var IdeologyMissionPanel = _ref15 => {
   var {
     activeMission,
     player,
     lang
-  } = _ref23;
+  } = _ref15;
   return /*#__PURE__*/_jsxs("div", {
     "data-testid": "ideology-mission-panel",
     children: [/*#__PURE__*/_jsx("h4", {
@@ -700,13 +484,13 @@ var IdeologyMissionPanel = _ref23 => {
     })]
   });
 };
-var MissionPanel = _ref24 => {
+var MissionPanel = _ref16 => {
   var {
     activeMission,
     player,
     completedMissionCount,
     lang
-  } = _ref24;
+  } = _ref16;
   return /*#__PURE__*/_jsxs("div", {
     "data-testid": "mission-panel",
     children: [/*#__PURE__*/_jsx("h4", {
@@ -721,36 +505,93 @@ var MissionPanel = _ref24 => {
     })]
   });
 };
-var CardEncyclopediaPanel = _ref25 => {
-  var {
-    onClose
-  } = _ref25;
-  return /*#__PURE__*/_jsx("button", {
-    onClick: onClose,
-    children: "Close"
-  });
-};
-var SettingsModal = _ref26 => {
+var FONT_SIZE_OPTIONS = ['small', 'medium', 'large'];
+var SettingsModal = _ref17 => {
   var {
     isOpen,
     onClose,
     settings,
-    onChange
-  } = _ref26;
-  return isOpen ? /*#__PURE__*/_jsx("button", {
-    onClick: onClose,
-    children: "Close"
-  }) : null;
+    onChange: _onChange
+  } = _ref17;
+  if (!isOpen) return null;
+  return /*#__PURE__*/_jsx("div", {
+    className: "fixed inset-0 z-[120] bg-black/60 flex items-center justify-center p-4",
+    "data-testid": "settings-modal",
+    children: /*#__PURE__*/_jsxs("div", {
+      className: "w-full max-w-md bg-slate-900 border border-slate-700 rounded-xl p-4 space-y-3",
+      children: [/*#__PURE__*/_jsxs("div", {
+        className: "flex items-center justify-between",
+        children: [/*#__PURE__*/_jsx("h3", {
+          className: "text-lg font-bold",
+          children: "Settings"
+        }), /*#__PURE__*/_jsx("button", {
+          onClick: onClose,
+          "aria-label": "Close settings",
+          children: /*#__PURE__*/_jsx(IconX, {
+            size: 18
+          })
+        })]
+      }), /*#__PURE__*/_jsxs("label", {
+        className: "block",
+        children: ["Language", /*#__PURE__*/_jsxs("select", {
+          value: settings.lang,
+          onChange: event => _onChange('lang', event.target.value),
+          "data-testid": "settings-lang",
+          children: [/*#__PURE__*/_jsx("option", {
+            value: "ja",
+            children: "\u65E5\u672C\u8A9E"
+          }), /*#__PURE__*/_jsx("option", {
+            value: "en",
+            children: "English"
+          })]
+        })]
+      }), /*#__PURE__*/_jsxs("label", {
+        className: "block",
+        children: ["Font size", /*#__PURE__*/_jsx("select", {
+          value: settings.fontSizeLevel,
+          onChange: event => _onChange('fontSizeLevel', event.target.value),
+          "data-testid": "settings-font-size",
+          children: FONT_SIZE_OPTIONS.map(option => /*#__PURE__*/_jsx("option", {
+            value: option,
+            children: option
+          }, option))
+        })]
+      }), /*#__PURE__*/_jsxs("label", {
+        className: "block",
+        children: ["Master volume: ", settings.masterVolume, /*#__PURE__*/_jsx("input", {
+          type: "range",
+          min: 0,
+          max: 100,
+          value: settings.masterVolume,
+          onChange: event => _onChange('masterVolume', Number(event.target.value)),
+          "data-testid": "settings-master-volume"
+        })]
+      }), /*#__PURE__*/_jsxs("label", {
+        className: "flex items-center gap-2",
+        children: [/*#__PURE__*/_jsx("input", {
+          type: "checkbox",
+          checked: settings.skipTurnSummary,
+          onChange: event => _onChange('skipTurnSummary', event.target.checked),
+          "data-testid": "settings-skip-summary"
+        }), "Skip turn summary"]
+      }), /*#__PURE__*/_jsxs("label", {
+        className: "flex items-center gap-2",
+        children: [/*#__PURE__*/_jsx("input", {
+          type: "checkbox",
+          checked: settings.isMuted,
+          onChange: event => _onChange('isMuted', event.target.checked),
+          "data-testid": "settings-muted"
+        }), "Mute audio"]
+      })]
+    })
+  });
 };
-var StatusPanel = _ref27 => {
+var StatusPanel = _ref18 => {
   var _data$inflation;
   var {
     data,
-    isEnemy,
-    interest,
-    isShaking,
-    lang
-  } = _ref27;
+    isEnemy
+  } = _ref18;
   if (!data) return /*#__PURE__*/_jsx("div", {
     className: "p-4 border rounded text-red-500",
     children: "Error: No Data"
@@ -802,25 +643,20 @@ var calculateSuccessRate = (card, support) => {
   var bonus = (support - 50) * 0.5;
   return Math.min(100, Math.max(0, Math.round(base + bonus)));
 };
-var CardButton = /*#__PURE__*/memo(_ref28 => {
+var CardButton = /*#__PURE__*/memo(_ref19 => {
   var {
     card,
     onPlay,
-    onHover,
     player,
     gameState,
-    lastTags,
     lang,
     activeEvent,
     era
-  } = _ref28;
+  } = _ref19;
   var typeInfo = CARD_TYPES[card.type];
   var inflatedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
-  var canAfford = player.money >= inflatedCost;
   return /*#__PURE__*/_jsxs("button", {
-    onClick: e => onPlay(card, e),
-    onMouseEnter: () => onHover(card),
-    onMouseLeave: () => onHover(null),
+    onClick: () => onPlay(card),
     disabled: gameState !== 'PLAYING',
     "data-testid": "card-".concat(getLoc(card, 'name', lang)),
     className: "card-button ".concat(typeInfo.baseStyle),
@@ -839,17 +675,18 @@ var CardButton = /*#__PURE__*/memo(_ref28 => {
     })]
   });
 });
-function EconomicCardGame(_ref29) {
+function EconomicCardGame(_ref20) {
+  var _small$medium$large$f;
   var {
     initialDeck = null,
     randomFn = secureRandom
-  } = _ref29;
+  } = _ref20;
   var rng = typeof randomFn === 'function' ? randomFn : secureRandom;
   var randomInt = max => Math.floor(rng() * max);
   var createRandomId = () => randomInt(Number.MAX_SAFE_INTEGER);
   var missionProcessedTurnRef = useRef(0);
   var [turn, setTurn] = useState(1);
-  var [era, setEra] = useState(ERAS.GROWTH);
+  var [era] = useState(ERAS.GROWTH);
   var [gameState, setGameState] = useState('TITLE'); // TITLE, SETUP, PLAYING, WON, LOST
   var [skipTurnSummary, setSkipTurnSummary] = useState(false);
   var [autoProceed, setAutoProceed] = useState(false);
@@ -857,22 +694,8 @@ function EconomicCardGame(_ref29) {
   var [activeEvent, setActiveEvent] = useState(null);
   var [lastTags, setLastTags] = useState([]);
   var [isMuted, setIsMuted] = useState(false);
-  var [lastPlayedCard, setLastPlayedCard] = useState(null);
-  var [floatingTexts, setFloatingTexts] = useState([]);
-  var [showTurnOverlay, setShowTurnOverlay] = useState(false);
-  var [shake, setShake] = useState({
-    player: false,
-    enemy: false
-  });
-  var [hoveredCard, setHoveredCard] = useState(null);
-  var [crisisAlert, setCrisisAlert] = useState(null);
   var [evaluation, setEvaluation] = useState(null);
   var [lang, setLang] = useState('ja');
-  var [comboMessage, setComboMessage] = useState(null);
-  var [comboChain, setComboChain] = useState({
-    tag: null,
-    count: 0
-  });
   var [activeMission, setActiveMission] = useState(null);
   var [completedMissionCount, setCompletedMissionCount] = useState(0);
   var [turnSummaryData, setTurnSummaryData] = useState(null);
@@ -881,14 +704,7 @@ function EconomicCardGame(_ref29) {
     gdpGain: 0,
     text: ''
   });
-  var [earnedTitles, setEarnedTitles] = useState({});
-  var [unlockedAchievements, setUnlockedAchievements] = useState({});
-  var [discoveredCards, setDiscoveredCards] = useState({});
-  var [showEncyclopedia, setShowEncyclopedia] = useState(false);
-  var [gameProgress, setGameProgress] = useState({
-    monetarist_rank_a_count: 0,
-    total_inflation_combos: 0
-  });
+  var [unlockedAchievements] = useState({});
   var [fontSizeLevel, setFontSizeLevel] = useState('medium');
   var [masterVolume, setMasterVolume] = useState(50);
   var [showSettings, setShowSettings] = useState(false);
@@ -910,6 +726,30 @@ function EconomicCardGame(_ref29) {
     }
     return copy;
   };
+  useEffect(() => {
+    if (typeof localStorage === 'undefined') return;
+    loadAndApplySettings({
+      setLang,
+      setFontSizeLevel,
+      setSkipTurnSummary,
+      setIsMuted,
+      setMasterVolume
+    }, localStorage, SETTINGS_STORAGE_KEY);
+  }, []);
+  useEffect(() => {
+    if (typeof localStorage === 'undefined') return;
+    saveSettingsToStorage(localStorage, {
+      lang,
+      fontSizeLevel,
+      skipTurnSummary,
+      isMuted,
+      masterVolume
+    }, SETTINGS_STORAGE_KEY);
+  }, [lang, fontSizeLevel, skipTurnSummary, isMuted, masterVolume]);
+  useEffect(() => {
+    SoundManager.setMuted(isMuted);
+    SoundManager.setVolume(masterVolume / 100);
+  }, [isMuted, masterVolume]);
   useEffect(() => {
     if (autoProceed) {
       setAutoProceed(false);
@@ -939,9 +779,7 @@ function EconomicCardGame(_ref29) {
     rating: 'AAA',
     interestDue: 0
   });
-  var addFloatingText = () => {}; // Stub
-
-  var applyUnrestPenalty = (state, actorLabel) => {
+  var applyUnrestPenalty = state => {
     if (!state) return state;
     if (state.inflation < 8) return state;
     var incomePenalty = state.inflation >= 12 ? 4 : 2;
@@ -954,8 +792,6 @@ function EconomicCardGame(_ref29) {
   var applySupportChange = function applySupportChange(state) {
     var _state$support;
     var delta = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
-    var actorLabel = arguments.length > 2 ? arguments[2] : undefined;
-    var reason = arguments.length > 3 ? arguments[3] : undefined;
     if (!delta) return state;
     var prevSupport = (_state$support = state.support) !== null && _state$support !== void 0 ? _state$support : 0;
     var nextSupport = Math.min(100, Math.max(0, prevSupport + delta));
@@ -963,7 +799,7 @@ function EconomicCardGame(_ref29) {
       support: nextSupport
     });
   };
-  var applyRatingUpdate = (state, actorLabel) => {
+  var applyRatingUpdate = state => {
     var _state$debt;
     var nextRating = getRatingByDebt((_state$debt = state.debt) !== null && _state$debt !== void 0 ? _state$debt : 0);
     return _objectSpread(_objectSpread({}, state), {}, {
@@ -975,7 +811,7 @@ function EconomicCardGame(_ref29) {
     var ratingInfo = getRatingInfo(state.rating);
     return Math.max(0, Math.round(((_state$interestDue = state.interestDue) !== null && _state$interestDue !== void 0 ? _state$interestDue : 0) * ratingInfo.interestMultiplier));
   };
-  var applyInterestPayment = (state, actorLabel) => {
+  var applyInterestPayment = state => {
     var interest = getInterestForTurn(state);
     if (!interest) return state;
     return _objectSpread(_objectSpread({}, state), {}, {
@@ -1070,7 +906,7 @@ function EconomicCardGame(_ref29) {
     setGameDeck(deck);
     setDiscardPile(discarded);
   };
-  var issueBonds = e => {
+  var issueBonds = () => {
     if (gameState !== 'PLAYING') return;
     if (bondIssuedThisTurn) return;
     setPlayer(prev => {
@@ -1085,7 +921,7 @@ function EconomicCardGame(_ref29) {
     setBondIssuedThisTurn(true);
     addLog(lang === 'en' ? 'Issued bonds: Funds +50, Debt +50, Interest +5' : '国債発行: 資金+50、債務+50、利払+5');
   };
-  var repayDebt = e => {
+  var repayDebt = () => {
     if (gameState !== 'PLAYING') return;
     if (player.money < 50) return;
     if ((player.debt || 0) <= 0) return;
@@ -1190,7 +1026,7 @@ function EconomicCardGame(_ref29) {
     setEvaluation(result);
     return true;
   }, [gameState, player, enemy, currentDifficulty, turn, lang, completedMissionCount, selectedIdeology]);
-  var playCard = useCallback((card, e) => {
+  var playCard = useCallback(card => {
     var _card$combosWith;
     if (gameState !== 'PLAYING') return;
     var adjustedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
@@ -1215,10 +1051,9 @@ function EconomicCardGame(_ref29) {
       if (card.onFailure) penaltyState = card.onFailure(penaltyState);
       nextPlayerState = penaltyState;
       setPlayer(nextPlayerState);
-      setLastPlayedCard(card);
       setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
       var {
-          uniqueId: _2
+          uniqueId: _discardedUniqueId2
         } = card,
         _baseCard = _objectWithoutProperties(card, _excluded);
       setDiscardPile(prev => [...prev, _baseCard]);
@@ -1282,10 +1117,9 @@ function EconomicCardGame(_ref29) {
     if (card.tip) {
       addLog("Memo: ".concat(getLoc(card, 'tip', lang)));
     }
-    setLastPlayedCard(card);
     setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
     var {
-        uniqueId: _
+        uniqueId: _discardedUniqueId
       } = card,
       baseCard = _objectWithoutProperties(card, _excluded2);
     setDiscardPile(prev => [...prev, baseCard]);
@@ -1296,7 +1130,7 @@ function EconomicCardGame(_ref29) {
     }
     checkForNewMission(nextPlayerState);
     return checkWinCondition(nextPlayerState, updatedEnemyState !== null && updatedEnemyState !== void 0 ? updatedEnemyState : enemy);
-  }, [gameState, player, enemy, lang, activeEvent, era, lastTags, gameDeck, discardPile, discoveredCards, gameProgress, comboChain, turnHighlight, checkForNewMission, checkWinCondition, addLog, unlockedAchievements, earnedTitles, currentDifficulty, selectedIdeology, completedMissionCount]);
+  }, [gameState, player, enemy, lang, activeEvent, era, lastTags, gameDeck, discardPile, turnHighlight, checkForNewMission, checkWinCondition, addLog]);
   var aiTurn = () => {
     var _activeEvent$effect$i, _activeEvent$effect2;
     var driftTarget = 0;
@@ -1319,7 +1153,14 @@ function EconomicCardGame(_ref29) {
     afterIncome = applyInterestPayment(afterIncome, 'ライバル');
     var ratedEnemy = applyRatingUpdate(afterIncome, 'ライバル');
     var unrestAdjusted = applyUnrestPenalty(ratedEnemy, 'ライバル');
-    var potentialActions = ALL_CARDS.filter(c => c.id < MAX_STANDARD_CARD_ID && calculateInflatedCost(c.cost, unrestAdjusted.inflation, activeEvent, era) <= unrestAdjusted.money);
+    var potentialActions = getPotentialActions({
+      money: unrestAdjusted.money,
+      inflation: unrestAdjusted.inflation,
+      activeEvent,
+      era,
+      cards: ALL_CARDS,
+      maxStandardCardId: MAX_STANDARD_CARD_ID
+    });
     if (potentialActions.length === 0) {
       setEnemy(unrestAdjusted);
       return checkWinCondition(player, unrestAdjusted);
@@ -1366,6 +1207,24 @@ function EconomicCardGame(_ref29) {
       text: ''
     });
   };
+  var updateSetting = (key, value) => {
+    var handlers = {
+      lang: setLang,
+      fontSizeLevel: setFontSizeLevel,
+      skipTurnSummary: setSkipTurnSummary,
+      isMuted: setIsMuted,
+      masterVolume: setMasterVolume
+    };
+    var handler = handlers[key];
+    if (handler) {
+      handler(value);
+    }
+  };
+  var fontSizeClass = (_small$medium$large$f = {
+    small: 'text-sm',
+    medium: 'text-base',
+    large: 'text-lg'
+  }[fontSizeLevel]) !== null && _small$medium$large$f !== void 0 ? _small$medium$large$f : 'text-base';
   var endTurn = () => {
     var _activeEvent$effect$i2, _activeEvent$effect3;
     if (gameState !== 'PLAYING' || showTurnSummary) return;
@@ -1387,7 +1246,6 @@ function EconomicCardGame(_ref29) {
       money: currentPlayerState.money + playerIncomeGain,
       inflation: driftedInflation
     });
-    var interestPaid = getInterestForTurn(playerAfterIncome);
     playerAfterIncome = applyInterestPayment(playerAfterIncome, 'あなた');
     var ratedPlayer = applyRatingUpdate(playerAfterIncome, 'あなた');
     var unrestApplied = applyUnrestPenalty(ratedPlayer, 'あなた');
@@ -1407,8 +1265,9 @@ function EconomicCardGame(_ref29) {
     }
   };
   return /*#__PURE__*/_jsxs("div", {
-    className: "min-h-screen ".concat(era.bgClass),
+    className: "min-h-screen ".concat(era.bgClass, " ").concat(fontSizeClass),
     children: [/*#__PURE__*/_jsxs("div", {
+      className: "flex items-center gap-2",
       children: [/*#__PURE__*/_jsx("button", {
         onClick: () => setLang('en'),
         "data-testid": "lang-en",
@@ -1417,10 +1276,23 @@ function EconomicCardGame(_ref29) {
         onClick: () => setLang('ja'),
         "data-testid": "lang-ja",
         children: "\u65E5\u672C\u8A9E"
-      }), /*#__PURE__*/_jsx("button", {
+      }), /*#__PURE__*/_jsxs("button", {
         onClick: () => setIsMuted(prev => !prev),
         "data-testid": "mute-toggle",
-        children: isMuted ? 'Unmute' : 'Mute'
+        className: "inline-flex items-center gap-1",
+        children: [isMuted ? /*#__PURE__*/_jsx(IconVolumeX, {
+          size: 16
+        }) : /*#__PURE__*/_jsx(IconVolume2, {
+          size: 16
+        }), /*#__PURE__*/_jsx("span", {
+          children: isMuted ? 'Unmute' : 'Mute'
+        })]
+      }), /*#__PURE__*/_jsx("button", {
+        onClick: () => setShowSettings(true),
+        "data-testid": "open-settings",
+        children: /*#__PURE__*/_jsx(IconSettings, {
+          size: 16
+        })
       })]
     }), gameState === 'TITLE' && /*#__PURE__*/_jsx("div", {
       children: /*#__PURE__*/_jsx("button", {
@@ -1431,12 +1303,22 @@ function EconomicCardGame(_ref29) {
       children: [/*#__PURE__*/_jsxs("label", {
         children: ["Difficulty:", /*#__PURE__*/_jsx("select", {
           value: selectedDifficulty,
-          onChange: e => setSelectedDifficulty(e.target.value),
+          onChange: event => setSelectedDifficulty(event.target.value),
           "data-testid": "difficulty-select",
           children: Object.values(DIFFICULTY_SETTINGS).map(diff => /*#__PURE__*/_jsx("option", {
             value: diff.id,
             children: diff.label
           }, diff.id))
+        })]
+      }), /*#__PURE__*/_jsxs("label", {
+        children: ["Ideology:", /*#__PURE__*/_jsx("select", {
+          value: selectedIdeology,
+          onChange: event => setSelectedIdeology(event.target.value),
+          "data-testid": "ideology-select",
+          children: Object.values(IDEOLOGIES).map(ideology => /*#__PURE__*/_jsx("option", {
+            value: ideology.id,
+            children: getLoc(ideology, 'name', lang)
+          }, ideology.id))
         })]
       }), /*#__PURE__*/_jsx("button", {
         onClick: startGame,
@@ -1480,10 +1362,8 @@ function EconomicCardGame(_ref29) {
           children: playerHand.map(card => /*#__PURE__*/_jsx(CardButton, {
             card: card,
             onPlay: playCard,
-            onHover: setHoveredCard,
             player: player,
             gameState: gameState,
-            lastTags: lastTags,
             lang: lang,
             activeEvent: activeEvent,
             era: era
@@ -1530,6 +1410,17 @@ function EconomicCardGame(_ref29) {
       data: turnSummaryData,
       onContinue: proceedToNextTurn,
       lang: lang
+    }), /*#__PURE__*/_jsx(SettingsModal, {
+      isOpen: showSettings,
+      onClose: () => setShowSettings(false),
+      settings: {
+        lang,
+        fontSizeLevel,
+        skipTurnSummary,
+        isMuted,
+        masterVolume
+      },
+      onChange: updateSetting
     })]
   });
 }
