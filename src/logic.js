@@ -169,6 +169,15 @@
 
     const clampSupport = (value = 0) => Math.max(0, Math.min(100, value));
 
+    const calculateInflatedCost = (baseCost, inflationRate = 0, activeEvent = null, era = null) => {
+        const inflated = Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
+        let multiplier = activeEvent?.effect?.costMultiplier || 1;
+        if (era?.id === 'STAGNATION') {
+            multiplier *= 1.5;
+        }
+        return Math.max(0, Math.round(inflated * multiplier));
+    };
+
     const applyInflationDrift = (value, target = 0) => {
         const diff = target - value;
         const step = 0.3;
@@ -868,5 +877,6 @@
         MAX_STANDARD_CARD_ID,
         getGameStatus,
         evaluateGame,
+        calculateInflatedCost,
     };
 }));

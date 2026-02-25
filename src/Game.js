@@ -11,7 +11,7 @@ const {
     clampInflation, applyInflationDrift, applyInflationChange,
     MAX_STANDARD_CARD_ID,
     getGameStatus, evaluateGame, resolveBondRisk,
-    secureRandom
+    secureRandom, calculateInflatedCost
 } = GameLogic;
 
 // --- Mocks ---
@@ -187,15 +187,6 @@ const calculateSuccessRate = (card, support) => {
     if (base >= 100) return 100;
     const bonus = (support - 50) * 0.5;
     return Math.min(100, Math.max(0, Math.round(base + bonus)));
-};
-
-const calculateInflatedCost = (baseCost, inflationRate = 0, activeEvent = null, era = null) => {
-    const inflated = Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
-    let multiplier = activeEvent?.effect?.costMultiplier || 1;
-    if (era?.id === 'STAGNATION') {
-        multiplier *= 1.5;
-    }
-    return Math.max(0, Math.round(inflated * multiplier));
 };
 
 const CardButton = memo(({ card, onPlay, onHover, player, gameState, lastTags, lang, activeEvent, era }) => {
