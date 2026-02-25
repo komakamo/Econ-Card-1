@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import GameLogic from './logic.js';
+import { SETTINGS_STORAGE_KEY, loadAndApplySettings } from './settingsValidation.js';
 
 // --- Game Logic Constants ---
 const {
@@ -9,7 +10,7 @@ const {
     INFLATION_MIN, INFLATION_MAX,
     RATING_TIERS, getRatingByDebt, getRatingInfo,
     clampInflation, applyInflationDrift, applyInflationChange,
-    MAX_STANDARD_CARD_ID,
+    MAX_STANDARD_CARD_ID, getPotentialActions,
     getGameStatus, evaluateGame, resolveBondRisk,
     secureRandom, calculateInflatedCost
 } = GameLogic;
@@ -307,6 +308,23 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         }
         return copy;
     };
+
+    useEffect(() => {
+        if (typeof localStorage === 'undefined') return;
+        loadAndApplySettings({
+            setLang,
+            setFontSizeLevel,
+            setSkipTurnSummary,
+            setIsMuted,
+            setMasterVolume,
+        }, localStorage, SETTINGS_STORAGE_KEY);
+    }, []);
+
+    useEffect(() => {
+        if (typeof localStorage === 'undefined') return;
+        const settings = { lang, fontSizeLevel, skipTurnSummary, isMuted, masterVolume };
+        localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    }, [lang, fontSizeLevel, skipTurnSummary, isMuted, masterVolume]);
 
     useEffect(() => {
         if (autoProceed) {
@@ -730,7 +748,14 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         const ratedEnemy = applyRatingUpdate(afterIncome, 'ライバル');
         const unrestAdjusted = applyUnrestPenalty(ratedEnemy, 'ライバル');
 
-        const potentialActions = ALL_CARDS.filter(c => c.id < MAX_STANDARD_CARD_ID && calculateInflatedCost(c.cost, unrestAdjusted.inflation, activeEvent, era) <= unrestAdjusted.money);
+        const potentialActions = getPotentialActions({
+            money: unrestAdjusted.money,
+            inflation: unrestAdjusted.inflation,
+            activeEvent,
+            era,
+            cards: ALL_CARDS,
+            maxStandardCardId: MAX_STANDARD_CARD_ID,
+        });
 
         if (potentialActions.length === 0) {
             setEnemy(unrestAdjusted);
