@@ -52,9 +52,18 @@ describe('Inflation Drift Integration', () => {
 
         render(<EconomicCardGame initialDeck={initialDeck} />);
 
-        // Start Game
+        // Switch to English
+        await act(async () => {
+            fireEvent.click(screen.getByTestId('lang-en'));
+        });
+
+        // Start Game (Title -> Setup -> Playing)
         await act(async () => {
             fireEvent.click(screen.getByText(/START GAME/i));
+        });
+        const setupStarts = await screen.findAllByText(/START GAME/i);
+        await act(async () => {
+            fireEvent.click(setupStarts[setupStarts.length - 1]);
         });
 
         // Verify initial inflation is 0.0%
@@ -76,6 +85,12 @@ describe('Inflation Drift Integration', () => {
         });
 
         expect(inflationEl).toHaveTextContent('Inflation: 4.7%');
+
+        // Click Continue on Summary
+        const continueButton = await screen.findByText(/Continue/i);
+        await act(async () => {
+            fireEvent.click(continueButton);
+        });
 
         // End Turn 2 -> Drift to 4.4%
         await act(async () => {
