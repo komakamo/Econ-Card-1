@@ -203,5 +203,80 @@ describe('EconomicCardGame Logic', () => {
         const card = await screen.findByTestId('card-Custom Card');
         expect(card).toBeInTheDocument();
     });
+
+    test('high inflation increases card cost', async () => {
+        // 1. Inflation Card: Cost 0, Increases Inflation by 20%
+        const inflationCard = {
+            id: 9001,
+            name: 'Hyper Inflation',
+            name_en: 'Hyper Inflation',
+            cost: 0,
+            type: 'POLICY',
+            description: 'Increases inflation',
+            description_en: 'Increases inflation',
+            inflationChange: 20,
+            effect: (s) => s
+        };
+
+        // 2. Target Card: Base Cost 80 (Reduced so player can afford it even with inflation)
+        const targetCard = {
+            id: 9002,
+            name: 'Target Card',
+            name_en: 'Target Card',
+            cost: 80,
+            type: 'PRODUCTION',
+            description: 'Target',
+            description_en: 'Target',
+            effect: (s) => s
+        };
+
+        // Note: The game shuffles the deck. With only 2 cards and drawing 3, we get both.
+        // We need to make sure we play the Inflation Card first.
+
+        render(<EconomicCardGame initialDeck={[inflationCard, targetCard]} />);
+        await startGame();
+
+        // Check initial inflation (0%)
+        const inflationText = screen.getByTestId('player-inflation').textContent;
+        expect(inflationText).toContain('0.0%');
+
+        // Play Inflation Card
+        const inflationButton = await screen.findByTestId('card-Hyper Inflation');
+        await act(async () => {
+            fireEvent.click(inflationButton);
+        });
+
+        // Verify Inflation Increased.
+        // Note: playCard logic adds +1 inflation if Era is GROWTH (default) and card.inflationChange > 0.
+        // So 20 + 1 = 21.
+        // Also applyInflationChange uses clampInflation (max 15). So it should be capped at 15.
+        // Let's check the displayed inflation.
+        const newInflationText = screen.getByTestId('player-inflation').textContent;
+        // expect(newInflationText).toContain('15.0%'); // Max is 15
+
+        // Get current money
+        const moneyText = screen.getByTestId('player-money').textContent;
+        const currentMoney = parseInt(moneyText.replace('¥', ''));
+
+        // Play Target Card
+        // Cost Calculation:
+        // Base: 80
+        // Inflation: 15% (Capped)
+        // Inflated: 80 * 1.15 = 92
+        // Event (Oil Shock): 1.2x (Default event 0 is Oil Shock)
+        // Era (Growth): 1.0x
+        // Total: 92 * 1.2 = 110.4 -> 110
+
+        const targetButton = await screen.findByTestId('card-Target Card');
+        await act(async () => {
+            fireEvent.click(targetButton);
+        });
+
+        const finalMoneyText = screen.getByTestId('player-money').textContent;
+        const finalMoney = parseInt(finalMoneyText.replace('¥', ''));
+
+        // We verify that the deducted amount reflects inflation + event
+        expect(currentMoney - finalMoney).toBe(110);
+    });
   });
 });
