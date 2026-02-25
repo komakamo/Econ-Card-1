@@ -199,7 +199,7 @@ const CardButton = memo(({ card, onPlay, onHover, player, gameState, lastTags, l
             onClick={(e) => onPlay(card, e)}
             onMouseEnter={() => onHover(card)}
             onMouseLeave={() => onHover(null)}
-            disabled={!canAfford || gameState !== 'PLAYING'}
+            disabled={gameState !== 'PLAYING'}
             data-testid={`card-${getLoc(card, 'name', lang)}`}
             className={`card-button ${typeInfo.baseStyle}`}
         >
@@ -525,7 +525,10 @@ function EconomicCardGame({ initialDeck = null }) {
 
         let updatedEnemyState = null;
 
-        if (player.money < adjustedCost) return;
+        if (player.money < adjustedCost) {
+            addLog(t('insufficientFunds', lang));
+            return;
+        }
 
         const successRate = calculateSuccessRate(card, player.support);
         const roll = Math.random() * 100;

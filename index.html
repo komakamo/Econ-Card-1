@@ -1249,7 +1249,7 @@
                     onClick={(e) => onPlay(card, e)}
                     onMouseEnter={() => onHover(card)}
                     onMouseLeave={() => onHover(null)}
-                    disabled={!canAfford || gameState !== 'PLAYING'}
+                    disabled={gameState !== 'PLAYING'}
                     className={`
                         relative text-left group
                         flex flex-col h-full rounded-xl border-2 transition-all duration-500 ease-out overflow-hidden
