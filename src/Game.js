@@ -582,10 +582,10 @@ function EconomicCardGame({ initialDeck = null }) {
         setActiveMission((prev) => (prev ? { ...prev, turnsRemaining } : prev));
     }, [activeMission, checkForNewMission, addLog, lang]);
 
-    const checkWinCondition = useCallback((nextPlayer = player, nextEnemy = enemy) => {
+    const checkWinCondition = useCallback((nextPlayer = player, nextEnemy = enemy, currentTurn = turn) => {
         if (gameState !== 'PLAYING') return false;
 
-        const gameStatus = getGameStatus(nextPlayer, nextEnemy, currentDifficulty);
+        const gameStatus = getGameStatus(nextPlayer, nextEnemy, currentDifficulty, currentTurn);
         if (gameStatus.status === 'ONGOING') return false;
 
         const isWin = gameStatus.status === 'WIN';
@@ -595,7 +595,7 @@ function EconomicCardGame({ initialDeck = null }) {
         const result = evaluateGame(nextPlayer, currentDifficulty, isWin, IDEOLOGIES[selectedIdeology], lang, completedMissionCount);
         setEvaluation(result);
         return true;
-    }, [gameState, player, enemy, currentDifficulty, lang, completedMissionCount, selectedIdeology]);
+    }, [gameState, player, enemy, currentDifficulty, turn, lang, completedMissionCount, selectedIdeology]);
 
     const playCard = useCallback((card, e) => {
         if (gameState !== 'PLAYING') return;
@@ -762,10 +762,12 @@ function EconomicCardGame({ initialDeck = null }) {
             processMissionAtTurnEnd(player);
             missionProcessedTurnRef.current = turn;
         }
-        if (checkWinCondition()) return;
+        if (checkWinCondition(player, enemy, turn)) return;
         const aiEndedGame = aiTurn();
         if (!aiEndedGame) {
-            setTurn(prev => prev + 1);
+            const nextTurn = turn + 1;
+            if (checkWinCondition(player, enemy, nextTurn)) return;
+            setTurn(nextTurn);
             drawCards(1);
         }
         setLastTags([]);
@@ -850,7 +852,7 @@ function EconomicCardGame({ initialDeck = null }) {
                     <div>
                         <span data-testid="current-difficulty">Difficulty: {currentDifficulty.label}</span>
                         <span data-testid="target-gdp">Target GDP: <NumberCounter value={currentDifficulty.targetGdp} /></span>
-                        <span data-testid="turn-indicator">Turn: {turn} / 40 (Remaining: {40 - turn})</span>
+                        <span data-testid="turn-indicator">Turn: {turn} / {currentDifficulty.maxTurns} (Remaining: {Math.max(0, currentDifficulty.maxTurns - turn)})</span>
                     </div>
                     <StatusPanel data={enemy} isEnemy={true} lang={lang} />
                     <StatusPanel data={player} isEnemy={false} lang={lang} />
