@@ -248,7 +248,10 @@ const CardButton = memo(({ card, onPlay, onHover, player, gameState, lastTags, l
      );
 });
 
-function EconomicCardGame({ initialDeck = null }) {
+function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
+    const rng = typeof randomFn === 'function' ? randomFn : secureRandom;
+    const randomInt = (max) => Math.floor(rng() * max);
+    const createRandomId = () => randomInt(Number.MAX_SAFE_INTEGER);
     const missionProcessedTurnRef = useRef(0);
     const [turn, setTurn] = useState(1);
     const [era, setEra] = useState(ERAS.GROWTH);
@@ -299,7 +302,7 @@ function EconomicCardGame({ initialDeck = null }) {
     const shuffleArray = (arr) => {
         const copy = [...arr];
         for (let i = copy.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
+            const j = randomInt(i + 1);
             [copy[i], copy[j]] = [copy[j], copy[i]];
         }
         return copy;
@@ -438,8 +441,8 @@ function EconomicCardGame({ initialDeck = null }) {
     };
 
     const addLog = useCallback((msg) => {
-        setLogs(prev => [{ id: Math.random(), message: msg }, ...prev].slice(0, 10));
-    }, []);
+        setLogs(prev => [{ id: createRandomId(), message: msg }, ...prev].slice(0, 10));
+    }, [randomFn]);
 
     const drawCards = (count, sourceDeck = null, sourceDiscard = null) => {
         let deck = sourceDeck ? [...sourceDeck] : [...gameDeck];
@@ -453,7 +456,7 @@ function EconomicCardGame({ initialDeck = null }) {
                 discarded = [];
             }
             const [card] = deck.splice(-1, 1);
-            drawnCards.push({ ...card, uniqueId: Math.random() });
+            drawnCards.push({ ...card, uniqueId: createRandomId() });
         }
 
         if (drawnCards.length > 0) {
@@ -560,7 +563,7 @@ function EconomicCardGame({ initialDeck = null }) {
         if (missionCompleted) {
             const rewardCard = ALL_CARDS.find((card) => card.id === activeMission.rewardCardId);
             if (rewardCard) {
-                setPlayerHand((prev) => [...prev, { ...rewardCard, uniqueId: Math.random() }]);
+                setPlayerHand((prev) => [...prev, { ...rewardCard, uniqueId: createRandomId() }]);
                 addLog(`${lang === 'en' ? 'Mission complete! Reward card added:' : 'ミッション達成！報酬カード獲得:'} ${getLoc(rewardCard, 'name', lang)}`);
             } else {
                 addLog(lang === 'en' ? 'Mission complete!' : 'ミッション達成！');
@@ -615,7 +618,7 @@ function EconomicCardGame({ initialDeck = null }) {
         }
 
         const successRate = calculateSuccessRate(card, player.support);
-        const roll = Math.random() * 100;
+        const roll = rng() * 100;
         const isSuccess = roll < successRate;
 
         const afterCost = { ...player, money: player.money - adjustedCost };
@@ -733,7 +736,7 @@ function EconomicCardGame({ initialDeck = null }) {
             return checkWinCondition(player, unrestAdjusted);
         }
 
-        const aiCard = potentialActions[Math.floor(Math.random() * potentialActions.length)];
+        const aiCard = potentialActions[randomInt(potentialActions.length)];
         const inflatedCost = calculateInflatedCost(aiCard.cost, unrestAdjusted.inflation, activeEvent, era);
         let afterPayment = { ...unrestAdjusted, money: unrestAdjusted.money - inflatedCost };
 
