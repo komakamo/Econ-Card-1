@@ -37,4 +37,29 @@ if (indexHtml.includes('text/babel')) {
   throw new Error('Smoke test failed: legacy inlined Babel script still exists in production entry.');
 }
 
+
+const cspMatch = indexHtml.match(/<meta[^>]*http-equiv="Content-Security-Policy"[^>]*content="([^"]+)"/i);
+if (!cspMatch) {
+  throw new Error('Smoke test failed: CSP meta tag is missing from dist/index.html.');
+}
+
+const csp = cspMatch[1];
+if (!csp.includes("script-src 'self'")) {
+  throw new Error("Smoke test failed: CSP script-src is not restricted to 'self'.");
+}
+
+const forbiddenCspTokens = ["'unsafe-inline'", "'unsafe-eval'"];
+for (const token of forbiddenCspTokens) {
+  if (csp.includes(token)) {
+    throw new Error(`Smoke test failed: CSP still contains forbidden token ${token}.`);
+  }
+}
+
+const forbiddenExternalHosts = ['cdn.tailwindcss.com', 'unpkg.com', 'cdnjs.cloudflare.com'];
+for (const host of forbiddenExternalHosts) {
+  if (indexHtml.includes(host)) {
+    throw new Error(`Smoke test failed: dist/index.html still references external CDN ${host}.`);
+  }
+}
+
 console.log('Smoke test passed: dist entrypoint and bundle look valid.');
