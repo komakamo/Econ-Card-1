@@ -152,8 +152,40 @@ const CardInfoPanel = ({ card, lang }) => {
 };
 
 const ComboGuidePanel = () => <div />;
-const IdeologyMissionPanel = () => <div />;
-const MissionPanel = () => <div />;
+
+const MissionStatusContent = ({ activeMission, player, lang }) => {
+    if (!activeMission) {
+        return <p data-testid="mission-status-empty">{lang === 'en' ? 'No active mission' : '進行中ミッションなし'}</p>;
+    }
+
+    const isObjectiveMet = activeMission.objective(player);
+    const missionName = getLoc(activeMission, 'name', lang);
+    const objectiveText = getLoc(activeMission, 'objective_text', lang);
+
+    return (
+        <div data-testid="mission-status-active">
+            <div data-testid="mission-name">{missionName}</div>
+            <div data-testid="mission-turns">{lang === 'en' ? 'Turns left' : '残りターン'}: {activeMission.turnsRemaining}</div>
+            <div data-testid="mission-objective">{objectiveText}</div>
+            <div data-testid="mission-progress">{lang === 'en' ? 'Achievable now' : '現在達成可能'}: {isObjectiveMet ? '✅' : '❌'}</div>
+        </div>
+    );
+};
+
+const IdeologyMissionPanel = ({ activeMission, player, lang }) => (
+    <div data-testid="ideology-mission-panel">
+        <h4>{t('ideologyMission', lang)}</h4>
+        <MissionStatusContent activeMission={activeMission} player={player} lang={lang} />
+    </div>
+);
+
+const MissionPanel = ({ activeMission, player, completedMissionCount, lang }) => (
+    <div data-testid="mission-panel">
+        <h4>{lang === 'en' ? 'Mission' : 'ミッション'}</h4>
+        <div data-testid="completed-mission-count">{lang === 'en' ? 'Completed' : '達成数'}: {completedMissionCount}</div>
+        <MissionStatusContent activeMission={activeMission} player={player} lang={lang} />
+    </div>
+);
 const CardEncyclopediaPanel = ({ onClose }) => <button onClick={onClose}>Close</button>;
 const SettingsModal = ({ isOpen, onClose, settings, onChange }) => isOpen ? <button onClick={onClose}>Close</button> : null;
 
@@ -217,6 +249,7 @@ const CardButton = memo(({ card, onPlay, onHover, player, gameState, lastTags, l
 });
 
 function EconomicCardGame({ initialDeck = null }) {
+    const missionProcessedTurnRef = useRef(0);
     const [turn, setTurn] = useState(1);
     const [era, setEra] = useState(ERAS.GROWTH);
     const [gameState, setGameState] = useState('TITLE'); // TITLE, SETUP, PLAYING, WON, LOST
@@ -395,6 +428,9 @@ function EconomicCardGame({ initialDeck = null }) {
         setLastTags([]);
         setTurn(1);
         setGameState('PLAYING');
+        setActiveMission(null);
+        setCompletedMissionCount(0);
+        missionProcessedTurnRef.current = 0;
 
         drawCards(3, shuffledDeck, []);
     };
@@ -496,7 +532,50 @@ function EconomicCardGame({ initialDeck = null }) {
         };
     };
 
-    const checkForNewMission = useCallback((playerState) => {}, []);
+    const checkForNewMission = useCallback((playerState) => {
+        if (activeMission) return;
+
+        const foundMission = MISSIONS.find((mission) => mission.trigger(playerState));
+        if (!foundMission) return;
+
+        setActiveMission({
+            ...foundMission,
+            turnsRemaining: foundMission.turns,
+        });
+        addLog(`${lang === 'en' ? 'New mission:' : '新規ミッション:'} ${getLoc(foundMission, 'name', lang)}`);
+    }, [activeMission, addLog, lang]);
+
+    const processMissionAtTurnEnd = useCallback((playerState) => {
+        if (!activeMission) {
+            checkForNewMission(playerState);
+            return;
+        }
+
+        const missionCompleted = activeMission.objective(playerState);
+        if (missionCompleted) {
+            const rewardCard = ALL_CARDS.find((card) => card.id === activeMission.rewardCardId);
+            if (rewardCard) {
+                setPlayerHand((prev) => [...prev, { ...rewardCard, uniqueId: Math.random() }]);
+                addLog(`${lang === 'en' ? 'Mission complete! Reward card added:' : 'ミッション達成！報酬カード獲得:'} ${getLoc(rewardCard, 'name', lang)}`);
+            } else {
+                addLog(lang === 'en' ? 'Mission complete!' : 'ミッション達成！');
+            }
+            setCompletedMissionCount((prev) => prev + 1);
+            setActiveMission(null);
+            checkForNewMission(playerState);
+            return;
+        }
+
+        const turnsRemaining = activeMission.turnsRemaining - 1;
+        if (turnsRemaining <= 0) {
+            addLog(`${lang === 'en' ? 'Mission failed:' : 'ミッション失敗:'} ${getLoc(activeMission, 'name', lang)}`);
+            setActiveMission(null);
+            checkForNewMission(playerState);
+            return;
+        }
+
+        setActiveMission((prev) => (prev ? { ...prev, turnsRemaining } : prev));
+    }, [activeMission, checkForNewMission, addLog, lang]);
 
     const checkWinCondition = useCallback((nextPlayer = player, nextEnemy = enemy) => {
         if (gameState !== 'PLAYING') return false;
@@ -674,6 +753,10 @@ function EconomicCardGame({ initialDeck = null }) {
 
     const proceedToNextTurn = () => {
         setShowTurnSummary(false);
+        if (missionProcessedTurnRef.current !== turn) {
+            processMissionAtTurnEnd(player);
+            missionProcessedTurnRef.current = turn;
+        }
         if (checkWinCondition()) return;
         const aiEndedGame = aiTurn();
         if (!aiEndedGame) {
@@ -709,6 +792,8 @@ function EconomicCardGame({ initialDeck = null }) {
         const ratedPlayer = applyRatingUpdate(playerAfterIncome, 'あなた');
         const unrestApplied = applyUnrestPenalty(ratedPlayer, 'あなた');
         setPlayer(unrestApplied);
+        processMissionAtTurnEnd(unrestApplied);
+        missionProcessedTurnRef.current = turn;
 
         const summary = {
             turn,
@@ -763,6 +848,8 @@ function EconomicCardGame({ initialDeck = null }) {
                     </div>
                     <StatusPanel data={enemy} isEnemy={true} lang={lang} />
                     <StatusPanel data={player} isEnemy={false} lang={lang} />
+                    <MissionPanel activeMission={activeMission} player={player} completedMissionCount={completedMissionCount} lang={lang} />
+                    <IdeologyMissionPanel activeMission={activeMission} player={player} lang={lang} />
                     <div>
                         <h3>{t('yourHand', lang)}</h3>
                         <div>
