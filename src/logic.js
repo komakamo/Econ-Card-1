@@ -700,6 +700,7 @@
             label: 'ビギナー',
             label_en: 'Beginner',
             targetGdp: 200,
+            maxTurns: 40,
             initialMoney: 120,
             initialDebt: 0,
             eventDamageMultiplier: 0.5,
@@ -711,6 +712,7 @@
             label: 'ノーマル',
             label_en: 'Normal',
             targetGdp: 300,
+            maxTurns: 40,
             initialMoney: 80,
             initialDebt: 0,
             eventDamageMultiplier: 1.0,
@@ -722,6 +724,7 @@
             label: 'ハード',
             label_en: 'Hard',
             targetGdp: 400,
+            maxTurns: 40,
             initialMoney: 60,
             initialDebt: 30,
             eventDamageMultiplier: 1.5,
@@ -733,12 +736,14 @@
     // AI Logic Constants
     const MAX_STANDARD_CARD_ID = 100; // AI only plays cards with ID < 100
 
-    const getGameStatus = (player, enemy, difficulty) => {
+    const getGameStatus = (player, enemy, difficulty, turn) => {
         const target = difficulty.targetGdp || 300;
+        const maxTurns = difficulty.maxTurns || 40;
         if (player.gdp >= target) return { status: 'WIN', reason_ja: '経済目標達成！', reason_en: 'Economic Goal Achieved!' };
         if (enemy.gdp >= target) return { status: 'LOSE', reason_ja: 'ライバル国に敗北...', reason_en: 'Defeated by Rival...' };
         if (player.support <= 0) return { status: 'LOSE', reason_ja: '支持率低下により政権崩壊', reason_en: 'Administration collapsed due to low support' };
         if (enemy.support <= 0) return { status: 'WIN', reason_ja: 'ライバル国が自滅！', reason_en: 'Rival administration collapsed!' };
+        if (turn > maxTurns) return { status: 'LOSE', reason_ja: '制限ターンを超過して敗北', reason_en: 'Defeat: Turn limit exceeded' };
         return { status: 'ONGOING' };
     };
 
