@@ -294,6 +294,7 @@ function EconomicCardGame({ initialDeck = null }) {
     const [selectedIdeology, setSelectedIdeology] = useState(IDEOLOGIES.KEYNESIAN.id);
     const [gameDeck, setGameDeck] = useState([]);
     const [discardPile, setDiscardPile] = useState([]);
+    const [bondIssuedThisTurn, setBondIssuedThisTurn] = useState(false);
 
     const shuffleArray = (arr) => {
         const copy = [...arr];
@@ -430,6 +431,7 @@ function EconomicCardGame({ initialDeck = null }) {
         setGameState('PLAYING');
         setActiveMission(null);
         setCompletedMissionCount(0);
+        setBondIssuedThisTurn(false);
         missionProcessedTurnRef.current = 0;
 
         drawCards(3, shuffledDeck, []);
@@ -463,6 +465,7 @@ function EconomicCardGame({ initialDeck = null }) {
 
     const issueBonds = (e) => {
         if (gameState !== 'PLAYING') return;
+        if (bondIssuedThisTurn) return;
         setPlayer(prev => {
             const updated = {
                 ...prev,
@@ -472,6 +475,8 @@ function EconomicCardGame({ initialDeck = null }) {
             };
             return applyRatingUpdate(updated, 'あなた');
         });
+        setBondIssuedThisTurn(true);
+        addLog(lang === 'en' ? 'Issued bonds: Funds +50, Debt +50, Interest +5' : '国債発行: 資金+50、債務+50、利払+5');
     };
 
     const repayDebt = (e) => {
@@ -769,6 +774,7 @@ function EconomicCardGame({ initialDeck = null }) {
 
     const endTurn = () => {
         if (gameState !== 'PLAYING' || showTurnSummary) return;
+        setBondIssuedThisTurn(false);
         let currentPlayerState = { ...player };
         let driftTarget = 0;
         let eraIncomePenalty = 0;
@@ -858,6 +864,7 @@ function EconomicCardGame({ initialDeck = null }) {
                             ))}
                         </div>
                         <button onClick={repayDebt} disabled={gameState !== 'PLAYING' || (player.debt || 0) <= 0 || player.money < 50}>Repay</button>
+                        <button onClick={issueBonds} disabled={gameState !== 'PLAYING' || bondIssuedThisTurn}>{t('bond', lang)}</button>
                         <button onClick={endTurn}>{t('endTurn', lang)}</button>
                         <button onClick={() => setActiveEvent(EVENTS[0])} data-testid="trigger-event">Trigger Event</button>
                     </div>
