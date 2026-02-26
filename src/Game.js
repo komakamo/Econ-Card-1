@@ -265,6 +265,7 @@ const getCardProvidedTags = (card) => {
     return tags;
 };
 
+
 const calculateSuccessRate = (card, support) => {
     const base = card.baseSuccessRate ?? 100;
     if (base >= 100) return 100;
@@ -577,11 +578,6 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         };
     };
 
-    const withEventMultiplier = (setter) => (updater) => setter(prev => {
-        const next = typeof updater === 'function' ? updater(prev) : updater;
-        return applyEventMultiplier(prev, next);
-    });
-
     const applyComboBonus = (prevState, nextState, multiplier = 1) => {
         const normalizedMultiplier = Number.isFinite(multiplier) ? multiplier : Number(multiplier) || 1;
         if (normalizedMultiplier <= 1.0) return nextState;
@@ -596,6 +592,14 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
             income: applyScale('income'),
             gdp: applyScale('gdp'),
         };
+    };
+
+
+    const computeEnemyAfterAttack = (enemyState, cardState, nextPlayerState, comboMultiplier) => {
+        const effected = cardState.targetEffect ? cardState.targetEffect(enemyState, nextPlayerState) : enemyState;
+        const comboBoosted = applyComboBonus(enemyState, effected, comboMultiplier);
+        const unrested = applyUnrestPenalty(comboBoosted, 'ライバル');
+        return applySupportChange(unrested, cardState.targetSupportChange, 'ライバル');
     };
 
     const checkForNewMission = useCallback((playerState) => {
@@ -668,8 +672,6 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         const isTech = providedTags.includes('tech');
         const eraMultiplier = (era.id === 'IT_REV' && isTech) ? 2 : 1;
 
-        let updatedEnemyState = null;
-
         if (player.money < adjustedCost) {
             addLog(t('insufficientFunds', lang));
             return;
@@ -737,16 +739,10 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         }
         setPlayer(nextPlayerState);
 
+        let nextEnemyState = enemy;
         if (card.type === 'ATTACK') {
-            const eventAwareSetEnemy = withEventMultiplier(setEnemy);
-            eventAwareSetEnemy(prev => {
-                const effected = card.targetEffect ? card.targetEffect(prev, nextPlayerState) : prev;
-                const comboBoosted = applyComboBonus(prev, effected, comboMultiplier);
-                const unrested = applyUnrestPenalty(comboBoosted, 'ライバル');
-                const withSupport = applySupportChange(unrested, card.targetSupportChange, 'ライバル');
-                updatedEnemyState = withSupport;
-                return withSupport;
-            });
+            nextEnemyState = computeEnemyAfterAttack(enemy, card, nextPlayerState, comboMultiplier);
+            setEnemy(nextEnemyState);
         }
 
         if (card.tip) {
@@ -764,7 +760,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         }
 
         checkForNewMission(nextPlayerState);
-        return checkWinCondition(nextPlayerState, updatedEnemyState ?? enemy);
+        return checkWinCondition(nextPlayerState, nextEnemyState);
     }, [gameState, player, enemy, lang, activeEvent, era, lastTags, gameDeck, discardPile, turnHighlight, checkForNewMission, checkWinCondition, addLog]);
 
     const aiTurn = () => {
