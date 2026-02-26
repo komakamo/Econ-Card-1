@@ -118,3 +118,16 @@ test('saveSettingsToStorage writes sanitized payload', () => {
     expect(storage.setItem).toHaveBeenCalledWith(SETTINGS_STORAGE_KEY, JSON.stringify(saved));
 });
 
+test('saveSettingsToStorage does not throw when setItem throws', () => {
+    const storage = {
+        setItem: jest.fn(() => {
+            throw new Error('quota exceeded');
+        }),
+    };
+
+    expect(() => saveSettingsToStorage(storage, { lang: 'en' }, SETTINGS_STORAGE_KEY)).not.toThrow();
+    expect(saveSettingsToStorage(storage, { lang: 'en' }, SETTINGS_STORAGE_KEY)).toEqual({
+        ...SETTINGS_DEFAULTS,
+        lang: 'en',
+    });
+});
