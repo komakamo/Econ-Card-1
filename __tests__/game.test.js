@@ -167,6 +167,33 @@ describe('EconomicCardGame Logic', () => {
         expect(enemyMoney).toContain('70');
     });
 
+    test('attack can immediately win the game when enemy support drops to 0 or less', async () => {
+        const decisiveAttack = {
+            id: 10001,
+            name: '政権崩壊工作',
+            name_en: 'Regime Destabilization',
+            cost: 10,
+            type: 'ATTACK',
+            targetSupportChange: -100,
+            description: 'desc',
+            description_en: 'desc',
+        };
+
+        render(<EconomicCardGame initialDeck={[decisiveAttack]} />);
+        await startGame();
+
+        const cardButton = await screen.findByTestId('card-Regime Destabilization');
+        await act(async () => {
+            fireEvent.click(cardButton);
+        });
+
+        await waitFor(() => {
+            expect(screen.getByTestId('game-result')).toBeInTheDocument();
+        });
+        expect(screen.getByText('Result: WON')).toBeInTheDocument();
+    });
+
+
     test('mute toggle updates UI state', async () => {
         render(<EconomicCardGame />);
         const muteToggle = screen.getByTestId('mute-toggle');
