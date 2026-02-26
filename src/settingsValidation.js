@@ -85,6 +85,10 @@ export const sanitizeSettingsForStorage = (settings) => {
 export const saveSettingsToStorage = (storage, settings, key = SETTINGS_STORAGE_KEY) => {
     if (!storage || typeof storage.setItem !== 'function') return null;
     const sanitized = sanitizeSettingsForStorage(settings);
-    storage.setItem(key, JSON.stringify(sanitized));
+    try {
+        storage.setItem(key, JSON.stringify(sanitized));
+    } catch {
+        return sanitized;
+    }
     return sanitized;
 };

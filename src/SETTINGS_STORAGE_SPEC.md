@@ -31,3 +31,4 @@
 - `saveSettingsToStorage` は `sanitizeSettingsForStorage` を必ず通して保存する。
 - 保存時は defaults と validate 済み入力を merge した完全なオブジェクトを JSON 化して書き込む。
 - storage API が無い環境では `null` を返して no-op。
+- `storage.setItem` が例外を送出しても外へ伝播させず、sanitized 済みオブジェクトを返す。
