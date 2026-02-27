@@ -103,6 +103,26 @@ describe('EconomicCardGame Logic', () => {
       expect(card).toBeInTheDocument();
     });
 
+    test('card type label is shown in English when language is English', async () => {
+      const publicWorks = {
+          id: 3,
+          name: '公共事業',
+          name_en: 'Public Works',
+          cost: 40,
+          type: 'POLICY',
+          description: 'desc',
+          description_en: 'desc',
+          effect: (s) => s
+      };
+
+      render(<EconomicCardGame initialDeck={[publicWorks]} />);
+      await startGame();
+
+      const card = await screen.findByTestId('card-Public Works');
+      expect(card).toHaveTextContent('POLICY');
+      expect(card).not.toHaveTextContent('政策');
+    });
+
     test('playing Public Works deducts money (with Oil Shock multiplier)', async () => {
       const publicWorks = {
             id: 3,
