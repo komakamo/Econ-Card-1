@@ -297,7 +297,7 @@ const CardButton = memo(({ card, onPlay, player, gameState, lang, activeEvent, e
      );
 });
 
-function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
+function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initialEvent = null }) {
     const rng = typeof randomFn === 'function' ? randomFn : secureRandom;
     const randomInt = (max) => Math.floor(rng() * max);
     const createRandomId = () => randomInt(Number.MAX_SAFE_INTEGER);
@@ -436,6 +436,17 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         return { ...state, money: Math.max(0, state.money - interest) };
     };
 
+    const pickInitialEvent = () => {
+        if (typeof initialEvent === 'number' && Number.isInteger(initialEvent)) {
+            return EVENTS[initialEvent] ?? null;
+        }
+        if (initialEvent) {
+            return initialEvent;
+        }
+        if (EVENTS.length === 0) return null;
+        return EVENTS[randomInt(EVENTS.length)];
+    };
+
     const startGame = () => {
         const difficulty = DIFFICULTY_SETTINGS[selectedDifficulty];
         setCurrentDifficulty(difficulty);
@@ -458,7 +469,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom }) {
         setGameDeck(shuffledDeck);
         setDiscardPile([]);
 
-        const event = EVENTS[0]; // Simple event for testing
+        const event = pickInitialEvent();
         setActiveEvent(event);
 
         const initialDebt = (ideology.initialStats.debt || 0) + (difficulty.initialDebt || 0);

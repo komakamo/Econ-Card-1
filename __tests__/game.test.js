@@ -109,7 +109,7 @@ describe('EconomicCardGame Logic', () => {
             description_en: 'desc',
             effect: (s) => s
         };
-      render(<EconomicCardGame initialDeck={[publicWorks]} />);
+      render(<EconomicCardGame initialDeck={[publicWorks]} initialEvent={0} />);
       await startGame();
 
       const yourHand = await screen.findByText(/Your Hand/i);
@@ -131,7 +131,7 @@ describe('EconomicCardGame Logic', () => {
           effect: (s) => s
       };
 
-      render(<EconomicCardGame initialDeck={[publicWorks]} />);
+      render(<EconomicCardGame initialDeck={[publicWorks]} initialEvent={0} />);
       await startGame();
 
       const card = await screen.findByTestId('card-Public Works');
@@ -151,7 +151,7 @@ describe('EconomicCardGame Logic', () => {
             effect: (s) => ({ ...s, gdp: (s.gdp || 0) + 40 })
         };
 
-      render(<EconomicCardGame initialDeck={[publicWorks]} />);
+      render(<EconomicCardGame initialDeck={[publicWorks]} initialEvent={0} />);
       await startGame();
 
       const initialMoneyText = screen.getByTestId('player-money').textContent;
@@ -296,7 +296,7 @@ describe('EconomicCardGame Logic', () => {
         // Note: The game shuffles the deck. With only 2 cards and drawing 3, we get both.
         // We need to make sure we play the Inflation Card first.
 
-        render(<EconomicCardGame initialDeck={[inflationCard, targetCard]} />);
+        render(<EconomicCardGame initialDeck={[inflationCard, targetCard]} initialEvent={0} />);
         await startGame();
 
         // Check initial inflation (0%)
