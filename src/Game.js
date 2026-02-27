@@ -275,6 +275,7 @@ const calculateSuccessRate = (card, support) => {
 
 const CardButton = memo(({ card, onPlay, player, gameState, lang, activeEvent, era }) => {
      const typeInfo = CARD_TYPES[card.type];
+     const typeLabel = lang === 'en' ? typeInfo.label_en : typeInfo.label;
      const inflatedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
      return (
         <button
@@ -285,7 +286,7 @@ const CardButton = memo(({ card, onPlay, player, gameState, lang, activeEvent, e
         >
             <div className={`px-3 py-2 flex justify-between items-center ${typeInfo.headerStyle}`}>
                 <span className="text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
-                    {typeInfo.icon} {typeInfo.label}
+                    {typeInfo.icon} {typeLabel}
                 </span>
                 <span className="font-mono text-lg font-black tracking-tighter">¥{inflatedCost}</span>
             </div>
