@@ -177,7 +177,7 @@
 
     const applyInflationChange = (state, delta = 0) => {
         if (!delta) return state;
-    const GameLogic = { ...state, inflation: clampInflation((state.inflation ?? 0) + delta) };
+        return { ...state, inflation: clampInflation((state.inflation ?? 0) + delta) };
     };
 
     const RATING_TIERS = [
