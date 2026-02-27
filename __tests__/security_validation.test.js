@@ -131,3 +131,27 @@ test('saveSettingsToStorage does not throw when setItem throws', () => {
         lang: 'en',
     });
 });
+
+test('loadAndApplySettings does not throw when getItem throws', () => {
+    const storage = {
+        getItem: jest.fn(() => {
+            throw new Error('storage blocked');
+        }),
+    };
+    const handlers = {
+        setLang: jest.fn(),
+        setFontSizeLevel: jest.fn(),
+        setSkipTurnSummary: jest.fn(),
+        setIsMuted: jest.fn(),
+        setMasterVolume: jest.fn(),
+    };
+
+    expect(() => loadAndApplySettings(handlers, storage, SETTINGS_STORAGE_KEY)).not.toThrow();
+    expect(loadAndApplySettings(handlers, storage, SETTINGS_STORAGE_KEY)).toEqual({});
+    expect(storage.getItem).toHaveBeenCalledWith(SETTINGS_STORAGE_KEY);
+    expect(handlers.setLang).not.toHaveBeenCalled();
+    expect(handlers.setFontSizeLevel).not.toHaveBeenCalled();
+    expect(handlers.setSkipTurnSummary).not.toHaveBeenCalled();
+    expect(handlers.setIsMuted).not.toHaveBeenCalled();
+    expect(handlers.setMasterVolume).not.toHaveBeenCalled();
+});

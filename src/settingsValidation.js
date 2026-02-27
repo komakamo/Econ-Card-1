@@ -38,10 +38,10 @@ export const validateSettings = (parsed) => {
 export const loadSettingsFromStorage = (storage, key = SETTINGS_STORAGE_KEY) => {
     if (!storage || typeof storage.getItem !== 'function') return {};
 
-    const raw = storage.getItem(key);
-    if (!raw) return {};
-
     try {
+        const raw = storage.getItem(key);
+        if (!raw) return {};
+
         const parsed = JSON.parse(raw);
         const validObject = validateObject(parsed);
         return validObject ? validateSettings(validObject) : {};
