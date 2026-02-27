@@ -75,6 +75,22 @@ describe('EconomicCardGame Logic', () => {
       expect(result.status).toBe('WIN');
       expect(result.reason_en).toContain('Rival administration collapsed');
     });
+
+
+    test('returns ONGOING when turn is just before maxTurns', () => {
+      const player = { gdp: 100, debt: 0, support: 50 };
+      const enemy = { gdp: 100, debt: 0, support: 50 };
+      const result = getGameStatus(player, enemy, baseDifficulty, 39);
+      expect(result.status).toBe('ONGOING');
+    });
+
+    test('returns LOSE when turn reaches maxTurns (boundary)', () => {
+      const player = { gdp: 100, debt: 0, support: 50 };
+      const enemy = { gdp: 100, debt: 0, support: 50 };
+      const result = getGameStatus(player, enemy, baseDifficulty, 40);
+      expect(result.status).toBe('LOSE');
+      expect(result.reason_en).toBe('Defeat: Turn limit reached');
+    });
   });
 
   describe('Integration Tests', () => {

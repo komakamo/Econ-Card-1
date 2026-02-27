@@ -748,7 +748,7 @@
         if (enemy.gdp >= target) return { status: 'LOSE', reason_ja: 'ライバル国に敗北...', reason_en: 'Defeated by Rival...' };
         if (player.support <= 0) return { status: 'LOSE', reason_ja: '支持率低下により政権崩壊', reason_en: 'Administration collapsed due to low support' };
         if (enemy.support <= 0) return { status: 'WIN', reason_ja: 'ライバル国が自滅！', reason_en: 'Rival administration collapsed!' };
-        if (turn > maxTurns) return { status: 'LOSE', reason_ja: '制限ターンを超過して敗北', reason_en: 'Defeat: Turn limit exceeded' };
+        if (turn >= maxTurns) return { status: 'LOSE', reason_ja: '制限ターンに到達して敗北', reason_en: 'Defeat: Turn limit reached' };
         return { status: 'ONGOING' };
     };
 
