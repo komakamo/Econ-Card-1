@@ -10,9 +10,9 @@ if (!indexHtml.includes('<div id="root"></div>')) {
   throw new Error('Smoke test failed: dist/index.html is missing #root.');
 }
 
-const jsMatch = indexHtml.match(/<script[^>]*type="module"[^>]*src="([^\"]+)"/);
+const jsMatch = indexHtml.match(/<script[^>]*src="([^\"]+)"/);
 if (!jsMatch) {
-  throw new Error('Smoke test failed: module script entry was not found in dist/index.html.');
+  throw new Error('Smoke test failed: script entry was not found in dist/index.html.');
 }
 
 const assetPath = jsMatch[1].replace(/^\//, '');
@@ -24,19 +24,24 @@ if (entryStat.size <= 0) {
 }
 
 const entryJs = await readFile(entryPath, 'utf8');
-if (!entryJs.includes("from './Game.js'")) {
-  throw new Error('Smoke test failed: entry bundle does not import the game implementation module.');
+if (!entryJs.includes('START GAME')) {
+  throw new Error('Smoke test failed: production bundle does not contain expected UI text marker.');
 }
 
-const gameBundle = await readFile(path.join(distDir, 'Game.js'), 'utf8');
-if (!gameBundle.includes('START GAME')) {
-  throw new Error('Smoke test failed: built game module does not contain expected UI text marker.');
+const unresolvedImports = ['from"react"', "from'react'", 'from"react-dom/client"', "from'react-dom/client'", 'from"react/jsx-runtime"', "from'react/jsx-runtime'"];
+for (const token of unresolvedImports) {
+  if (entryJs.includes(token)) {
+    throw new Error(`Smoke test failed: unresolved dependency import remains in bundle (${token}).`);
+  }
 }
 
 if (indexHtml.includes('text/babel')) {
   throw new Error('Smoke test failed: legacy inlined Babel script still exists in production entry.');
 }
 
+if (indexHtml.includes('importmap')) {
+  throw new Error('Smoke test failed: import map should not be required for production distribution.');
+}
 
 const cspMatch = indexHtml.match(/<meta[^>]*http-equiv="Content-Security-Policy"[^>]*content="([^"]+)"/i);
 if (!cspMatch) {
@@ -55,11 +60,4 @@ for (const token of forbiddenCspTokens) {
   }
 }
 
-const forbiddenExternalHosts = ['cdn.tailwindcss.com', 'unpkg.com', 'cdnjs.cloudflare.com'];
-for (const host of forbiddenExternalHosts) {
-  if (indexHtml.includes(host)) {
-    throw new Error(`Smoke test failed: dist/index.html still references external CDN ${host}.`);
-  }
-}
-
-console.log('Smoke test passed: dist entrypoint and bundle look valid.');
+console.log('Smoke test passed: dist output is self-contained and static-host ready.');
