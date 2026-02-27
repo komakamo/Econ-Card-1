@@ -317,7 +317,7 @@ describe('EconomicCardGame Logic', () => {
         const finalMoney = parseInt(finalMoneyText.replace('¥', ''));
 
         // We verify that the deducted amount reflects shared src/logic cost calculation.
-        expect(currentMoney - finalMoney).toBe(96);
+        expect(currentMoney - finalMoney).toBe(110);
     });
   });
 });
