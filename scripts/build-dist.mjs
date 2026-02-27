@@ -25,6 +25,7 @@ const compile = async (input, output) => {
 
 await compile('src/logic.js', 'logic.js');
 await compile('src/Game.js', 'Game.js');
+await compile('src/settingsValidation.js', 'settingsValidation.js');
 await compile('src/main.jsx', 'main.js');
 
 const distHtml = `<!doctype html>
@@ -34,9 +35,18 @@ const distHtml = `<!doctype html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://esm.sh; object-src 'none'; base-uri 'self'; form-action 'self'"
     />
     <title>Economic Card Game</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18",
+          "react-dom/client": "https://esm.sh/react-dom@18/client",
+          "react/jsx-runtime": "https://esm.sh/react@18/jsx-runtime"
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

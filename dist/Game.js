@@ -654,6 +654,7 @@ var CardButton = /*#__PURE__*/memo(_ref19 => {
     era
   } = _ref19;
   var typeInfo = CARD_TYPES[card.type];
+  var typeLabel = lang === 'en' ? typeInfo.label_en : typeInfo.label;
   var inflatedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
   return /*#__PURE__*/_jsxs("button", {
     onClick: () => onPlay(card),
@@ -664,7 +665,7 @@ var CardButton = /*#__PURE__*/memo(_ref19 => {
       className: "px-3 py-2 flex justify-between items-center ".concat(typeInfo.headerStyle),
       children: [/*#__PURE__*/_jsxs("span", {
         className: "text-[10px] font-black uppercase tracking-wider flex items-center gap-1",
-        children: [typeInfo.icon, " ", typeInfo.label]
+        children: [typeInfo.icon, " ", typeLabel]
       }), /*#__PURE__*/_jsxs("span", {
         className: "font-mono text-lg font-black tracking-tighter",
         children: ["\xA5", inflatedCost]
@@ -679,7 +680,8 @@ function EconomicCardGame(_ref20) {
   var _small$medium$large$f;
   var {
     initialDeck = null,
-    randomFn = secureRandom
+    randomFn = secureRandom,
+    initialEvent = null
   } = _ref20;
   var rng = typeof randomFn === 'function' ? randomFn : secureRandom;
   var randomInt = max => Math.floor(rng() * max);
@@ -818,6 +820,17 @@ function EconomicCardGame(_ref20) {
       money: Math.max(0, state.money - interest)
     });
   };
+  var pickInitialEvent = () => {
+    if (typeof initialEvent === 'number' && Number.isInteger(initialEvent)) {
+      var _EVENTS$initialEvent;
+      return (_EVENTS$initialEvent = EVENTS[initialEvent]) !== null && _EVENTS$initialEvent !== void 0 ? _EVENTS$initialEvent : null;
+    }
+    if (initialEvent) {
+      return initialEvent;
+    }
+    if (EVENTS.length === 0) return null;
+    return EVENTS[randomInt(EVENTS.length)];
+  };
   var startGame = () => {
     var difficulty = DIFFICULTY_SETTINGS[selectedDifficulty];
     setCurrentDifficulty(difficulty);
@@ -837,7 +850,7 @@ function EconomicCardGame(_ref20) {
     }
     setGameDeck(shuffledDeck);
     setDiscardPile([]);
-    var event = EVENTS[0]; // Simple event for testing
+    var event = pickInitialEvent();
     setActiveEvent(event);
     var initialDebt = (ideology.initialStats.debt || 0) + (difficulty.initialDebt || 0);
     var initialPlayerState = {
@@ -952,10 +965,6 @@ function EconomicCardGame(_ref20) {
       gdp: applyScale('gdp')
     });
   };
-  var withEventMultiplier = setter => updater => setter(prev => {
-    var next = typeof updater === 'function' ? updater(prev) : updater;
-    return applyEventMultiplier(prev, next);
-  });
   var applyComboBonus = function applyComboBonus(prevState, nextState) {
     var multiplier = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 1;
     var normalizedMultiplier = Number.isFinite(multiplier) ? multiplier : Number(multiplier) || 1;
@@ -970,6 +979,12 @@ function EconomicCardGame(_ref20) {
       income: applyScale('income'),
       gdp: applyScale('gdp')
     });
+  };
+  var computeEnemyAfterAttack = (enemyState, cardState, nextPlayerState, comboMultiplier) => {
+    var effected = cardState.targetEffect ? cardState.targetEffect(enemyState, nextPlayerState) : enemyState;
+    var comboBoosted = applyComboBonus(enemyState, effected, comboMultiplier);
+    var unrested = applyUnrestPenalty(comboBoosted, 'ライバル');
+    return applySupportChange(unrested, cardState.targetSupportChange, 'ライバル');
   };
   var checkForNewMission = useCallback(playerState => {
     if (activeMission) return;
@@ -1034,7 +1049,6 @@ function EconomicCardGame(_ref20) {
     var providedTags = getCardProvidedTags(card);
     var isTech = providedTags.includes('tech');
     var eraMultiplier = era.id === 'IT_REV' && isTech ? 2 : 1;
-    var updatedEnemyState = null;
     if (player.money < adjustedCost) {
       addLog(t('insufficientFunds', lang));
       return;
@@ -1103,16 +1117,10 @@ function EconomicCardGame(_ref20) {
       });
     }
     setPlayer(nextPlayerState);
+    var nextEnemyState = enemy;
     if (card.type === 'ATTACK') {
-      var eventAwareSetEnemy = withEventMultiplier(setEnemy);
-      eventAwareSetEnemy(prev => {
-        var effected = card.targetEffect ? card.targetEffect(prev, nextPlayerState) : prev;
-        var comboBoosted = applyComboBonus(prev, effected, comboMultiplier);
-        var unrested = applyUnrestPenalty(comboBoosted, 'ライバル');
-        var withSupport = applySupportChange(unrested, card.targetSupportChange, 'ライバル');
-        updatedEnemyState = withSupport;
-        return withSupport;
-      });
+      nextEnemyState = computeEnemyAfterAttack(enemy, card, nextPlayerState, comboMultiplier);
+      setEnemy(nextEnemyState);
     }
     if (card.tip) {
       addLog("Memo: ".concat(getLoc(card, 'tip', lang)));
@@ -1129,7 +1137,7 @@ function EconomicCardGame(_ref20) {
       setLastTags([]);
     }
     checkForNewMission(nextPlayerState);
-    return checkWinCondition(nextPlayerState, updatedEnemyState !== null && updatedEnemyState !== void 0 ? updatedEnemyState : enemy);
+    return checkWinCondition(nextPlayerState, nextEnemyState);
   }, [gameState, player, enemy, lang, activeEvent, era, lastTags, gameDeck, discardPile, turnHighlight, checkForNewMission, checkWinCondition, addLog]);
   var aiTurn = () => {
     var _activeEvent$effect$i, _activeEvent$effect2;

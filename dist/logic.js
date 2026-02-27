@@ -185,7 +185,7 @@ var applyInflationChange = function applyInflationChange(state) {
   var _state$inflation;
   var delta = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
   if (!delta) return state;
-  var GameLogic = _objectSpread(_objectSpread({}, state), {}, {
+  return _objectSpread(_objectSpread({}, state), {}, {
     inflation: clampInflation(((_state$inflation = state.inflation) !== null && _state$inflation !== void 0 ? _state$inflation : 0) + delta)
   });
 };
@@ -870,10 +870,10 @@ var getGameStatus = (player, enemy, difficulty, turn) => {
     reason_ja: 'ライバル国が自滅！',
     reason_en: 'Rival administration collapsed!'
   };
-  if (turn > maxTurns) return {
+  if (turn >= maxTurns) return {
     status: 'LOSE',
-    reason_ja: '制限ターンを超過して敗北',
-    reason_en: 'Defeat: Turn limit exceeded'
+    reason_ja: '制限ターンに到達して敗北',
+    reason_en: 'Defeat: Turn limit reached'
   };
   return {
     status: 'ONGOING'
