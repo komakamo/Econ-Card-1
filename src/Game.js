@@ -112,8 +112,8 @@ const CrisisOverlay = ({ message, show, type = 'danger' }) => {
      );
 };
 
-const TurnSummaryPanel = ({ data, onContinue, lang }) => {
-    if (!data) return null;
+const TurnSummaryPanel = ({ data, show, onContinue, lang }) => {
+    if (!show || !data) return null;
     return (
         <div className="fixed inset-0 z-[100] bg-slate-900/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in">
             <div className="bg-slate-800 border-2 border-slate-700 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center relative overflow-hidden animate-pop-in">
@@ -451,6 +451,8 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
         const difficulty = DIFFICULTY_SETTINGS[selectedDifficulty];
         setCurrentDifficulty(difficulty);
         const ideology = IDEOLOGIES[selectedIdeology];
+        setShowTurnSummary(false);
+        setTurnSummaryData(null);
 
         let shuffledDeck;
         if (initialDeck) {
@@ -832,6 +834,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
 
     const proceedToNextTurn = () => {
         setShowTurnSummary(false);
+        setTurnSummaryData(null);
         if (missionProcessedTurnRef.current !== turn) {
             processMissionAtTurnEnd(player);
             missionProcessedTurnRef.current = turn;
@@ -846,6 +849,12 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
         }
         setLastTags([]);
         setTurnHighlight({ gdpGain: 0, text: '' });
+    };
+
+    const returnToTitle = () => {
+        setShowTurnSummary(false);
+        setTurnSummaryData(null);
+        setGameState('TITLE');
     };
 
     const updateSetting = (key, value) => {
@@ -992,10 +1001,10 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
                     <h2>Game End</h2>
                     <div>Result: {gameState}</div>
                     <div>Reason: {evaluation?.rankLabel}</div>
-                    <button onClick={() => setGameState('TITLE')}>Back to Start</button>
+                    <button onClick={returnToTitle}>Back to Start</button>
                 </div>
             ) : null}
-            <TurnSummaryPanel data={turnSummaryData} onContinue={proceedToNextTurn} lang={lang} />
+            <TurnSummaryPanel data={turnSummaryData} show={showTurnSummary} onContinue={proceedToNextTurn} lang={lang} />
             <SettingsModal
                 isOpen={showSettings}
                 onClose={() => setShowSettings(false)}
