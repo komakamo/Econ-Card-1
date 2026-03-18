@@ -15,6 +15,9 @@ const {
     secureRandom, calculateInflatedCost, getCardProvidedTags
 } = GameLogic;
 
+const DIFFICULTY_SETTINGS_ARRAY = Object.values(DIFFICULTY_SETTINGS);
+const IDEOLOGIES_ARRAY = Object.values(IDEOLOGIES);
+
 // --- Mocks ---
 const SoundManager = {
     init: () => {},
@@ -906,7 +909,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
                             onChange={(event) => setSelectedDifficulty(event.target.value)}
                             data-testid="difficulty-select"
                         >
-                            {Object.values(DIFFICULTY_SETTINGS).map(diff => (
+                            {DIFFICULTY_SETTINGS_ARRAY.map(diff => (
                                 <option key={diff.id} value={diff.id}>{diff.label}</option>
                             ))}
                         </select>
@@ -918,7 +921,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
                             onChange={(event) => setSelectedIdeology(event.target.value)}
                             data-testid="ideology-select"
                         >
-                            {Object.values(IDEOLOGIES).map((ideology) => (
+                            {IDEOLOGIES_ARRAY.map((ideology) => (
                                 <option key={ideology.id} value={ideology.id}>{getLoc(ideology, 'name', lang)}</option>
                             ))}
                         </select>
