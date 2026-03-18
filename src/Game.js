@@ -273,13 +273,13 @@ const calculateSuccessRate = (card, support) => {
     return Math.min(100, Math.max(0, Math.round(base + bonus)));
 };
 
-const CardButton = memo(({ card, onPlay, player, gameState, lang, activeEvent, era }) => {
+const CardButton = memo(({ card, index, onPlay, player, gameState, lang, activeEvent, era }) => {
      const typeInfo = CARD_TYPES[card.type];
      const typeLabel = lang === 'en' ? typeInfo.label_en : typeInfo.label;
      const inflatedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
      return (
         <button
-            onClick={() => onPlay(card)}
+            onClick={() => onPlay(card, index)}
             disabled={gameState !== 'PLAYING'}
             data-testid={`card-${getLoc(card, 'name', lang)}`}
             className={`card-button ${typeInfo.baseStyle}`}
@@ -676,7 +676,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
         return true;
     }, [gameState, player, enemy, currentDifficulty, turn, lang, completedMissionCount, selectedIdeology]);
 
-    const playCard = useCallback((card) => {
+    const playCard = useCallback((card, index) => {
         if (gameState !== 'PLAYING') return;
 
         const adjustedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
@@ -703,7 +703,14 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
             if (card.onFailure) penaltyState = card.onFailure(penaltyState);
             nextPlayerState = penaltyState;
             setPlayer(nextPlayerState);
-                setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
+            setPlayerHand(prev => {
+                if (typeof index === 'number' && index >= 0 && index < prev.length && prev[index].uniqueId === card.uniqueId) {
+                    const newHand = [...prev];
+                    newHand.splice(index, 1);
+                    return newHand;
+                }
+                return prev.filter(c => c.uniqueId !== card.uniqueId);
+            });
             const { uniqueId: _discardedUniqueId, ...baseCard } = card;
             setDiscardPile(prev => [...prev, baseCard]);
             setLastTags([]);
@@ -763,7 +770,14 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
             addLog(`Memo: ${getLoc(card, 'tip', lang)}`);
         }
 
-        setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
+        setPlayerHand(prev => {
+            if (typeof index === 'number' && index >= 0 && index < prev.length && prev[index].uniqueId === card.uniqueId) {
+                const newHand = [...prev];
+                newHand.splice(index, 1);
+                return newHand;
+            }
+            return prev.filter(c => c.uniqueId !== card.uniqueId);
+        });
         const { uniqueId: _discardedUniqueId, ...baseCard } = card;
         setDiscardPile(prev => [...prev, baseCard]);
 
@@ -977,8 +991,8 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
                     <div>
                         <h3>{t('yourHand', lang)}</h3>
                         <div>
-                            {playerHand.map(card => (
-                                <CardButton key={card.uniqueId} card={card} onPlay={playCard} player={player} gameState={gameState} lang={lang} activeEvent={activeEvent} era={era} />
+                            {playerHand.map((card, index) => (
+                                <CardButton key={card.uniqueId} card={card} index={index} onPlay={playCard} player={player} gameState={gameState} lang={lang} activeEvent={activeEvent} era={era} />
                             ))}
                         </div>
                         <button onClick={repayDebt} disabled={gameState !== 'PLAYING' || (player.debt || 0) <= 0 || player.money < 50}>Repay</button>
