@@ -206,7 +206,7 @@
             cryptoObj.getRandomValues(array);
             return array[0] / 4294967296;
         }
-        return Math.random();
+        throw new Error('Secure random number generation is not supported in this environment.');
     };
 
     const resolveBondRisk = ({ amount, defaultRisk, randomFn = secureRandom, state }) => {
