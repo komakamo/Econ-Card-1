@@ -458,14 +458,15 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
         if (initialDeck) {
             shuffledDeck = shuffleArray([...initialDeck]);
         } else {
-            const deckSource = ALL_CARDS;
-            const availableCards = deckSource.filter(card => !card.requiredAchievement || unlockedAchievements[card.requiredAchievement]);
-
             const newDeck = [];
-            availableCards.forEach(card => {
-                const weight = ideology.deckWeights[card.id] || 1;
-                for(let i=0; i<weight; i++) newDeck.push(card);
-            });
+            for (const card of ALL_CARDS) {
+                if (!card.requiredAchievement || unlockedAchievements[card.requiredAchievement]) {
+                    const weight = ideology.deckWeights[card.id] || 1;
+                    for (let i = 0; i < weight; i++) {
+                        newDeck.push(card);
+                    }
+                }
+            }
             shuffledDeck = shuffleArray(newDeck);
         }
         setGameDeck(shuffledDeck);
