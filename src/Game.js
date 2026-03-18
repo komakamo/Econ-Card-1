@@ -12,7 +12,7 @@ const {
     clampInflation, applyInflationDrift, applyInflationChange,
     MAX_STANDARD_CARD_ID, getPotentialActions,
     getGameStatus, evaluateGame, resolveBondRisk,
-    secureRandom, calculateInflatedCost
+    secureRandom, calculateInflatedCost, getCardProvidedTags
 } = GameLogic;
 
 // --- Mocks ---
@@ -98,6 +98,7 @@ const TurnSummaryPanel = ({ data, show, onContinue, lang }) => {
         </div>
     );
 };
+
 
 const MissionStatusContent = ({ activeMission, player, lang }) => {
     if (!activeMission) {
@@ -211,19 +212,6 @@ const StatusPanel = ({ data, isEnemy }) => {
         </div>
     );
 };
-
-// Pure Helpers extracted for performance
-const getCardProvidedTags = (card) => {
-    const tags = [];
-    if (Array.isArray(card?.providesTags)) {
-        tags.push(...card.providesTags);
-    }
-    if (card?.providesTag) {
-        tags.push(card.providesTag);
-    }
-    return tags;
-};
-
 
 const calculateSuccessRate = (card, support) => {
     const base = card.baseSuccessRate ?? 100;
