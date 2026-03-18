@@ -151,6 +151,17 @@
         return UI_TEXT[lang][key] || UI_TEXT['ja'][key] || key;
     };
 
+    const getCardProvidedTags = (card) => {
+        const tags = [];
+        if (Array.isArray(card?.providesTags)) {
+            tags.push(...card.providesTags);
+        }
+        if (card?.providesTag) {
+            tags.push(card.providesTag);
+        }
+        return tags;
+    };
+
     // --- Helpers ---
     const INFLATION_MIN = -5;
     const INFLATION_MAX = 15;
@@ -889,6 +900,7 @@ const GameLogic = {
         getGameStatus,
         evaluateGame,
         calculateInflatedCost,
+        getCardProvidedTags,
     };
 
 export default GameLogic;

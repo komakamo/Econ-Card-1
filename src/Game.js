@@ -12,7 +12,7 @@ const {
     clampInflation, applyInflationDrift, applyInflationChange,
     MAX_STANDARD_CARD_ID, getPotentialActions,
     getGameStatus, evaluateGame, resolveBondRisk,
-    secureRandom, calculateInflatedCost
+    secureRandom, calculateInflatedCost, getCardProvidedTags
 } = GameLogic;
 
 // --- Mocks ---
@@ -70,32 +70,7 @@ const CARD_TYPES = {
 };
 
 // --- Visual Components ---
-const BackgroundEffects = () => <div />; // Stub for tests
-const Confetti = () => <div />; // Stub for tests
-
-const ComboOverlay = ({ message, show }) => {
-    if (!show) return null;
-    return (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center pointer-events-none animate-fade-in">
-            <div className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] animate-pop-in">
-                {message}
-            </div>
-        </div>
-    );
-};
-
 const NumberCounter = ({ value }) => <span>{value}</span>; // Simplified for tests
-
-const TurnOverlay = ({ turn, show }) => {
-    if (!show) return null;
-    return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
-            <div className="bg-slate-900/90 text-cyan-400 text-6xl font-black px-12 py-6 rounded-2xl border-4 border-cyan-500 shadow-[0_0_50px_rgba(6,182,212,0.5)] animate-pop-in">
-                TURN {turn}
-            </div>
-        </div>
-    );
-};
 
 const CrisisOverlay = ({ message, show, type = 'danger' }) => {
      if (!show) return null;
@@ -124,21 +99,6 @@ const TurnSummaryPanel = ({ data, show, onContinue, lang }) => {
     );
 };
 
-const CardInfoPanel = ({ card, lang }) => {
-    if (!card) return null;
-    const typeInfo = CARD_TYPES[card.type];
-    return (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-fade-in shadow-lg">
-            <div className={`px-4 py-3 border-b border-slate-800 flex items-center gap-2 ${typeInfo?.headerStyle?.replace('bg-', 'bg-opacity-20 bg-')}`}>
-                 {typeInfo?.icon}
-                 <span className="font-bold text-sm tracking-wider">{getLoc(card, 'name', lang)}</span>
-            </div>
-            <div className="p-4 space-y-4">
-                <p className="text-xs text-slate-400 leading-relaxed">{getLoc(card, 'description', lang)}</p>
-            </div>
-        </div>
-    );
-};
 
 const MissionStatusContent = ({ activeMission, player, lang }) => {
     if (!activeMission) {
@@ -252,19 +212,6 @@ const StatusPanel = ({ data, isEnemy }) => {
         </div>
     );
 };
-
-// Pure Helpers extracted for performance
-const getCardProvidedTags = (card) => {
-    const tags = [];
-    if (Array.isArray(card?.providesTags)) {
-        tags.push(...card.providesTags);
-    }
-    if (card?.providesTag) {
-        tags.push(card.providesTag);
-    }
-    return tags;
-};
-
 
 const calculateSuccessRate = (card, support) => {
     const base = card.baseSuccessRate ?? 100;
