@@ -26,4 +26,27 @@ describe('clampSupport', () => {
     test('should handle non-integer values within range', () => {
         expect(clampSupport(50.5)).toBe(50.5);
     });
+
+    test('should coerce valid numeric strings', () => {
+        expect(clampSupport("50")).toBe(50);
+        expect(clampSupport("150")).toBe(100);
+        expect(clampSupport("-10")).toBe(0);
+    });
+
+    test('should handle NaN by returning NaN', () => {
+        expect(clampSupport(NaN)).toBe(NaN);
+        expect(clampSupport("invalid")).toBe(NaN);
+        expect(clampSupport({})).toBe(NaN);
+    });
+
+    test('should coerce null and booleans', () => {
+        expect(clampSupport(null)).toBe(0);
+        expect(clampSupport(false)).toBe(0);
+        expect(clampSupport(true)).toBe(1);
+    });
+
+    test('should handle Infinity and -Infinity', () => {
+        expect(clampSupport(Infinity)).toBe(100);
+        expect(clampSupport(-Infinity)).toBe(0);
+    });
 });
