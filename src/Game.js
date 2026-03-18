@@ -640,7 +640,8 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
         if (gameState !== 'PLAYING') return;
 
         const adjustedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
-        const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
+        const lastTagsSet = new Set(lastTags);
+        const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTagsSet.has(tag));
         const providedTags = getCardProvidedTags(card);
 
         const isTech = providedTags.includes('tech');
