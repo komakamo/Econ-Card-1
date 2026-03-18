@@ -70,32 +70,7 @@ const CARD_TYPES = {
 };
 
 // --- Visual Components ---
-const BackgroundEffects = () => <div />; // Stub for tests
-const Confetti = () => <div />; // Stub for tests
-
-const ComboOverlay = ({ message, show }) => {
-    if (!show) return null;
-    return (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center pointer-events-none animate-fade-in">
-            <div className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-yellow-300 to-amber-600 drop-shadow-[0_4px_4px_rgba(0,0,0,0.8)] animate-pop-in">
-                {message}
-            </div>
-        </div>
-    );
-};
-
 const NumberCounter = ({ value }) => <span>{value}</span>; // Simplified for tests
-
-const TurnOverlay = ({ turn, show }) => {
-    if (!show) return null;
-    return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
-            <div className="bg-slate-900/90 text-cyan-400 text-6xl font-black px-12 py-6 rounded-2xl border-4 border-cyan-500 shadow-[0_0_50px_rgba(6,182,212,0.5)] animate-pop-in">
-                TURN {turn}
-            </div>
-        </div>
-    );
-};
 
 const CrisisOverlay = ({ message, show, type = 'danger' }) => {
      if (!show) return null;
@@ -119,22 +94,6 @@ const TurnSummaryPanel = ({ data, show, onContinue, lang }) => {
             <div className="bg-slate-800 border-2 border-slate-700 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center relative overflow-hidden animate-pop-in">
                 <h2 className="text-2xl font-black text-white mb-6 tracking-tighter">{t('turnSummary', lang).toUpperCase()} {data.turn}</h2>
                 <button onClick={onContinue}>{t('continue', lang)}</button>
-            </div>
-        </div>
-    );
-};
-
-const CardInfoPanel = ({ card, lang }) => {
-    if (!card) return null;
-    const typeInfo = CARD_TYPES[card.type];
-    return (
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden animate-fade-in shadow-lg">
-            <div className={`px-4 py-3 border-b border-slate-800 flex items-center gap-2 ${typeInfo?.headerStyle?.replace('bg-', 'bg-opacity-20 bg-')}`}>
-                 {typeInfo?.icon}
-                 <span className="font-bold text-sm tracking-wider">{getLoc(card, 'name', lang)}</span>
-            </div>
-            <div className="p-4 space-y-4">
-                <p className="text-xs text-slate-400 leading-relaxed">{getLoc(card, 'description', lang)}</p>
             </div>
         </div>
     );
@@ -273,13 +232,13 @@ const calculateSuccessRate = (card, support) => {
     return Math.min(100, Math.max(0, Math.round(base + bonus)));
 };
 
-const CardButton = memo(({ card, onPlay, player, gameState, lang, activeEvent, era }) => {
+const CardButton = memo(({ card, index, onPlay, player, gameState, lang, activeEvent, era }) => {
      const typeInfo = CARD_TYPES[card.type];
      const typeLabel = lang === 'en' ? typeInfo.label_en : typeInfo.label;
      const inflatedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
      return (
         <button
-            onClick={() => onPlay(card)}
+            onClick={() => onPlay(card, index)}
             disabled={gameState !== 'PLAYING'}
             data-testid={`card-${getLoc(card, 'name', lang)}`}
             className={`card-button ${typeInfo.baseStyle}`}
@@ -458,14 +417,15 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
         if (initialDeck) {
             shuffledDeck = shuffleArray([...initialDeck]);
         } else {
-            const deckSource = ALL_CARDS;
-            const availableCards = deckSource.filter(card => !card.requiredAchievement || unlockedAchievements[card.requiredAchievement]);
-
             const newDeck = [];
-            availableCards.forEach(card => {
-                const weight = ideology.deckWeights[card.id] || 1;
-                for(let i=0; i<weight; i++) newDeck.push(card);
-            });
+            for (const card of ALL_CARDS) {
+                if (!card.requiredAchievement || unlockedAchievements[card.requiredAchievement]) {
+                    const weight = ideology.deckWeights[card.id] || 1;
+                    for (let i = 0; i < weight; i++) {
+                        newDeck.push(card);
+                    }
+                }
+            }
             shuffledDeck = shuffleArray(newDeck);
         }
         setGameDeck(shuffledDeck);
@@ -676,11 +636,12 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
         return true;
     }, [gameState, player, enemy, currentDifficulty, turn, lang, completedMissionCount, selectedIdeology]);
 
-    const playCard = useCallback((card) => {
+    const playCard = useCallback((card, index) => {
         if (gameState !== 'PLAYING') return;
 
         const adjustedCost = calculateInflatedCost(card.cost, player.inflation, activeEvent, era);
-        const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTags.includes(tag));
+        const lastTagsSet = new Set(lastTags);
+        const comboReadyTags = (card.combosWith ?? []).filter(tag => lastTagsSet.has(tag));
         const providedTags = getCardProvidedTags(card);
 
         const isTech = providedTags.includes('tech');
@@ -703,7 +664,14 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
             if (card.onFailure) penaltyState = card.onFailure(penaltyState);
             nextPlayerState = penaltyState;
             setPlayer(nextPlayerState);
-                setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
+            setPlayerHand(prev => {
+                if (typeof index === 'number' && index >= 0 && index < prev.length && prev[index].uniqueId === card.uniqueId) {
+                    const newHand = [...prev];
+                    newHand.splice(index, 1);
+                    return newHand;
+                }
+                return prev.filter(c => c.uniqueId !== card.uniqueId);
+            });
             const { uniqueId: _discardedUniqueId, ...baseCard } = card;
             setDiscardPile(prev => [...prev, baseCard]);
             setLastTags([]);
@@ -763,7 +731,14 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
             addLog(`Memo: ${getLoc(card, 'tip', lang)}`);
         }
 
-        setPlayerHand(prev => prev.filter(c => c.uniqueId !== card.uniqueId));
+        setPlayerHand(prev => {
+            if (typeof index === 'number' && index >= 0 && index < prev.length && prev[index].uniqueId === card.uniqueId) {
+                const newHand = [...prev];
+                newHand.splice(index, 1);
+                return newHand;
+            }
+            return prev.filter(c => c.uniqueId !== card.uniqueId);
+        });
         const { uniqueId: _discardedUniqueId, ...baseCard } = card;
         setDiscardPile(prev => [...prev, baseCard]);
 
@@ -977,8 +952,8 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
                     <div>
                         <h3>{t('yourHand', lang)}</h3>
                         <div>
-                            {playerHand.map(card => (
-                                <CardButton key={card.uniqueId} card={card} onPlay={playCard} player={player} gameState={gameState} lang={lang} activeEvent={activeEvent} era={era} />
+                            {playerHand.map((card, index) => (
+                                <CardButton key={card.uniqueId} card={card} index={index} onPlay={playCard} player={player} gameState={gameState} lang={lang} activeEvent={activeEvent} era={era} />
                             ))}
                         </div>
                         <button onClick={repayDebt} disabled={gameState !== 'PLAYING' || (player.debt || 0) <= 0 || player.money < 50}>Repay</button>
