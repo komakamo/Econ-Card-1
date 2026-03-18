@@ -775,21 +775,23 @@
         let comments = [];
         let nextGoals = [];
 
+        const isEn = lang === 'en';
+
         // Ideology Rank Criteria (Defaults to Standard/Keynesian if null)
         const criteria = ideology?.rankCriteria || { minGdp: 400, maxInflation: 4, minInflation: 2, maxDebt: 100 };
 
         // Inflation Eval
-        let inflationEval = lang === 'en' ? "Optimal" : "適正";
+        let inflationEval = isEn ? "Optimal" : "適正";
         if (inflation < 0) {
-            inflationEval = lang === 'en' ? "Deflationary" : "デフレ気味";
-            comments.push(lang === 'en' ? "Need to escape deflation" : "デフレ脱却が必要です");
+            inflationEval = isEn ? "Deflationary" : "デフレ気味";
+            comments.push(isEn ? "Need to escape deflation" : "デフレ脱却が必要です");
         }
-        else if (inflation < criteria.minInflation) { inflationEval = lang === 'en' ? "Low" : "やや低い"; }
-        else if (inflation <= criteria.maxInflation) { inflationEval = lang === 'en' ? "Ideal" : "理想的"; }
-        else if (inflation <= 8) { inflationEval = lang === 'en' ? "High" : "やや高い"; }
+        else if (inflation < criteria.minInflation) { inflationEval = isEn ? "Low" : "やや低い"; }
+        else if (inflation <= criteria.maxInflation) { inflationEval = isEn ? "Ideal" : "理想的"; }
+        else if (inflation <= 8) { inflationEval = isEn ? "High" : "やや高い"; }
         else {
-            inflationEval = lang === 'en' ? "Dangerous" : "危険水域";
-            comments.push(lang === 'en' ? "Control inflation immediately" : "インフレ抑制を最優先に");
+            inflationEval = isEn ? "Dangerous" : "危険水域";
+            comments.push(isEn ? "Control inflation immediately" : "インフレ抑制を最優先に");
         }
 
         // Rank Logic
@@ -801,7 +803,7 @@
             rank = 'E';
             rankLabel = 'FAILED';
             rankColor = 'text-gray-500';
-            nextGoals.push(lang === 'en' ? "Try to clear the game first!" : "まずはクリアを目指しましょう！");
+            nextGoals.push(isEn ? "Try to clear the game first!" : "まずはクリアを目指しましょう！");
         } else {
             // Check S (Ideology Specific)
             // Default S: GDP 400, Inf 2-4, Debt 100, AAA, Support 60
@@ -830,32 +832,44 @@
                 rankLabel = 'LEGENDARY';
                 rankColor = 'text-yellow-400 drop-shadow-[0_0_10px_rgba(250,204,21,0.5)]';
                 if(missionBonus && !isS) {
-                    nextGoals.unshift(lang === 'en' ? "Crisis Averted! A rank promoted to S." : "危機回避ボーナスでAランクから昇格！");
+                    nextGoals.unshift(isEn ? "Crisis Averted! A rank promoted to S." : "危機回避ボーナスでAランクから昇格！");
                 }
-                if(bonusAchieved) nextGoals.push(lang === 'en' ? "Bonus Goal (Inflation Control) Achieved!" : "ボーナス目標（インフレ抑制）も達成！");
-                nextGoals.push(lang === 'en' ? "Perfect Management! No higher title exists." : "完璧な手腕です！これ以上の称号はありません。");
+                if(bonusAchieved) nextGoals.push(isEn ? "Bonus Goal (Inflation Control) Achieved!" : "ボーナス目標（インフレ抑制）も達成！");
+                nextGoals.push(isEn ? "Perfect Management! No higher title exists." : "完璧な手腕です！これ以上の称号はありません。");
             } else if (isA) {
                 rank = 'A';
                 rankLabel = 'EXCELLENT';
                 rankColor = 'text-emerald-400';
                 // Advice for S
-                if (gdp < criteria.minGdp) nextGoals.push(lang === 'en' ? `Aim for GDP ${criteria.minGdp}T next` : `次はGDP ${criteria.minGdp}兆円を目指そう`);
-                if (inflation < criteria.minInflation || inflation > criteria.maxInflation) nextGoals.push(lang === 'en' ? `Keep Inflation ${criteria.minInflation}-${criteria.maxInflation}%` : `インフレ率 ${criteria.minInflation}-${criteria.maxInflation}% を目指そう`);
-                if (debt > criteria.maxDebt) nextGoals.push(lang === 'en' ? `Keep Debt under ${criteria.maxDebt}T` : `債務 ${criteria.maxDebt}兆円以下の健全財政を目指そう`);
-                if (completedMissionCount === 0) nextGoals.push(lang === 'en' ? "Complete a mission for a rank bonus!" : "ミッション達成でランクボーナス！");
+                if (gdp < criteria.minGdp) {
+                    nextGoals.push(isEn ? `Aim for GDP ${criteria.minGdp}T next` : `次はGDP ${criteria.minGdp}兆円を目指そう`);
+                }
+                if (inflation < criteria.minInflation || inflation > criteria.maxInflation) {
+                    nextGoals.push(
+                        isEn
+                            ? `Keep Inflation ${criteria.minInflation}-${criteria.maxInflation}%`
+                            : `インフレ率 ${criteria.minInflation}-${criteria.maxInflation}% を目指そう`
+                    );
+                }
+                if (debt > criteria.maxDebt) {
+                    nextGoals.push(isEn ? `Keep Debt under ${criteria.maxDebt}T` : `債務 ${criteria.maxDebt}兆円以下の健全財政を目指そう`);
+                }
+                if (completedMissionCount === 0) {
+                    nextGoals.push(isEn ? "Complete a mission for a rank bonus!" : "ミッション達成でランクボーナス！");
+                }
             } else {
                 rank = 'B';
                 rankLabel = 'GOOD';
                 rankColor = 'text-cyan-400';
                     // Advice for A
-                if (inflation > 6) nextGoals.push(lang === 'en' ? "Keep Inflation under 5% for Rank A" : "インフレを 5%以下 に抑えてAランクを目指そう");
-                if (debt > 200) nextGoals.push(lang === 'en' ? "Reduce Debt to maintain Rating" : "債務を減らして格付けを維持しよう");
-                if (support < 50) nextGoals.push(lang === 'en' ? "Keep Support above 50%" : "支持率 50%以上 をキープしよう");
+                if (inflation > 6) nextGoals.push(isEn ? "Keep Inflation under 5% for Rank A" : "インフレを 5%以下 に抑えてAランクを目指そう");
+                if (debt > 200) nextGoals.push(isEn ? "Reduce Debt to maintain Rating" : "債務を減らして格付けを維持しよう");
+                if (support < 50) nextGoals.push(isEn ? "Keep Support above 50%" : "支持率 50%以上 をキープしよう");
             }
         }
 
         // Default advice if empty
-        if (nextGoals.length === 0) nextGoals.push(lang === 'en' ? "Aim for even greater heights..." : "さらなる高みを目指して...");
+        if (nextGoals.length === 0) nextGoals.push(isEn ? "Aim for even greater heights..." : "さらなる高みを目指して...");
 
         return {
             rank,
