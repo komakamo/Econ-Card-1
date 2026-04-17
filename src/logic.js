@@ -199,12 +199,17 @@
     // Sort logic moved inside helper in index.html, but we can pre-sort here for efficiency
     const RATING_TIERS_DESC = [...RATING_TIERS].sort((a, b) => b.threshold - a.threshold);
 
+    const RATING_MAP = RATING_TIERS.reduce((acc, tier) => {
+        acc[tier.label] = tier;
+        return acc;
+    }, {});
+
     const getRatingByDebt = (debt = 0) => {
         const found = RATING_TIERS_DESC.find(tier => debt >= tier.threshold);
         return found?.label ?? 'AAA';
     };
 
-    const getRatingInfo = (rating = 'AAA') => RATING_TIERS.find(tier => tier.label === rating) ?? RATING_TIERS[0];
+    const getRatingInfo = (rating = 'AAA') => RATING_MAP[rating] ?? RATING_TIERS[0];
 
     const secureRandom = () => {
         const cryptoObj = (typeof window !== 'undefined' && (window.crypto || window.msCrypto)) ||
