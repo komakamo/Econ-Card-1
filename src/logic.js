@@ -168,8 +168,6 @@
 
     const clampInflation = (value) => Math.min(INFLATION_MAX, Math.max(INFLATION_MIN, Number(value.toFixed(1))));
 
-    const clampSupport = (value = 0) => Math.max(0, Math.min(100, value));
-
     const calculateInflatedCost = (baseCost, inflationRate = 0, activeEvent = null, era = null) => {
         const inflated = Math.max(0, Math.round(baseCost * (1 + inflationRate / 100)));
         let multiplier = activeEvent?.effect?.costMultiplier || 1;
@@ -892,7 +890,6 @@ const GameLogic = {
         INFLATION_MIN,
         INFLATION_MAX,
         clampInflation,
-        clampSupport,
         applyInflationDrift,
         applyInflationChange,
         RATING_TIERS,
