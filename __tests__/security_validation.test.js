@@ -6,6 +6,7 @@ import {
     validateSettings,
     validateObject,
     loadAndApplySettings,
+    loadSettingsFromStorage,
     sanitizeSettingsForStorage,
     saveSettingsToStorage,
     SETTINGS_DEFAULTS,
@@ -94,6 +95,89 @@ describe('Security Validation Logic', () => {
         expect(handlers.setSkipTurnSummary).toHaveBeenCalledWith(true);
         expect(handlers.setIsMuted).toHaveBeenCalledWith(false);
         expect(handlers.setMasterVolume).toHaveBeenCalledWith(100);
+    });
+
+    describe('loadSettingsFromStorage', () => {
+        test('returns empty object when storage is missing', () => {
+            expect(loadSettingsFromStorage(null)).toEqual({});
+            expect(loadSettingsFromStorage(undefined)).toEqual({});
+        });
+
+        test('returns empty object when getItem is not a function', () => {
+            expect(loadSettingsFromStorage({})).toEqual({});
+            expect(loadSettingsFromStorage({ getItem: 'not a function' })).toEqual({});
+        });
+
+        test('returns empty object when item is not found (returns null)', () => {
+            const storage = {
+                getItem: jest.fn(() => null),
+            };
+            const result = loadSettingsFromStorage(storage, 'test_key');
+            expect(storage.getItem).toHaveBeenCalledWith('test_key');
+            expect(result).toEqual({});
+        });
+
+        test('returns empty object when JSON is invalid', () => {
+            const storage = {
+                getItem: jest.fn(() => 'invalid { json'),
+            };
+            const result = loadSettingsFromStorage(storage);
+            expect(result).toEqual({});
+        });
+
+        test('returns empty object when parsed JSON is not an object', () => {
+            const storage = {
+                getItem: jest.fn(() => JSON.stringify(['not', 'an', 'object'])),
+            };
+            expect(loadSettingsFromStorage(storage)).toEqual({});
+
+            const storage2 = {
+                getItem: jest.fn(() => JSON.stringify('just a string')),
+            };
+            expect(loadSettingsFromStorage(storage2)).toEqual({});
+        });
+
+        test('returns validated settings when JSON is valid', () => {
+            const validSettings = {
+                lang: 'en',
+                fontSizeLevel: 'large',
+                skipTurnSummary: true,
+                isMuted: true,
+                masterVolume: 75,
+            };
+            const storage = {
+                getItem: jest.fn(() => JSON.stringify(validSettings)),
+            };
+            const result = loadSettingsFromStorage(storage);
+            expect(result).toEqual(validSettings);
+        });
+
+        test('returns partially validated settings when some fields are invalid', () => {
+            const mixedSettings = {
+                lang: 'fr', // invalid
+                fontSizeLevel: 'large', // valid
+                skipTurnSummary: 'yes', // invalid type
+                masterVolume: 150, // valid but needs clamping
+            };
+            const storage = {
+                getItem: jest.fn(() => JSON.stringify(mixedSettings)),
+            };
+            const result = loadSettingsFromStorage(storage);
+            expect(result).toEqual({
+                fontSizeLevel: 'large',
+                masterVolume: 100,
+            });
+        });
+
+        test('returns empty object when getItem throws an error', () => {
+            const storage = {
+                getItem: jest.fn(() => {
+                    throw new Error('Storage access denied');
+                }),
+            };
+            const result = loadSettingsFromStorage(storage);
+            expect(result).toEqual({});
+        });
     });
 });
 
