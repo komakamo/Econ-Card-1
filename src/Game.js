@@ -20,20 +20,15 @@ const IDEOLOGIES_ARRAY = Object.values(IDEOLOGIES);
 
 // --- Mocks ---
 const SoundManager = {
-    init: () => {},
     isMuted: false,
     setMuted(value) { this.isMuted = Boolean(value); },
     setVolume: () => {},
     toggleMute() { this.setMuted(!this.isMuted); },
-    playTone: () => {},
     playClick: () => {},
     playError: () => {},
     playCoin: () => {},
-    playSuccess: () => {},
     playCard: () => {},
     playGameEnd: () => {},
-    playCrisis: () => {},
-    playDoom: () => {},
 };
 
 // --- Icons ---
