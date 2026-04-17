@@ -196,6 +196,8 @@
         { label: 'D', threshold: 400, interestMultiplier: 2, eventDamageMultiplier: 1.5 },
     ];
 
+    const RATING_MAP = Object.fromEntries(RATING_TIERS.map(tier => [tier.label, tier]));
+
     // Sort logic moved inside helper in index.html, but we can pre-sort here for efficiency
     const RATING_TIERS_DESC = [...RATING_TIERS].sort((a, b) => b.threshold - a.threshold);
 
