@@ -27,7 +27,6 @@ const SoundManager = {
     playClick: () => {},
     playError: () => {},
     playCoin: () => {},
-    playSuccess: () => {},
     playCard: () => {},
     playGameEnd: () => {},
 };
