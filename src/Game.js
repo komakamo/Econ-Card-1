@@ -6,7 +6,7 @@ import { SETTINGS_STORAGE_KEY, loadAndApplySettings, saveSettingsToStorage } fro
 const {
     t, getLoc,
     EVENTS, ERAS, IDEOLOGIES,
-    ALL_CARDS, MISSIONS, DIFFICULTY_SETTINGS,
+    ALL_CARDS, CARD_MAP, MISSIONS, DIFFICULTY_SETTINGS,
     INFLATION_MIN, INFLATION_MAX,
     getRatingByDebt, getRatingInfo,
     clampInflation, applyInflationDrift, applyInflationChange,
@@ -588,7 +588,7 @@ function EconomicCardGame({ initialDeck = null, randomFn = secureRandom, initial
 
         const missionCompleted = activeMission.objective(playerState);
         if (missionCompleted) {
-            const rewardCard = ALL_CARDS.find((card) => card.id === activeMission.rewardCardId);
+            const rewardCard = CARD_MAP[activeMission.rewardCardId];
             if (rewardCard) {
                 setPlayerHand((prev) => [...prev, { ...rewardCard, uniqueId: createRandomId() }]);
                 addLog(`${lang === 'en' ? 'Mission complete! Reward card added:' : 'ミッション達成！報酬カード獲得:'} ${getLoc(rewardCard, 'name', lang)}`);

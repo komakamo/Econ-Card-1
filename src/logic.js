@@ -885,6 +885,11 @@
         };
     };
 
+    const CARD_MAP = ALL_CARDS.reduce((map, card) => {
+        map[card.id] = card;
+        return map;
+    }, {});
+
 const GameLogic = {
         UI_TEXT,
         getLoc,
@@ -907,6 +912,7 @@ const GameLogic = {
         ACHIEVEMENTS,
         CARD_DATA,
         ALL_CARDS,
+        CARD_MAP,
         MISSIONS,
         DIFFICULTY_SETTINGS,
         MAX_STANDARD_CARD_ID,
