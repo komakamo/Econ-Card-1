@@ -148,7 +148,7 @@
     };
 
     const t = (key, lang) => {
-        return UI_TEXT[lang][key] || UI_TEXT['ja'][key] || key;
+        return UI_TEXT[lang]?.[key] || UI_TEXT['ja'][key] || key;
     };
 
     const getCardProvidedTags = (card) => {
